@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build
+client/dist/
+
+# Environment
+.env
+.env.local
+.env.production
+client/.env
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Firebase
+.firebase/
+firebase-debug.log
+
+# Old files
+apostila-ionic-firebase.pdf

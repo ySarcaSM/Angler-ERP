@@ -1,0 +1,12 @@
+{
+  "name": "angler-erp",
+  "version": "2.0.0",
+  "description": "Angler ERP — Sistema de gestão empresarial com Firebase",
+  "private": true,
+  "scripts": {
+    "dev": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "preview": "cd client && npm run preview",
+    "install:all": "npm install && cd client && npm install"
+  }
+}
