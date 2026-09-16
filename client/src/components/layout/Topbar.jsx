@@ -6,16 +6,16 @@ export default function Topbar({ onMenuToggle }) {
   const { user, company } = useAuth();
 
   return (
-    <header className="h-16 bg-dark-900/80 backdrop-blur-xl border-b border-dark-800 flex items-center justify-between px-6 sticky top-0 z-30">
+    <header className="h-16 bg-dark-900/80 backdrop-blur-xl border-b border-dark-700/50 flex items-center justify-between px-6 sticky top-0 z-30">
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuToggle}
-          className="lg:hidden p-2 rounded-xl text-dark-400 hover:text-dark-100 hover:bg-dark-800 transition-all"
+          className="lg:hidden p-2 rounded-xl text-dark-400 hover:text-primary-300 hover:bg-dark-800 transition-all"
         >
           <Menu size={20} />
         </button>
 
-        <div className="hidden sm:flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 w-72">
+        <div className="hidden sm:flex items-center gap-2 bg-dark-800 border border-dark-700/50 rounded-xl px-4 py-2 w-72">
           <Search size={16} className="text-dark-500" />
           <input
             type="text"
@@ -26,13 +26,13 @@ export default function Topbar({ onMenuToggle }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <button className="relative p-2 rounded-xl text-dark-400 hover:text-dark-100 hover:bg-dark-800 transition-all">
+        <button className="relative p-2 rounded-xl text-dark-400 hover:text-primary-300 hover:bg-dark-800 transition-all">
           <Bell size={20} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
         </button>
 
-        <div className="hidden md:flex items-center gap-3 pl-3 border-l border-dark-800">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+        <div className="hidden md:flex items-center gap-3 pl-3 border-l border-dark-700/50">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400/20 to-primary-700/20 border border-primary-400/20 flex items-center justify-center text-primary-300 text-xs font-bold">
             {user?.name?.[0]}{user?.lastName?.[0] || ''}
           </div>
           <div>

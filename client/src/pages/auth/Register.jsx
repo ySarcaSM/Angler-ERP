@@ -33,8 +33,8 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-dark-950 px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">A</div>
-          <h1 className="text-2xl font-bold text-dark-100">Criar Conta</h1>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+          <h1 className="text-2xl font-bold text-gold">Criar Conta</h1>
           <p className="text-dark-500 text-sm mt-1">Comece a gerenciar seu negócio</p>
         </div>
         <div className="card"><div className="card-body">
@@ -56,7 +56,7 @@ export default function Register() {
               <input type="password" className="input" placeholder="Mínimo 6 caracteres" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
             </div>
             <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <><UserPlus size={18} /> Criar Conta</>}
+              {loading ? <div className="animate-spin w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full" /> : <><UserPlus size={18} /> Criar Conta</>}
             </button>
           </form>
         </div></div>

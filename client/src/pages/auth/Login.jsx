@@ -49,8 +49,8 @@ export default function Login() {
       <div className="min-h-screen flex items-center justify-center bg-dark-950 px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">A</div>
-            <h1 className="text-2xl font-bold text-dark-100">Recuperar Senha</h1>
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+            <h1 className="text-2xl font-bold text-gold">Recuperar Senha</h1>
             <p className="text-dark-500 text-sm mt-1">Informe seu email para receber o link</p>
           </div>
           <div className="card"><div className="card-body">
@@ -72,8 +72,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-dark-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">A</div>
-          <h1 className="text-2xl font-bold text-dark-100">Angler ERP</h1>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+          <h1 className="text-2xl font-bold text-gold">Angler ERP</h1>
           <p className="text-dark-500 text-sm mt-1">Entre na sua conta</p>
         </div>
 
@@ -87,7 +87,7 @@ export default function Login() {
               <label className="label">Senha</label>
               <div className="relative">
                 <input type={showPass ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-dark-300" onClick={() => setShowPass(!showPass)}>
+                <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 hover:text-primary-300" onClick={() => setShowPass(!showPass)}>
                   {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
@@ -96,7 +96,7 @@ export default function Login() {
               <button type="button" onClick={() => setShowReset(true)} className="text-primary-400 hover:text-primary-300">Esqueceu a senha?</button>
             </div>
             <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <><LogIn size={18} /> Entrar</>}
+              {loading ? <div className="animate-spin w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full" /> : <><LogIn size={18} /> Entrar</>}
             </button>
           </form>
         </div></div>
