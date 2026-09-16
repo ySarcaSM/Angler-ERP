@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -49,7 +49,9 @@ export default function Login() {
       <div className="min-h-screen flex items-center justify-center bg-dark-950 px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+            <Link to="/" className="inline-block">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+            </Link>
             <h1 className="text-2xl font-bold text-gold">Recuperar Senha</h1>
             <p className="text-dark-500 text-sm mt-1">Informe seu email para receber o link</p>
           </div>
@@ -63,6 +65,9 @@ export default function Login() {
               <button type="button" className="btn-ghost w-full" onClick={() => setShowReset(false)}>Voltar ao Login</button>
             </form>
           </div></div>
+          <p className="text-center text-sm text-dark-500 mt-6">
+            <Link to="/" className="text-dark-400 hover:text-primary-300 flex items-center justify-center gap-1"><ArrowLeft size={14} /> Voltar ao início</Link>
+          </p>
         </div>
       </div>
     );
@@ -72,7 +77,9 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-dark-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+          <Link to="/" className="inline-block">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+          </Link>
           <h1 className="text-2xl font-bold text-gold">Angler ERP</h1>
           <p className="text-dark-500 text-sm mt-1">Entre na sua conta</p>
         </div>
@@ -92,7 +99,7 @@ export default function Login() {
                 </button>
               </div>
             </div>
-            <div className="flex items-center justify-end text-sm">
+            <div className="flex items-center justify-between text-sm">
               <button type="button" onClick={() => setShowReset(true)} className="text-primary-400 hover:text-primary-300">Esqueceu a senha?</button>
             </div>
             <button type="submit" className="btn-primary w-full" disabled={loading}>
@@ -103,6 +110,9 @@ export default function Login() {
 
         <p className="text-center text-sm text-dark-500 mt-6">
           Não tem conta? <Link to="/register" className="text-primary-400 hover:text-primary-300 font-medium">Criar conta</Link>
+        </p>
+        <p className="text-center text-sm text-dark-500 mt-3">
+          <Link to="/" className="text-dark-400 hover:text-primary-300 flex items-center justify-center gap-1"><ArrowLeft size={14} /> Voltar ao início</Link>
         </p>
       </div>
     </div>

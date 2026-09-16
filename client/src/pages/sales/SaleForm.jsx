@@ -64,7 +64,7 @@ export default function SaleForm() {
       const client = clients.find((c) => c.id === form.clientId);
       await createSale(company.id, { ...form, clientName: client?.name || form.clientName }, { ...user, displayName: userData?.name || user.email });
       toast.success('Venda criada!');
-      navigate('/sales');
+      navigate('/app/sales');
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   };
@@ -72,7 +72,7 @@ export default function SaleForm() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/sales')} className="btn-ghost"><ArrowLeft size={18} /> Voltar</button>
+        <button onClick={() => navigate('/app/sales')} className="btn-ghost"><ArrowLeft size={18} /> Voltar</button>
         <h1 className="text-2xl font-bold text-dark-100">Nova Venda</h1>
       </div>
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -115,7 +115,7 @@ export default function SaleForm() {
         </div></div>
 
         <div className="flex justify-end gap-3">
-          <button type="button" className="btn-secondary" onClick={() => navigate('/sales')}>Cancelar</button>
+          <button type="button" className="btn-secondary" onClick={() => navigate('/app/sales')}>Cancelar</button>
           <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : <><Save size={18} /> Criar Venda</>}</button>
         </div>
       </form>

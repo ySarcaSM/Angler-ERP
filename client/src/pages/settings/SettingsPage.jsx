@@ -38,7 +38,7 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-4xl">
       <div><h1 className="text-2xl font-bold text-dark-100">Configurações</h1><p className="text-dark-500 text-sm mt-1">Gerencie sua empresa</p></div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button onClick={() => navigate('/settings/users')} className="card p-5 text-left hover:border-primary-500/30 transition-colors"><Users size={24} className="text-primary-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Usuários</div><div className="text-xs text-dark-500">Gerenciar equipe</div></button>
+        <button onClick={() => navigate('/app/settings/users')} className="card p-5 text-left hover:border-primary-500/30 transition-colors"><Users size={24} className="text-primary-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Usuários</div><div className="text-xs text-dark-500">Gerenciar equipe</div></button>
         <div className="card p-5"><Clock size={24} className="text-amber-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Log de Atividades</div><div className="text-xs text-dark-500">{auditLog.length} ações recentes</div></div>
       </div>
       <form onSubmit={handleSave}>

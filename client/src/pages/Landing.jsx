@@ -61,7 +61,7 @@ export default function Landing() {
       <nav className="landing-nav" id="landing-nav">
         <div className="landing-nav-inner">
           <Link to="/" className="landing-logo">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-sm font-bold shadow-gold-glow">A</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">A</div>
             <span>Angler ERP</span>
           </Link>
           <div className="landing-nav-links">
@@ -147,13 +147,13 @@ export default function Landing() {
                         <div className="landing-mock-chart-title">Top Produtos</div>
                         <div className="landing-mock-list">
                           {[
-                            { name: 'Produto A', val: 'R$ 12.4k' },
-                            { name: 'Produto B', val: 'R$ 9.8k' },
-                            { name: 'Produto C', val: 'R$ 7.2k' },
-                            { name: 'Produto D', val: 'R$ 5.1k' },
+                            { name: 'Produto A', val: 'R$ 12.4k', color: '#3b82f6' },
+                            { name: 'Produto B', val: 'R$ 9.8k', color: '#8b5cf6' },
+                            { name: 'Produto C', val: 'R$ 7.2k', color: '#06b6d4' },
+                            { name: 'Produto D', val: 'R$ 5.1k', color: '#f59e0b' },
                           ].map((p) => (
                             <div key={p.name} className="landing-mock-list-item">
-                              <div className="landing-mock-list-dot" />
+                              <div className="landing-mock-list-dot" style={{ background: p.color }} />
                               <span className="landing-mock-list-text">{p.name}</span>
                               <span className="landing-mock-list-val">{p.val}</span>
                             </div>

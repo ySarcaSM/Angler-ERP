@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -33,7 +33,9 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center bg-dark-950 px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+          <Link to="/" className="inline-block">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+          </Link>
           <h1 className="text-2xl font-bold text-gold">Criar Conta</h1>
           <p className="text-dark-500 text-sm mt-1">Comece a gerenciar seu negócio</p>
         </div>
@@ -62,6 +64,9 @@ export default function Register() {
         </div></div>
         <p className="text-center text-sm text-dark-500 mt-6">
           Já tem conta? <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium">Entrar</Link>
+        </p>
+        <p className="text-center text-sm text-dark-500 mt-3">
+          <Link to="/" className="text-dark-400 hover:text-primary-300 flex items-center justify-center gap-1"><ArrowLeft size={14} /> Voltar ao início</Link>
         </p>
       </div>
     </div>

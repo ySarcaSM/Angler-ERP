@@ -35,7 +35,7 @@ export default function UserManagement() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/settings')} className="btn-ghost"><ArrowLeft size={18} /></button>
+        <button onClick={() => navigate('/app/settings')} className="btn-ghost"><ArrowLeft size={18} /></button>
         <h1 className="text-2xl font-bold text-dark-100">Usuários</h1>
       </div>
       {loading ? <div className="flex items-center justify-center h-32"><div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full" /></div> : (

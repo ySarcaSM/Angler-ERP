@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { onAuthChange, getUserData, getCompanyData, login as fbLogin, register as fbRegister, logout as fbLogout, resetPassword as fbResetPassword } from '../services/firebase/auth';
 import toast from 'react-hot-toast';
 
@@ -54,12 +55,15 @@ export function AuthProvider({ children }) {
     return result;
   }, []);
 
+  const navigate = useNavigate();
+
   const logout = useCallback(async () => {
     await fbLogout();
     setUser(null);
     setUserData(null);
     setCompany(null);
-  }, []);
+    navigate('/');
+  }, [navigate]);
 
   const resetPassword = useCallback(async (email) => {
     await fbResetPassword(email);
