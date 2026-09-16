@@ -34,7 +34,7 @@ export default function Register() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 text-2xl font-bold mx-auto mb-4 shadow-gold-glow">A</div>
+            <img src="../logo.png" alt="logo"/>
           </Link>
           <h1 className="text-2xl font-bold text-gold">Criar Conta</h1>
           <p className="text-dark-500 text-sm mt-1">Comece a gerenciar seu negócio</p>

@@ -4,6 +4,8 @@ import {
   ArrowRight, Users, ShoppingCart, Truck,
   DollarSign, TrendingUp, Shield, Zap, Globe, Lock,
   ChevronLeft, ChevronRight, AlertTriangle, Clock, CheckCircle2,
+  Check, Star, Crown, Sparkles,
+  Menu, X,
 } from 'lucide-react';
 
 import reactLogo from '../assets/tech/react.png';
@@ -127,6 +129,23 @@ function Reveal({ children, className = '' }) {
   return <div className={`reveal ${className}`}>{children}</div>;
 }
 
+function FaqItem({ question, answer }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`lp-faq-item ${open ? 'open' : ''}`}>
+      <button className="lp-faq-q" onClick={() => setOpen(!open)}>
+        <span>{question}</span>
+        <ChevronRight size={18} className="lp-faq-chevron" />
+      </button>
+      <div className="lp-faq-a-wrap">
+        <div className="lp-faq-a">
+          <p>{answer}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function formatBRL(v) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -137,6 +156,7 @@ export default function Landing() {
   const [canScrollRight, setCanScrollRight] = useState(true);
   const pausedRef = useRef(false);
   const scrollPosRef = useRef(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -169,8 +189,9 @@ export default function Landing() {
         const delta = (now - lastTime) / 1000; // segundos
         scrollPosRef.current += PX_PER_SEC * delta;
 
-        if (scrollPosRef.current >= maxScroll) {
-          scrollPosRef.current -= maxScroll; // continua fluindo a partir do início
+        const cycleWidth = el.scrollWidth / 2; // largura de 1 set de itens (conteúdo duplicado)
+        if (scrollPosRef.current >= cycleWidth) {
+          scrollPosRef.current -= cycleWidth; // reset invisível pro começo do 1º set
         }
 
         el.scrollLeft = scrollPosRef.current;
@@ -202,6 +223,19 @@ export default function Landing() {
     setTimeout(updateCarouselBtns, 350);
   };
 
+  const scrollTo = (id) => (e) => {
+    e.preventDefault();
+    setMobileOpen(false);
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Scrolla1px pra forçar re-trigger quando já estiver na seção
+    window.scrollTo({ top: window.scrollY - 1, behavior: 'instant' });
+    requestAnimationFrame(() => {
+      const y = el.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    });
+  };
+
   return (
     <div className="lp">
       <div className="lp-noise" />
@@ -210,23 +244,38 @@ export default function Landing() {
       <nav className="lp-nav" id="lp-nav">
         <div className="lp-nav-inner">
           <Link to="/" className="lp-logo">
-            <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
-              <path d="M6 14C6 9.58 9.58 6 14 6C18.42 6 22 9.58 22 14" stroke="url(#g1)" strokeWidth="2.5" strokeLinecap="round" />
-              <circle cx="14" cy="18" r="1.8" fill="url(#g1)" />
-              <path d="M14 18V22" stroke="url(#g1)" strokeWidth="2" strokeLinecap="round" />
-              <path d="M10 22H18" stroke="url(#g1)" strokeWidth="2" strokeLinecap="round" />
-              <defs><linearGradient id="g1" x1="6" y1="6" x2="22" y2="22"><stop stopColor="#f5d17d" /><stop offset="1" stopColor="#b5882b" /></linearGradient></defs>
-            </svg>
+            <img src="../logo.png" alt='logo'/>
             <span>Angler</span>
           </Link>
           <div className="lp-nav-right">
-
-            <a href="#why">Por quê?</a>
+            <a href="#tech" onClick={scrollTo('tech')}>Tecnologias</a>
+            <a href="#why" onClick={scrollTo('why')}>Por quê?</a>
+            <a href="#pricing" onClick={scrollTo('pricing')}>Planos</a>
+            <a href="#faq" onClick={scrollTo('faq')}>FAQ</a>
+            <a href="#contact" onClick={scrollTo('contact')}>Contato</a>
             <Link to="/login" className="lp-btn lp-btn-ghost-sm">Entrar</Link>
             <Link to="/register" className="lp-btn lp-btn-gold-sm">Criar Conta</Link>
           </div>
+          <button className="lp-nav-hamburger" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </nav>
+
+      {/* ═══ MOBILE MENU ═══ */}
+      <div className={`lp-mobile-menu ${mobileOpen ? 'open' : ''}`}>
+        <div className="lp-mobile-menu-inner">
+          <a href="#tech" onClick={scrollTo('tech')}>Tecnologias</a>
+          <a href="#why" onClick={scrollTo('why')}>Por quê?</a>
+          <a href="#pricing" onClick={scrollTo('pricing')}>Planos</a>
+          <a href="#faq" onClick={scrollTo('faq')}>FAQ</a>
+          <a href="#contact" onClick={scrollTo('contact')}>Contato</a>
+          <div className="lp-mobile-menu-btns">
+            <Link to="/login" className="lp-btn lp-btn-ghost" onClick={() => setMobileOpen(false)}>Entrar</Link>
+            <Link to="/register" className="lp-btn lp-btn-gold" onClick={() => setMobileOpen(false)}>Criar Conta</Link>
+          </div>
+        </div>
+      </div>
 
       {/* ═══ HERO — Split: Text + Real Dashboard ═══ */}
       <section className="lp-hero">
@@ -388,7 +437,7 @@ export default function Landing() {
       </section>
 
       {/* ═══ TECH CAROUSEL ═══ */}
-      <section className="lp-carousel-section">
+      <section className="lp-carousel-section" id="tech">
         <div className="lp-carousel-head">
           <span className="lp-section-tag">Stack</span>
           <h2>Tecnologias</h2>
@@ -410,9 +459,9 @@ export default function Landing() {
             ref={carouselRef}
             onScroll={updateCarouselBtns}
           >
-            {TECH_STACK.map((t) => (
+            {[...TECH_STACK, ...TECH_STACK].map((t, i) => (
               <div
-                key={t.name}
+                key={`${t.name}-${i}`}
                 className="lp-carousel-card"
                 style={{ '--card-accent': t.color }}
               >
@@ -454,24 +503,160 @@ export default function Landing() {
           <div className="lp-section-head">
             <span className="lp-section-tag">Diferenciais</span>
             <h2>Por que Angler?</h2>
+            <p className="lp-section-sub">Tudo que você precisa para rodar seu negócio, sem a complexidade de um ERP tradicional.</p>
           </div>
         </Reveal>
         <div className="lp-why-grid">
           {[
-            { icon: Zap, title: 'Setup em minutos', desc: 'Clone, configure Firebase, rode. Sem migrations, sem Docker, sem DevOps.' },
-            { icon: Globe, title: 'Multi-tenant', desc: 'Cada empresa tem seus dados isolados. Regras Firestore por companyId.' },
-            { icon: Lock, title: 'Segurança real', desc: 'Firebase Auth, RBAC no client, audit log de todas as ações.' },
-            { icon: Shield, title: 'Open Source', desc: 'MIT License. Fork, customize, contribua. Seu código, suas regras.' },
-          ].map((w) => (
+            { icon: Zap, title: 'Setup em minutos', desc: 'Clone, configure Firebase e rode. Sem migrations, sem Docker, sem DevOps. Do zero ao funcional em menos de 5 minutos.', accent: '#facc15' },
+            { icon: Globe, title: 'Multi-tenant', desc: 'Cada empresa tem seus dados completamente isolados. Regras de segurança Firestore por companyId garantem privacidade total.', accent: '#38bdf8' },
+            { icon: Lock, title: 'Segurança real', desc: 'Firebase Auth com email/senha, RBAC com 5 níveis de permissão no client, e audit log gravando cada ação do sistema.', accent: '#a78bfa' },
+            { icon: Shield, title: '100% Open Source', desc: 'MIT License. Fork, customize, contribua. Seu código, suas regras. Sem vendor lock-in, sem surpresas.', accent: '#34d399' },
+          ].map((w, i) => (
             <Reveal key={w.title}>
-              <div className="lp-why-card">
-                <div className="lp-why-icon"><w.icon size={22} /></div>
+              <div className="lp-why-card" style={{ '--why-accent': w.accent, '--why-delay': `${i * 80}ms` }}>
+                <div className="lp-why-glow" />
+                <div className="lp-why-num">{String(i + 1).padStart(2, '0')}</div>
+                <div className="lp-why-icon"><w.icon size={24} strokeWidth={1.8} /></div>
                 <h3>{w.title}</h3>
                 <p>{w.desc}</p>
               </div>
             </Reveal>
           ))}
         </div>
+      </section>
+
+      {/* ═══ PRICING ═══ */}
+      <section className="lp-section lp-pricing" id="pricing">
+        <Reveal>
+          <div className="lp-section-head">
+            <span className="lp-section-tag">Planos</span>
+            <h2>Escolha seu plano</h2>
+            <p className="lp-section-sub">Comece grátis. Evolua quando precisar.</p>
+          </div>
+        </Reveal>
+        <div className="lp-pricing-grid">
+          {/* FREE */}
+          <Reveal>
+            <div className="lp-pricing-card">
+              <div className="lp-pricing-top">
+                <div className="lp-pricing-icon free"><Sparkles size={20} /></div>
+                <span className="lp-pricing-name">TestFREE</span>
+                <span className="lp-pricing-badge free">Grátis</span>
+              </div>
+              <div className="lp-pricing-price">
+                <span className="lp-pricing-val">R$ 0</span>
+                <span className="lp-pricing-period">para sempre</span>
+              </div>
+              <ul className="lp-pricing-features">
+                <li><Check size={14} /> Acesso completo ao conteúdo já disponível</li>
+                <li><Check size={14} /> Todos os módulos do ERP</li>
+                <li><Check size={14} /> Suporte da comunidade</li>
+              </ul>
+              <Link to="/register" className="lp-btn lp-btn-ghost lp-pricing-cta">Começar grátis</Link>
+            </div>
+          </Reveal>
+
+          {/* PRO */}
+          <Reveal>
+            <div className="lp-pricing-card popular">
+              <div className="lp-pricing-popular-tag"><Star size={12} /> Mais popular</div>
+              <div className="lp-pricing-top">
+                <div className="lp-pricing-icon pro"><Crown size={20} /></div>
+                <span className="lp-pricing-name">AnglerPro</span>
+                <span className="lp-pricing-badge pro">Pro</span>
+              </div>
+              <div className="lp-pricing-price">
+                <span className="lp-pricing-val">R$ 59<span className="lp-pricing-cents">,99</span></span>
+                <span className="lp-pricing-period">/mês</span>
+              </div>
+              <ul className="lp-pricing-features">
+                <li><Check size={14} /> Tudo do TestFREE</li>
+                <li><Check size={14} /> Relatórios semanais</li>
+                <li><Check size={14} /> IA por áudio</li>
+                <li><Check size={14} /> Relatórios customizáveis</li>
+                <li><Check size={14} /> Mais distribuidoras de IA</li>
+                <li><Check size={14} /> Cálculos para usar menos token</li>
+              </ul>
+              <Link to="/register" className="lp-btn lp-btn-gold lp-pricing-cta">Assinar agora</Link>
+            </div>
+          </Reveal>
+
+          {/* ULTRA */}
+          <Reveal>
+            <div className="lp-pricing-card">
+              <div className="lp-pricing-top">
+                <div className="lp-pricing-icon ultra"><Zap size={20} /></div>
+                <span className="lp-pricing-name">AnglerUltra</span>
+                <span className="lp-pricing-badge ultra">Ultra</span>
+              </div>
+              <div className="lp-pricing-price">
+                <span className="lp-pricing-val">R$ 99<span className="lp-pricing-cents">,99</span></span>
+                <span className="lp-pricing-period">/mês</span>
+              </div>
+              <ul className="lp-pricing-features">
+                <li><Check size={14} /> Tudo do AnglerPro</li>
+                <li><Check size={14} /> Configurações de UI</li>
+                <li><Check size={14} /> IA controladora de sistema</li>
+                <li><Check size={14} /> Importação e exportação de dados</li>
+                <li><Check size={14} /> Relatórios visão geral em PDF</li>
+              </ul>
+              <Link to="/register" className="lp-btn lp-btn-ghost lp-pricing-cta">Assinar agora</Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══ FAQ ═══ */}
+      <section className="lp-section lp-faq" id="faq">
+        <Reveal>
+          <div className="lp-section-head">
+            <span className="lp-section-tag">Dúvidas</span>
+            <h2>Perguntas Frequentes</h2>
+          </div>
+        </Reveal>
+        <div className="lp-faq-list">
+          {[
+            { q: 'Preciso pagar para usar?', a: 'Não. O Angler ERP é 100% gratuito e open source (MIT License). O único custo é o do Firebase, que tem um plano gratuito generoso — suficiente para a maioria das pequenas e médias empresas.' },
+            { q: 'Preciso saber programar?', a: 'Não necessariamente. O setup básico envolve copiar configurações e rodar comandos simples. Mas se quiser customizar, o código é todo em React — fácil de modificar.' },
+            { q: 'Funciona offline?', a: 'Parcialmente. O Firestore tem suporte offline nativo — dados ficam disponíveis mesmo sem internet e sincronizam quando a conexão volta. Para funcionalidades completas, a internet é necessária.' },
+            { q: 'Quantos usuários podem acessar?', a: 'Sem limite. O Firebase escala automaticamente. Você pode ter quantos usuários quiser, cada um com seu papel (owner, admin, manager, operator, viewer).' },
+            { q: 'Posso hospedar na minha própria infra?', a: 'Sim! O código é open source. Você pode fazer deploy no Firebase Hosting, Vercel, Netlify ou qualquer servidor estático. O backend é o Firestore, que roda na infra do Google.' },
+            { q: 'Como funciona a segurança dos dados?', a: 'Cada empresa tem seus dados isolados via companyId. As regras do Firestore garantem que usuários só acessam dados da própria empresa. Além disso, há RBAC com 5 níveis de permissão e audit log.' },
+          ].map((item, i) => (
+            <FaqItem key={i} question={item.q} answer={item.a} />
+          ))}
+        </div>
+      </section>
+
+      {/* ═══ CONTACT ═══ */}
+      <section className="lp-section lp-contact" id="contact">
+        <Reveal>
+          <div className="lp-section-head">
+            <span className="lp-section-tag">Contato</span>
+            <h2>Fale com a gente</h2>
+            <p className="lp-section-sub">Tem dúvida, sugestão ou encontrou um problema? Nos envie uma mensagem.</p>
+          </div>
+        </Reveal>
+        <Reveal>
+          <form className="lp-contact-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="lp-contact-field">
+              <label htmlFor="contact-title">Título</label>
+              <input id="contact-title" type="text" placeholder="Ex: Dúvida sobre integração" />
+            </div>
+            <div className="lp-contact-field">
+              <label htmlFor="contact-email">Email</label>
+              <input id="contact-email" type="email" placeholder="seu@email.com" />
+            </div>
+            <div className="lp-contact-field">
+              <label htmlFor="contact-desc">Descrição do problema</label>
+              <textarea id="contact-desc" rows={5} placeholder="Descreva com detalhes o que aconteceu..." />
+            </div>
+            <button type="submit" className="lp-btn lp-btn-gold lp-contact-submit">
+              Enviar mensagem
+            </button>
+          </form>
+        </Reveal>
       </section>
 
       {/* ═══ CTA ═══ */}
