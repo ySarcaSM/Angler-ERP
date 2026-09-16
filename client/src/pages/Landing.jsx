@@ -1,6 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BarChart3, Users, Package, ShoppingCart, Truck, Building2, DollarSign, TrendingUp, Settings, Shield, Zap, Globe, Lock, ChevronRight } from 'lucide-react';
+import {
+  ArrowRight, BarChart3, Users, Package, ShoppingCart, Truck,
+  DollarSign, TrendingUp, Settings, Shield, Zap, Globe, Lock,
+  ChevronLeft, ChevronRight, AlertTriangle, Clock, CheckCircle2,
+} from 'lucide-react';
 
 const MODULES = [
   { icon: BarChart3, label: 'Dashboard', desc: 'KPIs em tempo real, gráficos de vendas e visão geral do negócio.' },
@@ -20,11 +24,75 @@ const STATS = [
   { value: '< 5min', label: 'Para configurar' },
 ];
 
+// ─── Dados reais do dashboard ───
+const KPI_DATA = [
+  { label: 'Receita Mensal', value: 'R$ 47.832', change: '+12,5%', up: true, icon: DollarSign },
+  { label: 'Vendas no Mês', value: '186', change: '+8,3%', up: true, icon: ShoppingCart },
+  { label: 'Clientes Ativos', value: '1.248', change: '+3,1%', up: true, icon: Users },
+  { label: 'Estoque Baixo', value: '12 itens', change: 'Atenção', up: false, icon: AlertTriangle },
+];
+
+const SALES_CHART = [
+  { day: 'Seg', value: 4200 },
+  { day: 'Ter', value: 3800 },
+  { day: 'Qua', value: 5100 },
+  { day: 'Qui', value: 4600 },
+  { day: 'Sex', value: 6200 },
+  { day: 'Sáb', value: 3400 },
+  { day: 'Dom', value: 1800 },
+];
+
+const TOP_PRODUCTS = [
+  { name: 'Notebook Dell i7', qty: 34, total: 'R$ 89.760', pct: 100 },
+  { name: 'Monitor 27" 4K', qty: 52, total: 'R$ 51.480', pct: 57 },
+  { name: 'Teclado Mecânico', qty: 128, total: 'R$ 38.400', pct: 43 },
+  { name: 'Mouse Wireless', qty: 95, total: 'R$ 14.250', pct: 16 },
+  { name: 'Hub USB-C', qty: 210, total: 'R$ 12.600', pct: 14 },
+];
+
+const RECENT_SALES = [
+  { id: '#VDA-0186', client: 'TechCorp Ltda', value: 'R$ 4.320', status: 'Aprovado', time: '2min atrás' },
+  { id: '#VDA-0185', client: 'João Silva', value: 'R$ 890', status: 'Pendente', time: '15min atrás' },
+  { id: '#VDA-0184', client: 'StartupXYZ', value: 'R$ 12.500', status: 'Aprovado', time: '1h atrás' },
+  { id: '#VDA-0183', client: 'Maria Santos', value: 'R$ 2.150', status: 'Enviado', time: '2h atrás' },
+];
+
+const LOW_STOCK = [
+  { name: 'Mouse Wireless', current: 3, min: 10, critical: true },
+  { name: 'Cabo HDMI 2m', current: 7, min: 15, critical: true },
+  { name: 'Webcam 1080p', current: 12, min: 10, critical: false },
+  { name: 'Fone Bluetooth', current: 5, min: 8, critical: true },
+];
+
+const MAX_SALE = Math.max(...SALES_CHART.map((d) => d.value));
+
+// ─── Tech Stack Carousel ───
+const TECH_STACK = [
+  { name: 'React 18', color: '#61dafb', desc: 'UI Library' },
+  { name: 'Vite', color: '#bd34fe', desc: 'Build Tool' },
+  { name: 'Tailwind CSS', color: '#38bdf8', desc: 'Estilos' },
+  { name: 'Firebase', color: '#ffca28', desc: 'Backend' },
+  { name: 'Firestore', color: '#ff6f00', desc: 'Database' },
+  { name: 'Recharts', color: '#f7df1e', desc: 'Gráficos' },
+  { name: 'Lucide', color: '#f472b6', desc: 'Ícones' },
+  { name: 'date-fns', color: '#22d3ee', desc: 'Datas' },
+  { name: 'React Router', color: '#ef4444', desc: 'Rotas' },
+  { name: 'Hot Toast', color: '#f97316', desc: 'Notificações' },
+];
+
 function Reveal({ children, className = '' }) {
   return <div className={`reveal ${className}`}>{children}</div>;
 }
 
+function formatBRL(v) {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 export default function Landing() {
+  const carouselRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('visible'); }),
@@ -35,6 +103,20 @@ export default function Landing() {
     window.addEventListener('scroll', onScroll);
     return () => { observer.disconnect(); window.removeEventListener('scroll', onScroll); };
   }, []);
+
+  const updateCarouselBtns = () => {
+    const el = carouselRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 10);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+  };
+
+  const scrollCarousel = (dir) => {
+    const el = carouselRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * 260, behavior: 'smooth' });
+    setTimeout(updateCarouselBtns, 350);
+  };
 
   return (
     <div className="lp">
@@ -62,7 +144,7 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* ═══ HERO — Split Layout ═══ */}
+      {/* ═══ HERO — Split: Text + Real Dashboard ═══ */}
       <section className="lp-hero">
         <div className="lp-hero-grid">
           <div className="lp-hero-text">
@@ -87,43 +169,118 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Mini dashboard mockup */}
+          {/* ── Real Dashboard Mockup ── */}
           <div className="lp-hero-visual">
-            <div className="lp-mock">
-              <div className="lp-mock-bar">
+            <div className="lp-dash">
+              {/* Titlebar */}
+              <div className="lp-dash-bar">
                 <span className="lp-mock-dot r" />
                 <span className="lp-mock-dot y" />
                 <span className="lp-mock-dot g" />
-                <span className="lp-mock-title">Dashboard</span>
+                <span className="lp-dash-bar-title">Angler ERP — Dashboard</span>
               </div>
-              <div className="lp-mock-body">
-                <div className="lp-mock-row">
-                  {[
-                    { l: 'Receita', v: 'R$ 48.2k', c: '↑ 12%', up: true },
-                    { l: 'Vendas', v: '324', c: '↑ 8%', up: true },
-                    { l: 'Estoque Baixo', v: '7', c: '', up: false },
-                  ].map((k) => (
-                    <div key={k.l} className="lp-mock-kpi">
-                      <span className="lp-mock-kpi-l">{k.l}</span>
-                      <span className="lp-mock-kpi-v">{k.v}</span>
-                      {k.c && <span className={`lp-mock-kpi-c ${k.up ? 'up' : 'dn'}`}>{k.c}</span>}
+
+              <div className="lp-dash-body">
+                {/* KPI Row */}
+                <div className="lp-dash-kpis">
+                  {KPI_DATA.map((k) => (
+                    <div key={k.label} className="lp-dash-kpi">
+                      <div className="lp-dash-kpi-top">
+                        <span className="lp-dash-kpi-label">{k.label}</span>
+                        <k.icon size={14} className="lp-dash-kpi-icon" />
+                      </div>
+                      <div className="lp-dash-kpi-value">{k.value}</div>
+                      <div className={`lp-dash-kpi-change ${k.up ? 'up' : 'dn'}`}>
+                        {k.up ? '↑' : '⚠'} {k.change}
+                      </div>
                     </div>
                   ))}
                 </div>
-                <div className="lp-mock-chart">
-                  <div className="lp-mock-bars">
-                    {[40, 55, 35, 70, 50, 80, 65, 90, 75, 60, 85, 95].map((h, i) => (
-                      <div key={i} className="lp-mock-bar-item" style={{ height: `${h}%` }} />
-                    ))}
+
+                {/* Chart + Recent Sales */}
+                <div className="lp-dash-row">
+                  {/* Bar Chart */}
+                  <div className="lp-dash-chart">
+                    <div className="lp-dash-chart-head">
+                      <span>Vendas — Setembro 2026</span>
+                      <span className="lp-dash-chart-total">R$ 29.100</span>
+                    </div>
+                    <div className="lp-dash-chart-bars">
+                      {SALES_CHART.map((d) => (
+                        <div key={d.day} className="lp-dash-chart-col">
+                          <div className="lp-dash-chart-bar-wrap">
+                            <div
+                              className="lp-dash-chart-bar"
+                              style={{ height: `${(d.value / MAX_SALE) * 100}%` }}
+                            >
+                              <span className="lp-dash-chart-tip">{formatBRL(d.value)}</span>
+                            </div>
+                          </div>
+                          <span className="lp-dash-chart-day">{d.day}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recent Sales */}
+                  <div className="lp-dash-recent">
+                    <div className="lp-dash-recent-head">
+                      <Clock size={13} />
+                      <span>Vendas Recentes</span>
+                    </div>
+                    <div className="lp-dash-recent-list">
+                      {RECENT_SALES.map((s) => (
+                        <div key={s.id} className="lp-dash-recent-item">
+                          <div className="lp-dash-recent-left">
+                            <span className="lp-dash-recent-id">{s.id}</span>
+                            <span className="lp-dash-recent-client">{s.client}</span>
+                          </div>
+                          <div className="lp-dash-recent-right">
+                            <span className="lp-dash-recent-val">{s.value}</span>
+                            <span className={`lp-dash-recent-status ${s.status === 'Aprovado' ? 'ok' : s.status === 'Pendente' ? 'pend' : 'ship'}`}>
+                              {s.status === 'Aprovado' && <CheckCircle2 size={10} />}
+                              {s.status === 'Pendente' && <Clock size={10} />}
+                              {s.status === 'Enviado' && <Truck size={10} />}
+                              {s.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div className="lp-mock-bottom">
-                  <div className="lp-mock-list">
-                    {[{ n: 'Produto A', v: 'R$ 12k' }, { n: 'Produto B', v: 'R$ 9.8k' }, { n: 'Produto C', v: 'R$ 7.2k' }].map((p) => (
-                      <div key={p.n} className="lp-mock-li">
-                        <span className="lp-mock-li-dot" />
-                        <span>{p.n}</span>
-                        <span className="lp-mock-li-v">{p.v}</span>
+
+                {/* Top Products + Low Stock */}
+                <div className="lp-dash-row">
+                  <div className="lp-dash-top">
+                    <div className="lp-dash-top-head">
+                      <TrendingUp size={13} />
+                      <span>Top Produtos</span>
+                    </div>
+                    {TOP_PRODUCTS.map((p) => (
+                      <div key={p.name} className="lp-dash-top-item">
+                        <div className="lp-dash-top-info">
+                          <span className="lp-dash-top-name">{p.name}</span>
+                          <span className="lp-dash-top-meta">{p.qty} un &bull; {p.total}</span>
+                        </div>
+                        <div className="lp-dash-top-bar-bg">
+                          <div className="lp-dash-top-bar-fill" style={{ width: `${p.pct}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="lp-dash-stock">
+                    <div className="lp-dash-stock-head">
+                      <AlertTriangle size={13} />
+                      <span>Estoque Baixo</span>
+                    </div>
+                    {LOW_STOCK.map((s) => (
+                      <div key={s.name} className={`lp-dash-stock-item ${s.critical ? 'crit' : 'warn'}`}>
+                        <span className="lp-dash-stock-name">{s.name}</span>
+                        <span className="lp-dash-stock-nums">
+                          <strong>{s.current}</strong> / {s.min}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -146,6 +303,43 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ═══ TECH CAROUSEL ═══ */}
+      <section className="lp-carousel-section">
+        <div className="lp-carousel-head">
+          <span className="lp-section-tag">Stack</span>
+          <h2>Tecnologias</h2>
+        </div>
+        <div className="lp-carousel-wrap">
+          <button
+            className={`lp-carousel-btn left ${!canScrollLeft ? 'hidden' : ''}`}
+            onClick={() => scrollCarousel(-1)}
+            aria-label="Anterior"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div
+            className="lp-carousel"
+            ref={carouselRef}
+            onScroll={updateCarouselBtns}
+          >
+            {TECH_STACK.map((t) => (
+              <div key={t.name} className="lp-carousel-card">
+                <span className="lp-carousel-dot" style={{ background: t.color }} />
+                <span className="lp-carousel-name">{t.name}</span>
+                <span className="lp-carousel-desc">{t.desc}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            className={`lp-carousel-btn right ${!canScrollRight ? 'hidden' : ''}`}
+            onClick={() => scrollCarousel(1)}
+            aria-label="Próximo"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </section>
+
       {/* ═══ MODULES ═══ */}
       <section className="lp-section" id="modules">
         <Reveal>
@@ -158,7 +352,7 @@ export default function Landing() {
         <div className="lp-mod-grid">
           {MODULES.map((m, i) => (
             <Reveal key={m.label}>
-              <div className="lp-mod-card" style={{ animationDelay: `${i * 60}ms` }}>
+              <div className="lp-mod-card">
                 <div className="lp-mod-icon"><m.icon size={20} /></div>
                 <div>
                   <h3>{m.label}</h3>
