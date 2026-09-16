@@ -11,31 +11,31 @@ const NAV_SECTIONS = [
   {
     label: 'Principal',
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
+      { to: '/app', icon: LayoutDashboard, label: 'Dashboard', end: true },
     ],
   },
   {
     label: 'Gestão',
     items: [
-      { to: '/clients', icon: Users, label: 'Clientes' },
-      { to: '/products', icon: Package, label: 'Produtos' },
-      { to: '/sales', icon: ShoppingCart, label: 'Vendas' },
-      { to: '/purchases', icon: Truck, label: 'Compras' },
-      { to: '/suppliers', icon: FileText, label: 'Fornecedores' },
+      { to: '/app/clients', icon: Users, label: 'Clientes' },
+      { to: '/app/products', icon: Package, label: 'Produtos' },
+      { to: '/app/sales', icon: ShoppingCart, label: 'Vendas' },
+      { to: '/app/purchases', icon: Truck, label: 'Compras' },
+      { to: '/app/suppliers', icon: FileText, label: 'Fornecedores' },
     ],
   },
   {
     label: 'Financeiro',
     items: [
-      { to: '/financial', icon: DollarSign, label: 'Financeiro' },
-      { to: '/stock', icon: Warehouse, label: 'Estoque' },
-      { to: '/reports', icon: BarChart3, label: 'Relatórios' },
+      { to: '/app/financial', icon: DollarSign, label: 'Financeiro' },
+      { to: '/app/stock', icon: Warehouse, label: 'Estoque' },
+      { to: '/app/reports', icon: BarChart3, label: 'Relatórios' },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { to: '/settings', icon: Settings, label: 'Configurações' },
+      { to: '/app/settings', icon: Settings, label: 'Configurações' },
     ],
   },
 ];

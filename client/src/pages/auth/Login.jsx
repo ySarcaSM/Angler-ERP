@@ -20,7 +20,7 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success('Bem-vindo!');
-      navigate('/');
+      navigate('/app');
     } catch (err) {
       const msg = err.code === 'auth/invalid-credential' ? 'Email ou senha incorretos.'
         : err.code === 'auth/user-not-found' ? 'Usuário não encontrado.'

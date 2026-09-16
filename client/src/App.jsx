@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/layout/Layout';
+import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/dashboard/Dashboard';
@@ -42,9 +43,10 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} />
-      <Route path="/*" element={
+      <Route path="/" element={isAuthenticated ? <Navigate to="/app" replace /> : <Landing />} />
+      <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
+      <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
+      <Route path="/app/*" element={
         <PrivateRoute>
           <Layout>
             <Routes>
@@ -61,7 +63,7 @@ export default function App() {
               <Route path="/reports" element={<ReportsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/users" element={<UserManagement />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/app" replace />} />
             </Routes>
           </Layout>
         </PrivateRoute>
