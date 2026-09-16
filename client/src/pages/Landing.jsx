@@ -1,21 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, BarChart3, Users, Package, ShoppingCart, Truck,
-  DollarSign, TrendingUp, Settings, Shield, Zap, Globe, Lock,
+  ArrowRight, Users, ShoppingCart, Truck,
+  DollarSign, TrendingUp, Shield, Zap, Globe, Lock,
   ChevronLeft, ChevronRight, AlertTriangle, Clock, CheckCircle2,
 } from 'lucide-react';
 
-const MODULES = [
-  { icon: BarChart3, label: 'Dashboard', desc: 'KPIs em tempo real, gráficos de vendas e visão geral do negócio.' },
-  { icon: Users, label: 'Clientes', desc: 'CRM completo com busca, endereço e status.' },
-  { icon: Package, label: 'Produtos', desc: 'Cadastro com preços, categorias e controle de estoque.' },
-  { icon: ShoppingCart, label: 'Vendas', desc: 'Pedidos e orçamentos com aprovação automática.' },
-  { icon: Truck, label: 'Compras', desc: 'Pedidos com recebimento automático de estoque.' },
-  { icon: DollarSign, label: 'Financeiro', desc: 'Contas a pagar/receber e fluxo de caixa.' },
-  { icon: TrendingUp, label: 'Relatórios', desc: 'Análises de vendas, lucro e margem.' },
-  { icon: Settings, label: 'Configurações', desc: 'Empresa, usuários e log de auditoria.' },
-];
+import reactLogo from '../assets/tech/react.png';
+import viteLogo from '../assets/tech/vite.jpg';
+import tailwindcssLogo from '../assets/tech/tailwind.png';
+import firebaseLogo from '../assets/tech/firebase.png';
+import firestoreLogo from '../assets/tech/firestore.jpg';
+import rechartsLogo from '../assets/tech/recharts.jpg';
+import lucideLogo from '../assets/tech/lucide.jpg';
+import datefnsLogo from '../assets/tech/date-fns.png';
+import reactrouterLogo from '../assets/tech/react-router.png';
+import hottoastLogo from '../assets/tech/hot-toast.png';
+
+
+
 
 const STATS = [
   { value: '10+', label: 'Módulos integrados' },
@@ -68,16 +71,56 @@ const MAX_SALE = Math.max(...SALES_CHART.map((d) => d.value));
 
 // ─── Tech Stack Carousel ───
 const TECH_STACK = [
-  { name: 'React 18', color: '#61dafb', desc: 'UI Library' },
-  { name: 'Vite', color: '#bd34fe', desc: 'Build Tool' },
-  { name: 'Tailwind CSS', color: '#38bdf8', desc: 'Estilos' },
-  { name: 'Firebase', color: '#ffca28', desc: 'Backend' },
-  { name: 'Firestore', color: '#ff6f00', desc: 'Database' },
-  { name: 'Recharts', color: '#f7df1e', desc: 'Gráficos' },
-  { name: 'Lucide', color: '#f472b6', desc: 'Ícones' },
-  { name: 'date-fns', color: '#22d3ee', desc: 'Datas' },
-  { name: 'React Router', color: '#ef4444', desc: 'Rotas' },
-  { name: 'Hot Toast', color: '#f97316', desc: 'Notificações' },
+  {
+    name: 'React 18', color: '#61dafb',
+    items: ['Interfaces reativas e declarativas', 'Componentes reutilizáveis', 'Virtual DOM para performance'],
+    image: reactLogo,
+  },
+  {
+    name: 'Vite', color: '#bd34fe',
+    items: ['Hot reload instantâneo', 'Bundler otimizado com ESBuild', 'Dev server ultrarrápido'],
+    image: viteLogo,
+  },
+  {
+    name: 'Tailwind CSS', color: '#38bdf8',
+    items: ['Classes utilitárias no HTML', 'Design responsivo sem CSS custom', 'Produz CSS mínimo no build'],
+    image: tailwindcssLogo,
+  },
+  {
+    name: 'Firebase', color: '#ffca28',
+    items: ['Autenticação pronta (email, Google)', 'Hospedagem com SSL', 'Backend sem servidor'],
+    image: firebaseLogo,
+  },
+  {
+    name: 'Firestore', color: '#ff6f00',
+    items: ['Banco NoSQL em tempo real', 'Consultas avançadas por coleção', 'Sync automático entre clientes'],
+    image: firestoreLogo,
+  },
+  {
+    name: 'Recharts', color: '#f7df1e',
+    items: ['Gráficos declarativos em JSX', 'Construído sobre D3.js', 'Bar, line, pie, area charts'],
+    image: rechartsLogo,
+  },
+  {
+    name: 'Lucide', color: '#f472b6',
+    items: ['Ícones SVG leves e nítidos', 'Tree-shakeable (só importa o que usa)', 'Fácil de customizar tamanho e cor'],
+    image: lucideLogo,
+  },
+  {
+    name: 'date-fns', color: '#22d3ee',
+    items: ['Manipulação de datas modular', 'Formatação localizada (pt-BR)', 'Imutável e friend com tree-shaking'],
+    image: datefnsLogo,
+  },
+  {
+    name: 'React Router', color: '#ef4444',
+    items: ['Rotas aninhadas e declarativas', 'Lazy loading de páginas', 'Navegação programática'],
+    image: reactrouterLogo,
+  },
+  {
+    name: 'Hot Toast', color: '#f97316',
+    items: ['Notificações toast elegantes', 'Animações suaves de entrada/saída', 'Acessível e customizável'],
+    image: hottoastLogo,
+  },
 ];
 
 function Reveal({ children, className = '' }) {
@@ -92,6 +135,8 @@ export default function Landing() {
   const carouselRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const pausedRef = useRef(false);
+  const scrollPosRef = useRef(0);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -104,17 +149,56 @@ export default function Landing() {
     return () => { observer.disconnect(); window.removeEventListener('scroll', onScroll); };
   }, []);
 
+  // Auto-scroll do carousel (px/s — mude PX_PER_SEC para ajustar a velocidade)
+  useEffect(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+
+    const PX_PER_SEC = 30; // ← VELOCIDADE: funciona em qualquer valor, mesmo baixo
+    let lastTime = null;
+    let rafId = null;
+
+    // posição acumulada com casas decimais — el.scrollLeft é sempre inteiro
+    // e arredonda incrementos pequenos para zero, travando o auto-scroll
+    scrollPosRef.current = el.scrollLeft;
+
+    const tick = (now) => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+
+      if (lastTime !== null && !pausedRef.current && maxScroll > 0) {
+        const delta = (now - lastTime) / 1000; // segundos
+        scrollPosRef.current += PX_PER_SEC * delta;
+
+        if (scrollPosRef.current >= maxScroll) {
+          scrollPosRef.current -= maxScroll; // continua fluindo a partir do início
+        }
+
+        el.scrollLeft = scrollPosRef.current;
+      }
+
+      lastTime = now;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  const handleCarouselEnter = () => { pausedRef.current = true; };
+  const handleCarouselLeave = () => { pausedRef.current = false; };
+
   const updateCarouselBtns = () => {
     const el = carouselRef.current;
     if (!el) return;
     setCanScrollLeft(el.scrollLeft > 10);
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+    scrollPosRef.current = el.scrollLeft; // resincroniza após scroll manual (arraste, setas)
   };
 
   const scrollCarousel = (dir) => {
     const el = carouselRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * 260, behavior: 'smooth' });
+    el.scrollBy({ left: dir * 300, behavior: 'smooth' });
     setTimeout(updateCarouselBtns, 350);
   };
 
@@ -127,16 +211,16 @@ export default function Landing() {
         <div className="lp-nav-inner">
           <Link to="/" className="lp-logo">
             <svg viewBox="0 0 28 28" width="28" height="28" fill="none">
-              <path d="M6 14C6 9.58 9.58 6 14 6C18.42 6 22 9.58 22 14" stroke="url(#g1)" strokeWidth="2.5" strokeLinecap="round"/>
-              <circle cx="14" cy="18" r="1.8" fill="url(#g1)"/>
-              <path d="M14 18V22" stroke="url(#g1)" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M10 22H18" stroke="url(#g1)" strokeWidth="2" strokeLinecap="round"/>
-              <defs><linearGradient id="g1" x1="6" y1="6" x2="22" y2="22"><stop stopColor="#f5d17d"/><stop offset="1" stopColor="#b5882b"/></linearGradient></defs>
+              <path d="M6 14C6 9.58 9.58 6 14 6C18.42 6 22 9.58 22 14" stroke="url(#g1)" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="14" cy="18" r="1.8" fill="url(#g1)" />
+              <path d="M14 18V22" stroke="url(#g1)" strokeWidth="2" strokeLinecap="round" />
+              <path d="M10 22H18" stroke="url(#g1)" strokeWidth="2" strokeLinecap="round" />
+              <defs><linearGradient id="g1" x1="6" y1="6" x2="22" y2="22"><stop stopColor="#f5d17d" /><stop offset="1" stopColor="#b5882b" /></linearGradient></defs>
             </svg>
             <span>Angler</span>
           </Link>
           <div className="lp-nav-right">
-            <a href="#modules">Módulos</a>
+
             <a href="#why">Por quê?</a>
             <Link to="/login" className="lp-btn lp-btn-ghost-sm">Entrar</Link>
             <Link to="/register" className="lp-btn lp-btn-gold-sm">Criar Conta</Link>
@@ -309,7 +393,11 @@ export default function Landing() {
           <span className="lp-section-tag">Stack</span>
           <h2>Tecnologias</h2>
         </div>
-        <div className="lp-carousel-wrap">
+        <div
+          className="lp-carousel-wrap"
+          onMouseEnter={handleCarouselEnter}
+          onMouseLeave={handleCarouselLeave}
+        >
           <button
             className={`lp-carousel-btn left ${!canScrollLeft ? 'hidden' : ''}`}
             onClick={() => scrollCarousel(-1)}
@@ -323,10 +411,28 @@ export default function Landing() {
             onScroll={updateCarouselBtns}
           >
             {TECH_STACK.map((t) => (
-              <div key={t.name} className="lp-carousel-card">
-                <span className="lp-carousel-dot" style={{ background: t.color }} />
-                <span className="lp-carousel-name">{t.name}</span>
-                <span className="lp-carousel-desc">{t.desc}</span>
+              <div
+                key={t.name}
+                className="lp-carousel-card"
+                style={{ '--card-accent': t.color }}
+              >
+                <div className="lp-carousel-img">
+                  {t.image ? (
+                    <img src={t.image} alt={t.name} />
+                  ) : (
+                    <div className="lp-carousel-img-placeholder">
+                      <span>{t.name}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="lp-carousel-info">
+                  <span className="lp-carousel-name">{t.name}</span>
+                  <ul className="lp-carousel-desc">
+                    {t.items.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             ))}
           </div>
@@ -340,29 +446,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══ MODULES ═══ */}
-      <section className="lp-section" id="modules">
-        <Reveal>
-          <div className="lp-section-head">
-            <span className="lp-section-tag">Módulos</span>
-            <h2>Tudo integrado</h2>
-            <p>Oito módulos que cobrem cada área do seu negócio.</p>
-          </div>
-        </Reveal>
-        <div className="lp-mod-grid">
-          {MODULES.map((m, i) => (
-            <Reveal key={m.label}>
-              <div className="lp-mod-card">
-                <div className="lp-mod-icon"><m.icon size={20} /></div>
-                <div>
-                  <h3>{m.label}</h3>
-                  <p>{m.desc}</p>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+
 
       {/* ═══ WHY ═══ */}
       <section className="lp-section lp-why" id="why">
