@@ -102,18 +102,14 @@ npm run dev
 # http://localhost:3000
 ```
 
-### 5. Deploy
+### 5. Build
 
 ```bash
-# Build
 npm run build
-
-# Instalar Firebase CLI
-npm install -g firebase-tools
-firebase login
-firebase init hosting
-firebase deploy
 ```
+
+O deploy deve ser feito pelo provedor de hospedagem escolhido. As regras em
+`firestore.rules` podem ser copiadas manualmente em **Firestore Database → Rules**.
 
 ## Estrutura
 

@@ -17,8 +17,8 @@ export default function Register() {
     setLoading(true);
     try {
       await register(form);
-      toast.success('Conta criada com sucesso!');
-      navigate('/app');
+      toast.success('Conta criada! Verifique seu email antes de entrar.');
+      navigate('/login');
     } catch (err) {
       const msg = err.code === 'auth/email-already-in-use' ? 'Este email já está cadastrado.'
         : err.code === 'auth/weak-password' ? 'A senha precisa ter pelo menos 6 caracteres.'

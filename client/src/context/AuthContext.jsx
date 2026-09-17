@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { onAuthChange, getUserData, getCompanyData, login as fbLogin, register as fbRegister, logout as fbLogout, resetPassword as fbResetPassword } from '../services/firebase/auth';
+import {
+  onAuthChange,
+  getUserData,
+  getCompanyData,
+  login as fbLogin,
+  register as fbRegister,
+  logout as fbLogout,
+  resetPassword as fbResetPassword,
+} from '../services/firebase/auth';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);

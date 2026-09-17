@@ -12,6 +12,7 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
+  const [verificationRequired, setVerificationRequired] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
 
   const handleSubmit = async (e) => {
@@ -28,6 +29,7 @@ export default function Login() {
         : err.code === 'auth/too-many-requests' ? 'Muitas tentativas. Tente novamente mais tarde.'
         : err.message;
       toast.error(msg);
+      setVerificationRequired(err.code === 'auth/email-not-verified');
     } finally {
       setLoading(false);
     }
@@ -90,6 +92,7 @@ export default function Login() {
               <label className="label">Email</label>
               <input type="email" className="input" placeholder="seu@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
             </div>
+
             <div>
               <label className="label">Senha</label>
               <div className="relative">
@@ -99,9 +102,11 @@ export default function Login() {
                 </button>
               </div>
             </div>
+
             <div className="flex items-center justify-between text-sm">
               <button type="button" onClick={() => setShowReset(true)} className="text-primary-400 hover:text-primary-300">Esqueceu a senha?</button>
             </div>
+
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading ? <div className="animate-spin w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full" /> : <><LogIn size={18} /> Entrar</>}
             </button>

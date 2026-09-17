@@ -1,0 +1,43 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function currentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isMember(companyId) {
+      return isAuth() && currentUser().companyId == companyId;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuth() && (
+        request.auth.uid == userId ||
+        currentUser().companyId == resource.data.companyId
+      );
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update: if isAuth() && (
+        request.auth.uid == userId ||
+        currentUser().role in ['owner', 'admin']
+      );
+    }
+
+    match /companies/{companyId} {
+      allow read: if isMember(companyId);
+      allow write: if isAuth() && request.auth.uid == companyId;
+    }
+
+    match /{collection}/{docId} {
+      allow read, write: if isMember(resource.data.companyId);
+      allow create: if isMember(request.resource.data.companyId);
+    }
+
+    match /counters/{companyId} {
+      allow read, write: if isMember(companyId);
+    }
+  }
+}

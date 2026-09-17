@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
   onAuthStateChanged,
 } from 'firebase/auth';
@@ -23,6 +24,9 @@ export async function register({ email, password, name, lastName, companyName })
 
   // Update display name
   await updateProfile(user, { displayName: `${name} ${lastName || ''}`.trim() });
+
+  // Firebase sends the verification link once during account creation.
+  await sendEmailVerification(user);
 
   // Create company document
   const companyRef = doc(db, 'companies', user.uid);
@@ -52,12 +56,22 @@ export async function register({ email, password, name, lastName, companyName })
     createdAt: serverTimestamp(),
   });
 
+  await signOut(auth);
+
   return { user, companyId: user.uid };
 }
 
 // ─── Login ───
 export async function login(email, password) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
+
+  if (!cred.user.emailVerified) {
+    await signOut(auth);
+    const error = new Error('Verifique seu email antes de entrar.');
+    error.code = 'auth/email-not-verified';
+    throw error;
+  }
+
   return cred.user;
 }
 

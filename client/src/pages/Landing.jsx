@@ -18,9 +18,7 @@ import lucideLogo from '../assets/tech/lucide.jpg';
 import datefnsLogo from '../assets/tech/date-fns.png';
 import reactrouterLogo from '../assets/tech/react-router.png';
 import hottoastLogo from '../assets/tech/hot-toast.png';
-
-
-
+import erpImage from '../assets/erp.jpg';
 
 const STATS = [
   { value: '10+', label: 'Módulos integrados' },
@@ -243,15 +241,11 @@ export default function Landing() {
       {/* ═══ NAV ═══ */}
       <nav className="lp-nav" id="lp-nav">
         <div className="lp-nav-inner">
-          <Link to="/" className="lp-logo">
-            <img src="../logo.png" alt='logo'/>
-            <span>Angler</span>
-          </Link>
           <div className="lp-nav-right">
-            <a href="#tech" onClick={scrollTo('tech')}>Tecnologias</a>
             <a href="#why" onClick={scrollTo('why')}>Por quê?</a>
             <a href="#pricing" onClick={scrollTo('pricing')}>Planos</a>
             <a href="#faq" onClick={scrollTo('faq')}>FAQ</a>
+            <a href="#tech" onClick={scrollTo('tech')}>Tecnologias</a>
             <a href="#contact" onClick={scrollTo('contact')}>Contato</a>
             <Link to="/login" className="lp-btn lp-btn-ghost-sm">Entrar</Link>
             <Link to="/register" className="lp-btn lp-btn-gold-sm">Criar Conta</Link>
@@ -265,10 +259,10 @@ export default function Landing() {
       {/* ═══ MOBILE MENU ═══ */}
       <div className={`lp-mobile-menu ${mobileOpen ? 'open' : ''}`}>
         <div className="lp-mobile-menu-inner">
-          <a href="#tech" onClick={scrollTo('tech')}>Tecnologias</a>
           <a href="#why" onClick={scrollTo('why')}>Por quê?</a>
           <a href="#pricing" onClick={scrollTo('pricing')}>Planos</a>
           <a href="#faq" onClick={scrollTo('faq')}>FAQ</a>
+          <a href="#tech" onClick={scrollTo('tech')}>Tecnologias</a>
           <a href="#contact" onClick={scrollTo('contact')}>Contato</a>
           <div className="lp-mobile-menu-btns">
             <Link to="/login" className="lp-btn lp-btn-ghost" onClick={() => setMobileOpen(false)}>Entrar</Link>
@@ -281,9 +275,15 @@ export default function Landing() {
       <section className="lp-hero">
         <div className="lp-hero-grid">
           <div className="lp-hero-text">
-            <div className="lp-chip">
-              <span className="lp-chip-dot" />
-              Open Source &bull; Gratuito
+            <div className="lp-brand-block">
+              <div className="lp-brand-wrap">
+                <div className="lp-brand-hero">Angler</div>
+                <img src="../logo.png" alt="logo Angler" className="lp-brand-logo" />
+              </div>
+              <div className="lp-chip">
+                <span className="lp-chip-dot" />
+                Open Source &bull; Gratuito
+              </div>
             </div>
             <h1>
               Seu ERP<br />
@@ -302,124 +302,9 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* ── Real Dashboard Mockup ── */}
+          {/* ── ERP Image Mockup ── */}
           <div className="lp-hero-visual">
-            <div className="lp-dash">
-              {/* Titlebar */}
-              <div className="lp-dash-bar">
-                <span className="lp-mock-dot r" />
-                <span className="lp-mock-dot y" />
-                <span className="lp-mock-dot g" />
-                <span className="lp-dash-bar-title">Angler ERP — Dashboard</span>
-              </div>
-
-              <div className="lp-dash-body">
-                {/* KPI Row */}
-                <div className="lp-dash-kpis">
-                  {KPI_DATA.map((k) => (
-                    <div key={k.label} className="lp-dash-kpi">
-                      <div className="lp-dash-kpi-top">
-                        <span className="lp-dash-kpi-label">{k.label}</span>
-                        <k.icon size={14} className="lp-dash-kpi-icon" />
-                      </div>
-                      <div className="lp-dash-kpi-value">{k.value}</div>
-                      <div className={`lp-dash-kpi-change ${k.up ? 'up' : 'dn'}`}>
-                        {k.up ? '↑' : '⚠'} {k.change}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Chart + Recent Sales */}
-                <div className="lp-dash-row">
-                  {/* Bar Chart */}
-                  <div className="lp-dash-chart">
-                    <div className="lp-dash-chart-head">
-                      <span>Vendas — Setembro 2026</span>
-                      <span className="lp-dash-chart-total">R$ 29.100</span>
-                    </div>
-                    <div className="lp-dash-chart-bars">
-                      {SALES_CHART.map((d) => (
-                        <div key={d.day} className="lp-dash-chart-col">
-                          <div className="lp-dash-chart-bar-wrap">
-                            <div
-                              className="lp-dash-chart-bar"
-                              style={{ height: `${(d.value / MAX_SALE) * 100}%` }}
-                            >
-                              <span className="lp-dash-chart-tip">{formatBRL(d.value)}</span>
-                            </div>
-                          </div>
-                          <span className="lp-dash-chart-day">{d.day}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Recent Sales */}
-                  <div className="lp-dash-recent">
-                    <div className="lp-dash-recent-head">
-                      <Clock size={13} />
-                      <span>Vendas Recentes</span>
-                    </div>
-                    <div className="lp-dash-recent-list">
-                      {RECENT_SALES.map((s) => (
-                        <div key={s.id} className="lp-dash-recent-item">
-                          <div className="lp-dash-recent-left">
-                            <span className="lp-dash-recent-id">{s.id}</span>
-                            <span className="lp-dash-recent-client">{s.client}</span>
-                          </div>
-                          <div className="lp-dash-recent-right">
-                            <span className="lp-dash-recent-val">{s.value}</span>
-                            <span className={`lp-dash-recent-status ${s.status === 'Aprovado' ? 'ok' : s.status === 'Pendente' ? 'pend' : 'ship'}`}>
-                              {s.status === 'Aprovado' && <CheckCircle2 size={10} />}
-                              {s.status === 'Pendente' && <Clock size={10} />}
-                              {s.status === 'Enviado' && <Truck size={10} />}
-                              {s.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Top Products + Low Stock */}
-                <div className="lp-dash-row">
-                  <div className="lp-dash-top">
-                    <div className="lp-dash-top-head">
-                      <TrendingUp size={13} />
-                      <span>Top Produtos</span>
-                    </div>
-                    {TOP_PRODUCTS.map((p) => (
-                      <div key={p.name} className="lp-dash-top-item">
-                        <div className="lp-dash-top-info">
-                          <span className="lp-dash-top-name">{p.name}</span>
-                          <span className="lp-dash-top-meta">{p.qty} un &bull; {p.total}</span>
-                        </div>
-                        <div className="lp-dash-top-bar-bg">
-                          <div className="lp-dash-top-bar-fill" style={{ width: `${p.pct}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="lp-dash-stock">
-                    <div className="lp-dash-stock-head">
-                      <AlertTriangle size={13} />
-                      <span>Estoque Baixo</span>
-                    </div>
-                    {LOW_STOCK.map((s) => (
-                      <div key={s.name} className={`lp-dash-stock-item ${s.critical ? 'crit' : 'warn'}`}>
-                        <span className="lp-dash-stock-name">{s.name}</span>
-                        <span className="lp-dash-stock-nums">
-                          <strong>{s.current}</strong> / {s.min}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <img src={erpImage} alt="Dashboard do ERP Angler" className="lp-erp-image" />
           </div>
         </div>
       </section>
@@ -435,67 +320,6 @@ export default function Landing() {
           ))}
         </div>
       </section>
-
-      {/* ═══ TECH CAROUSEL ═══ */}
-      <section className="lp-carousel-section" id="tech">
-        <div className="lp-carousel-head">
-          <span className="lp-section-tag">Stack</span>
-          <h2>Tecnologias</h2>
-        </div>
-        <div
-          className="lp-carousel-wrap"
-          onMouseEnter={handleCarouselEnter}
-          onMouseLeave={handleCarouselLeave}
-        >
-          <button
-            className={`lp-carousel-btn left ${!canScrollLeft ? 'hidden' : ''}`}
-            onClick={() => scrollCarousel(-1)}
-            aria-label="Anterior"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <div
-            className="lp-carousel"
-            ref={carouselRef}
-            onScroll={updateCarouselBtns}
-          >
-            {[...TECH_STACK, ...TECH_STACK].map((t, i) => (
-              <div
-                key={`${t.name}-${i}`}
-                className="lp-carousel-card"
-                style={{ '--card-accent': t.color }}
-              >
-                <div className="lp-carousel-img">
-                  {t.image ? (
-                    <img src={t.image} alt={t.name} />
-                  ) : (
-                    <div className="lp-carousel-img-placeholder">
-                      <span>{t.name}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="lp-carousel-info">
-                  <span className="lp-carousel-name">{t.name}</span>
-                  <ul className="lp-carousel-desc">
-                    {t.items.map((item, i) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            className={`lp-carousel-btn right ${!canScrollRight ? 'hidden' : ''}`}
-            onClick={() => scrollCarousel(1)}
-            aria-label="Próximo"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </section>
-
-
 
       {/* ═══ WHY ═══ */}
       <section className="lp-section lp-why" id="why">
@@ -626,6 +450,60 @@ export default function Landing() {
           ].map((item, i) => (
             <FaqItem key={i} question={item.q} answer={item.a} />
           ))}
+        </div>
+      </section>
+
+      {/* ═══ TECH CAROUSEL ═══ */}
+      <section className="lp-carousel-section" id="tech">
+        <div className="lp-carousel-head">
+          <span className="lp-section-tag">Stack</span>
+          <h2>Tecnologias</h2>
+        </div>
+        <div
+          className="lp-carousel-wrap"
+          onMouseEnter={handleCarouselEnter}
+          onMouseLeave={handleCarouselLeave}
+        >
+          <button
+            className={`lp-carousel-btn left ${!canScrollLeft ? 'hidden' : ''}`}
+            onClick={() => scrollCarousel(-1)}
+            aria-label="Anterior"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div
+            className="lp-carousel lp-tech-list"
+            ref={carouselRef}
+            onScroll={updateCarouselBtns}
+          >
+            {[...TECH_STACK, ...TECH_STACK].map((t, i) => (
+              <React.Fragment key={`${t.name}-${i}`}>
+                <div
+                  className="lp-carousel-card lp-tech-pill"
+                  style={{ '--card-accent': t.color }}
+                >
+                  <div className="lp-tech-icon">
+                    {t.image ? (
+                      <img src={t.image} alt={t.name} />
+                    ) : (
+                      <span>{t.name.slice(0, 2)}</span>
+                    )}
+                  </div>
+                  <span className="lp-tech-name">{t.name}</span>
+                </div>
+                {i < [...TECH_STACK, ...TECH_STACK].length - 1 && (
+                  <span className="lp-carousel-separator">•</span>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+          <button
+            className={`lp-carousel-btn right ${!canScrollRight ? 'hidden' : ''}`}
+            onClick={() => scrollCarousel(1)}
+            aria-label="Próximo"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
       </section>
 

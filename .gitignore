@@ -9,6 +9,7 @@ client/dist/
 .env.local
 .env.production
 client/.env
+functions/.env
 
 # IDE
 .vscode/
