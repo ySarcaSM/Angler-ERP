@@ -66,7 +66,30 @@ const AVAILABLE_MODULES = [
 ];
 
 // ═══════════════════════════════════════════
-// Componente
+// Input reutilizável (FORA do componente para evitar re-criação)
+// ═══════════════════════════════════════════
+
+function InputField({ label, name, type = 'text', placeholder, value, onChange, error, required, ...rest }) {
+  return (
+    <div>
+      <label className="label">
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <input
+        type={type}
+        className={`input ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        {...rest}
+      />
+      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// Componente principal
 // ═══════════════════════════════════════════
 
 export default function Register() {
@@ -192,29 +215,6 @@ export default function Register() {
     } finally {
       setLoading(false);
     }
-  }
-
-  // ═══════════════════════════════════════════
-  // Helpers de input
-  // ═══════════════════════════════════════════
-
-  function InputField({ label, name, type = 'text', placeholder, value, onChange, error, required, ...rest }) {
-    return (
-      <div>
-        <label className="label">
-          {label} {required && <span className="text-red-400">*</span>}
-        </label>
-        <input
-          type={type}
-          className={`input ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          {...rest}
-        />
-        {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
-      </div>
-    );
   }
 
   // ═══════════════════════════════════════════
