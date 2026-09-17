@@ -18,6 +18,10 @@ import ReportsPage from './pages/reports/ReportsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import UserManagement from './pages/settings/UserManagement';
 
+// ─── Admin ───
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminPanel from './pages/admin/AdminPanel';
+
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
   if (loading) {
@@ -46,6 +50,11 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
+
+      {/* Admin */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/contas" element={<AdminPanel />} />
+
       <Route path="/app/*" element={
         <PrivateRoute>
           <Layout>

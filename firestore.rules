@@ -14,6 +14,11 @@ service cloud.firestore {
       return isAuth() && currentUser().companyId == companyId;
     }
 
+    function isAdmin(companyId) {
+      return isAuth() && isMember(companyId) &&
+        currentUser().role in ['owner', 'admin'];
+    }
+
     match /users/{userId} {
       allow read: if isAuth() && (
         request.auth.uid == userId ||
@@ -24,6 +29,12 @@ service cloud.firestore {
         request.auth.uid == userId ||
         currentUser().role in ['owner', 'admin']
       );
+      allow delete: if isAdmin(resource.data.companyId);
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin(resource.data.companyId);
+      allow create: if true;
     }
 
     match /companies/{companyId} {

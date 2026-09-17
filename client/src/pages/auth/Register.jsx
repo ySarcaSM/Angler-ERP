@@ -418,7 +418,7 @@ export default function Register() {
   // ═══════════════════════════════════════════
 
   async function handleSubmit(e) {
-    e.preventDefault();
+    e?.preventDefault?.();
     if (!validateStep3()) return;
 
     setLoading(true);
@@ -511,7 +511,8 @@ export default function Register() {
                   </button>
                 ) : (
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleSubmit}
                     className="btn-primary flex-1 flex items-center justify-center gap-2"
                     disabled={loading}
                   >

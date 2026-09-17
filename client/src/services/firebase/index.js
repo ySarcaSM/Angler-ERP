@@ -11,4 +11,5 @@ export * as suppliersService from './suppliers';
 export * as financialService from './financial';
 export * as stockService from './stock';
 export * as settingsService from './settings';
+export * as adminService from './admin';
 export { db, auth, storage } from '../../config/firebase';

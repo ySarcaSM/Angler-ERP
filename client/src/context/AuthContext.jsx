@@ -27,6 +27,16 @@ export function AuthProvider({ children }) {
           // Get user data from Firestore
           const uData = await getUserData(firebaseUser.uid);
           if (uData) {
+            // Verificar se a conta está desativada
+            if (uData.status === 'disabled') {
+              await fbLogout();
+              setUser(null);
+              setUserData(null);
+              setCompany(null);
+              toast.error('Sua conta foi desativada. Contate o administrador.');
+              return;
+            }
+
             setUserData(uData);
             setUser(firebaseUser);
 
@@ -36,8 +46,11 @@ export function AuthProvider({ children }) {
               setCompany(cData);
             }
           } else {
-            // User doc doesn't exist yet (might be during registration)
-            setUser(firebaseUser);
+            // Documento do usuário não existe (foi excluído pelo admin)
+            await fbLogout();
+            setUser(null);
+            setUserData(null);
+            setCompany(null);
           }
         } catch (err) {
           console.error('Error loading user data:', err);

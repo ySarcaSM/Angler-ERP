@@ -383,6 +383,7 @@ export default function Landing() {
               <ul className="lp-pricing-features">
                 <li><Check size={14} /> Acesso completo ao conteúdo já disponível</li>
                 <li><Check size={14} /> Todos os módulos do ERP</li>
+                <li><Check size={14} /> Painel de administração de contas</li>
                 <li><Check size={14} /> Suporte da comunidade</li>
               </ul>
               <Link to="/register" className="lp-btn lp-btn-ghost lp-pricing-cta">Começar grátis</Link>
