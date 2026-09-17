@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, Package, ShoppingCart, Truck,
+  Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
   FileText, ChevronLeft, ChevronRight,
 } from 'lucide-react';
@@ -11,7 +11,8 @@ const NAV_SECTIONS = [
   {
     label: 'Principal',
     items: [
-      { to: '/app', icon: LayoutDashboard, label: 'Dashboard', end: true },
+      { to: '/', icon: Home, label: 'Home', end: true },
+      { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
     ],
   },
   {
