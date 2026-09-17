@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   UserPlus, ArrowLeft, ArrowRight, Check, Building2, User, LayoutGrid,
@@ -65,8 +65,14 @@ const AVAILABLE_MODULES = [
   { key: 'reports', label: 'Relatórios', desc: 'Vendas, lucro, margem' },
 ];
 
+const STEPS = [
+  { num: 1, label: 'Conta', icon: User },
+  { num: 2, label: 'Empresa', icon: Building2 },
+  { num: 3, label: 'Módulos', icon: LayoutGrid },
+];
+
 // ═══════════════════════════════════════════
-// Input reutilizável (FORA do componente para evitar re-criação)
+// Sub-componentes (FORA para evitar re-criação)
 // ═══════════════════════════════════════════
 
 function InputField({ label, name, type = 'text', placeholder, value, onChange, error, required, ...rest }) {
@@ -84,6 +90,241 @@ function InputField({ label, name, type = 'text', placeholder, value, onChange, 
         {...rest}
       />
       {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+    </div>
+  );
+}
+
+function StepIndicator({ currentStep }) {
+  return (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {STEPS.map((s, i) => (
+        <React.Fragment key={s.num}>
+          <div className="flex items-center gap-1.5">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+              currentStep > s.num
+                ? 'bg-primary-500 text-dark-950'
+                : currentStep === s.num
+                  ? 'bg-primary-400/20 border border-primary-400/40 text-primary-300'
+                  : 'bg-dark-800 border border-dark-700 text-dark-500'
+            }`}>
+              {currentStep > s.num ? <Check size={14} /> : s.num}
+            </div>
+            <span className={`text-xs font-medium hidden sm:inline ${
+              currentStep >= s.num ? 'text-primary-300' : 'text-dark-600'
+            }`}>
+              {s.label}
+            </span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div className={`w-8 h-0.5 rounded-full transition-all ${
+              currentStep > s.num ? 'bg-primary-500' : 'bg-dark-700'
+            }`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function ModuleToggle({ modKey, label, desc, active, onToggle }) {
+  return (
+    <div
+      role="checkbox"
+      aria-checked={active}
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onToggle(); }}}
+      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer select-none transition-all ${
+        active
+          ? 'border-primary-400/40 bg-primary-400/10 text-primary-200'
+          : 'border-dark-700/50 bg-dark-800/50 text-dark-400 hover:border-dark-600'
+      }`}
+    >
+      <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${
+        active
+          ? 'bg-primary-500 border-primary-500 text-dark-950'
+          : 'border-dark-600 bg-dark-800'
+      }`}>
+        {active && <Check size={14} />}
+      </div>
+      <div className="min-w-0">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs opacity-60">{desc}</div>
+      </div>
+    </div>
+  );
+}
+
+function Step1({ account, setAccount, errors }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4">
+        <User size={20} className="text-primary-400" />
+        <h2 className="text-lg font-semibold text-dark-100">Informações da Conta</h2>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <InputField
+          label="Nome" name="name" placeholder="João" required
+          value={account.name}
+          onChange={(e) => setAccount({ ...account, name: e.target.value })}
+          error={errors.name}
+        />
+        <InputField
+          label="Sobrenome" name="lastName" placeholder="Silva"
+          value={account.lastName}
+          onChange={(e) => setAccount({ ...account, lastName: e.target.value })}
+        />
+      </div>
+
+      <InputField
+        label="Email" name="email" type="email" placeholder="joao@email.com" required
+        value={account.email}
+        onChange={(e) => setAccount({ ...account, email: e.target.value })}
+        error={errors.email}
+      />
+
+      <InputField
+        label="Senha" name="password" type="password" placeholder="Mínimo 6 caracteres" required
+        value={account.password}
+        onChange={(e) => setAccount({ ...account, password: e.target.value })}
+        error={errors.password}
+        minLength={6}
+      />
+
+      <InputField
+        label="Confirmar Senha" name="confirmPassword" type="password" placeholder="Repita a senha" required
+        value={account.confirmPassword}
+        onChange={(e) => setAccount({ ...account, confirmPassword: e.target.value })}
+        error={errors.confirmPassword}
+      />
+    </div>
+  );
+}
+
+function Step2({ company, setCompany, errors }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Building2 size={20} className="text-primary-400" />
+        <h2 className="text-lg font-semibold text-dark-100">Informações da Empresa</h2>
+      </div>
+
+      <InputField
+        label="Nome da Empresa" name="companyName" placeholder="Angler Tech" required
+        value={company.companyName}
+        onChange={(e) => setCompany({ ...company, companyName: e.target.value })}
+        error={errors.companyName}
+      />
+
+      <InputField
+        label="Razão Social" name="razaoSocial" placeholder="Angler Tecnologia Ltda"
+        value={company.razaoSocial}
+        onChange={(e) => setCompany({ ...company, razaoSocial: e.target.value })}
+      />
+
+      <InputField
+        label="CNPJ" name="cnpj" placeholder="00.000.000/0000-00" required
+        value={company.cnpj}
+        onChange={(e) => setCompany({ ...company, cnpj: formatCNPJ(e.target.value) })}
+        error={errors.cnpj}
+        maxLength={18}
+      />
+
+      <InputField
+        label="Setor" name="sector" placeholder="Tecnologia, Comércio, Serviços..."
+        value={company.sector}
+        onChange={(e) => setCompany({ ...company, sector: e.target.value })}
+      />
+
+      <InputField
+        label="Endereço" name="address" placeholder="Rua Exemplo, 123 - Centro - São Paulo/SP" required
+        value={company.address}
+        onChange={(e) => setCompany({ ...company, address: e.target.value })}
+        error={errors.address}
+      />
+
+      <div className="grid grid-cols-2 gap-3">
+        <InputField
+          label="Email Empresarial" name="companyEmail" type="email" placeholder="contato@empresa.com" required
+          value={company.companyEmail}
+          onChange={(e) => setCompany({ ...company, companyEmail: e.target.value })}
+          error={errors.companyEmail}
+        />
+        <InputField
+          label="Telefone" name="companyPhone" placeholder="(11) 99999-9999" required
+          value={company.companyPhone}
+          onChange={(e) => setCompany({ ...company, companyPhone: formatPhone(e.target.value) })}
+          error={errors.companyPhone}
+          maxLength={15}
+        />
+      </div>
+    </div>
+  );
+}
+
+function Step3({ modules, setModules, lockModules, setLockModules, errors }) {
+  const toggleModule = useCallback((key) => {
+    setModules((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, [setModules]);
+
+  const selectedCount = Object.values(modules).filter(Boolean).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4">
+        <LayoutGrid size={20} className="text-primary-400" />
+        <h2 className="text-lg font-semibold text-dark-100">Personalização</h2>
+      </div>
+
+      <p className="text-dark-400 text-sm">
+        Selecione os módulos que sua empresa vai utilizar:
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {AVAILABLE_MODULES.map((mod) => (
+          <ModuleToggle
+            key={mod.key}
+            modKey={mod.key}
+            label={mod.label}
+            desc={mod.desc}
+            active={modules[mod.key]}
+            onToggle={() => toggleModule(mod.key)}
+          />
+        ))}
+      </div>
+
+      {errors.modules && <p className="text-red-400 text-xs">{errors.modules}</p>}
+
+      <div className="text-xs text-dark-500">
+        {selectedCount} de {AVAILABLE_MODULES.length} módulos selecionados
+      </div>
+
+      {/* Lock option */}
+      <div className="border-t border-dark-700/50 pt-4 mt-2">
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <div className="relative mt-0.5">
+            <input
+              type="checkbox"
+              checked={lockModules}
+              onChange={(e) => setLockModules(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-5 h-5 rounded-md border border-dark-600 bg-dark-800 peer-checked:bg-primary-500 peer-checked:border-primary-500 transition-all flex items-center justify-center">
+              {lockModules && <Check size={14} className="text-dark-950" />}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">
+              Carimbar configuração
+            </div>
+            <div className="text-xs text-dark-500 mt-0.5">
+              Impede que módulos sejam adicionados ou removidos após o cadastro.
+              Somente um administrador poderá alterar depois.
+            </div>
+          </div>
+        </label>
+      </div>
     </div>
   );
 }
@@ -187,12 +428,10 @@ export default function Register() {
         .map(([k]) => k);
 
       await register({
-        // Conta
         email: account.email.trim(),
         password: account.password,
         name: account.name.trim(),
         lastName: account.lastName.trim(),
-        // Empresa
         companyName: company.companyName.trim(),
         razaoSocial: company.razaoSocial.trim(),
         cnpj: company.cnpj.replace(/\D/g, ''),
@@ -200,7 +439,6 @@ export default function Register() {
         address: company.address.trim(),
         companyEmail: company.companyEmail.trim(),
         companyPhone: company.companyPhone.replace(/\D/g, ''),
-        // Módulos
         enabledModules,
         modulesLocked: lockModules,
       });
@@ -218,240 +456,7 @@ export default function Register() {
   }
 
   // ═══════════════════════════════════════════
-  // Render dos passos
-  // ═══════════════════════════════════════════
-
-  function renderStep1() {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <User size={20} className="text-primary-400" />
-          <h2 className="text-lg font-semibold text-dark-100">Informações da Conta</h2>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <InputField
-            label="Nome" name="name" placeholder="João" required
-            value={account.name}
-            onChange={(e) => setAccount({ ...account, name: e.target.value })}
-            error={errors.name}
-          />
-          <InputField
-            label="Sobrenome" name="lastName" placeholder="Silva"
-            value={account.lastName}
-            onChange={(e) => setAccount({ ...account, lastName: e.target.value })}
-          />
-        </div>
-
-        <InputField
-          label="Email" name="email" type="email" placeholder="joao@email.com" required
-          value={account.email}
-          onChange={(e) => setAccount({ ...account, email: e.target.value })}
-          error={errors.email}
-        />
-
-        <InputField
-          label="Senha" name="password" type="password" placeholder="Mínimo 6 caracteres" required
-          value={account.password}
-          onChange={(e) => setAccount({ ...account, password: e.target.value })}
-          error={errors.password}
-          minLength={6}
-        />
-
-        <InputField
-          label="Confirmar Senha" name="confirmPassword" type="password" placeholder="Repita a senha" required
-          value={account.confirmPassword}
-          onChange={(e) => setAccount({ ...account, confirmPassword: e.target.value })}
-          error={errors.confirmPassword}
-        />
-      </div>
-    );
-  }
-
-  function renderStep2() {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Building2 size={20} className="text-primary-400" />
-          <h2 className="text-lg font-semibold text-dark-100">Informações da Empresa</h2>
-        </div>
-
-        <InputField
-          label="Nome da Empresa" name="companyName" placeholder="Angler Tech" required
-          value={company.companyName}
-          onChange={(e) => setCompany({ ...company, companyName: e.target.value })}
-          error={errors.companyName}
-        />
-
-        <InputField
-          label="Razão Social" name="razaoSocial" placeholder="Angler Tecnologia Ltda"
-          value={company.razaoSocial}
-          onChange={(e) => setCompany({ ...company, razaoSocial: e.target.value })}
-        />
-
-        <InputField
-          label="CNPJ" name="cnpj" placeholder="00.000.000/0000-00" required
-          value={company.cnpj}
-          onChange={(e) => setCompany({ ...company, cnpj: formatCNPJ(e.target.value) })}
-          error={errors.cnpj}
-          maxLength={18}
-        />
-
-        <InputField
-          label="Setor" name="sector" placeholder="Tecnologia, Comércio, Serviços..."
-          value={company.sector}
-          onChange={(e) => setCompany({ ...company, sector: e.target.value })}
-        />
-
-        <InputField
-          label="Endereço" name="address" placeholder="Rua Exemplo, 123 - Centro - São Paulo/SP" required
-          value={company.address}
-          onChange={(e) => setCompany({ ...company, address: e.target.value })}
-          error={errors.address}
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          <InputField
-            label="Email Empresarial" name="companyEmail" type="email" placeholder="contato@empresa.com" required
-            value={company.companyEmail}
-            onChange={(e) => setCompany({ ...company, companyEmail: e.target.value })}
-            error={errors.companyEmail}
-          />
-          <InputField
-            label="Telefone" name="companyPhone" placeholder="(11) 99999-9999" required
-            value={company.companyPhone}
-            onChange={(e) => setCompany({ ...company, companyPhone: formatPhone(e.target.value) })}
-            error={errors.companyPhone}
-            maxLength={15}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  function renderStep3() {
-    const selectedCount = Object.values(modules).filter(Boolean).length;
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <LayoutGrid size={20} className="text-primary-400" />
-          <h2 className="text-lg font-semibold text-dark-100">Personalização</h2>
-        </div>
-
-        <p className="text-dark-400 text-sm">
-          Selecione os módulos que sua empresa vai utilizar:
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {AVAILABLE_MODULES.map((mod) => {
-            const active = modules[mod.key];
-            return (
-              <button
-                key={mod.key}
-                type="button"
-                onClick={() => setModules({ ...modules, [mod.key]: !active })}
-                className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
-                  active
-                    ? 'border-primary-400/40 bg-primary-400/10 text-primary-200'
-                    : 'border-dark-700/50 bg-dark-800/50 text-dark-400 hover:border-dark-600'
-                }`}
-              >
-                <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${
-                  active
-                    ? 'bg-primary-500 border-primary-500 text-dark-950'
-                    : 'border-dark-600 bg-dark-800'
-                }`}>
-                  {active && <Check size={14} />}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-medium">{mod.label}</div>
-                  <div className="text-xs opacity-60">{mod.desc}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {errors.modules && <p className="text-red-400 text-xs">{errors.modules}</p>}
-
-        <div className="text-xs text-dark-500">
-          {selectedCount} de {AVAILABLE_MODULES.length} módulos selecionados
-        </div>
-
-        {/* Lock option */}
-        <div className="border-t border-dark-700/50 pt-4 mt-2">
-          <label className="flex items-start gap-3 cursor-pointer group">
-            <div className="relative mt-0.5">
-              <input
-                type="checkbox"
-                checked={lockModules}
-                onChange={(e) => setLockModules(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-5 h-5 rounded-md border border-dark-600 bg-dark-800 peer-checked:bg-primary-500 peer-checked:border-primary-500 transition-all flex items-center justify-center">
-                {lockModules && <Check size={14} className="text-dark-950" />}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">
-                Carimbar configuração
-              </div>
-              <div className="text-xs text-dark-500 mt-0.5">
-                Impede que módulos sejam adicionados ou removidos após o cadastro.
-                Somente um administrador poderá alterar depois.
-              </div>
-            </div>
-          </label>
-        </div>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════
-  // Indicador de progresso
-  // ═══════════════════════════════════════════
-
-  const steps = [
-    { num: 1, label: 'Conta', icon: User },
-    { num: 2, label: 'Empresa', icon: Building2 },
-    { num: 3, label: 'Módulos', icon: LayoutGrid },
-  ];
-
-  function StepIndicator() {
-    return (
-      <div className="flex items-center justify-center gap-2 mb-6">
-        {steps.map((s, i) => (
-          <React.Fragment key={s.num}>
-            <div className="flex items-center gap-1.5">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                step > s.num
-                  ? 'bg-primary-500 text-dark-950'
-                  : step === s.num
-                    ? 'bg-primary-400/20 border border-primary-400/40 text-primary-300'
-                    : 'bg-dark-800 border border-dark-700 text-dark-500'
-              }`}>
-                {step > s.num ? <Check size={14} /> : s.num}
-              </div>
-              <span className={`text-xs font-medium hidden sm:inline ${
-                step >= s.num ? 'text-primary-300' : 'text-dark-600'
-              }`}>
-                {s.label}
-              </span>
-            </div>
-            {i < steps.length - 1 && (
-              <div className={`w-8 h-0.5 rounded-full transition-all ${
-                step > s.num ? 'bg-primary-500' : 'bg-dark-700'
-              }`} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════
-  // Render principal
+  // Render
   // ═══════════════════════════════════════════
 
   return (
@@ -469,12 +474,20 @@ export default function Register() {
         {/* Card */}
         <div className="card">
           <div className="card-body">
-            <StepIndicator />
+            <StepIndicator currentStep={step} />
 
             <form onSubmit={handleSubmit}>
-              {step === 1 && renderStep1()}
-              {step === 2 && renderStep2()}
-              {step === 3 && renderStep3()}
+              {step === 1 && <Step1 account={account} setAccount={setAccount} errors={errors} />}
+              {step === 2 && <Step2 company={company} setCompany={setCompany} errors={errors} />}
+              {step === 3 && (
+                <Step3
+                  modules={modules}
+                  setModules={setModules}
+                  lockModules={lockModules}
+                  setLockModules={setLockModules}
+                  errors={errors}
+                />
+              )}
 
               {/* Botões de navegação */}
               <div className="flex items-center gap-3 mt-6 pt-4 border-t border-dark-700/50">
