@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, Users, ShoppingCart, Truck,
+  Home, ArrowRight, Users, ShoppingCart, Truck,
   DollarSign, TrendingUp, Shield, Zap, Globe, Lock,
   ChevronLeft, ChevronRight, AlertTriangle, Clock, CheckCircle2,
   Check, Star, Crown, Sparkles,
@@ -234,6 +234,12 @@ export default function Landing() {
     });
   };
 
+  const scrollToTop = (e) => {
+    e.preventDefault();
+    setMobileOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="lp">
       <div className="lp-noise" />
@@ -242,6 +248,7 @@ export default function Landing() {
       <nav className="lp-nav" id="lp-nav">
         <div className="lp-nav-inner">
           <div className="lp-nav-right">
+            <a href="#" onClick={scrollToTop}><Home size={18} style={{ verticalAlign: 'middle' }} /></a>
             <a href="#why" onClick={scrollTo('why')}>Por quê?</a>
             <a href="#pricing" onClick={scrollTo('pricing')}>Planos</a>
             <a href="#faq" onClick={scrollTo('faq')}>FAQ</a>
@@ -259,6 +266,7 @@ export default function Landing() {
       {/* ═══ MOBILE MENU ═══ */}
       <div className={`lp-mobile-menu ${mobileOpen ? 'open' : ''}`}>
         <div className="lp-mobile-menu-inner">
+          <a href="#" onClick={scrollToTop}><Home size={18} style={{ verticalAlign: 'middle', marginRight: 6 }} />Home</a>
           <a href="#why" onClick={scrollTo('why')}>Por quê?</a>
           <a href="#pricing" onClick={scrollTo('pricing')}>Planos</a>
           <a href="#faq" onClick={scrollTo('faq')}>FAQ</a>
