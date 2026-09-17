@@ -17,7 +17,14 @@ import {
 import { auth, db } from '../../config/firebase';
 
 // ─── Register ───
-export async function register({ email, password, name, lastName, companyName }) {
+export async function register({
+  // Account
+  email, password, name, lastName,
+  // Company
+  companyName, razaoSocial, cnpj, sector, address, companyEmail, companyPhone,
+  // Modules
+  enabledModules, modulesLocked,
+}) {
   // Create Firebase Auth user
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   const user = cred.user;
@@ -32,6 +39,12 @@ export async function register({ email, password, name, lastName, companyName })
   const companyRef = doc(db, 'companies', user.uid);
   await setDoc(companyRef, {
     name: companyName,
+    razaoSocial: razaoSocial || '',
+    cnpj: cnpj || '',
+    sector: sector || '',
+    address: address || '',
+    companyEmail: companyEmail || '',
+    companyPhone: companyPhone || '',
     createdAt: serverTimestamp(),
     plan: 'trial',
     ownerUid: user.uid,
@@ -40,6 +53,10 @@ export async function register({ email, password, name, lastName, companyName })
       timezone: 'America/Sao_Paulo',
       taxRegime: 'simples',
       lowStockThreshold: 10,
+    },
+    modules: {
+      enabled: enabledModules || ['clients', 'products', 'sales', 'purchases', 'suppliers', 'financial', 'stock', 'reports'],
+      locked: modulesLocked || false,
     },
   });
 

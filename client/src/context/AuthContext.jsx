@@ -58,8 +58,8 @@ export function AuthProvider({ children }) {
     return fbUser;
   }, []);
 
-  const register = useCallback(async ({ email, password, name, lastName, companyName }) => {
-    const result = await fbRegister({ email, password, name, lastName, companyName });
+  const register = useCallback(async (data) => {
+    const result = await fbRegister(data);
     return result;
   }, []);
 
