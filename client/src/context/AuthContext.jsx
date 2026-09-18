@@ -9,6 +9,8 @@ import {
   logout as fbLogout,
   resetPassword as fbResetPassword,
 } from '../services/firebase/auth';
+import { getStoredAdminSession } from '../services/firebase/admin';
+import { isCurrentUserAdmin } from '../services/firebase/admin';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext(null);
@@ -23,6 +25,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {
+        // Não interferir com a sessão do superadmin
+        const adminSession = getStoredAdminSession();
+        if (adminSession && firebaseUser.uid === adminSession.uid) {
+          setLoading(false);
+          return;
+        }
+
         try {
           // Get user data from Firestore
           const uData = await getUserData(firebaseUser.uid);

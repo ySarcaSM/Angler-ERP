@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
-import { adminLogin } from '../../services/firebase/admin';
+import { Shield, Eye, EyeOff, LogIn, AlertCircle, User } from 'lucide-react';
+import { useAdminAuth } from '../../context/AdminAuthContext';
 import toast from 'react-hot-toast';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const { login, isAuthenticated } = useAdminAuth();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Se já está logado, redirecionar
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/admin/contas', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,8 +26,8 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const adminUser = await adminLogin(email, password);
-      toast.success(`Bem-vindo, ${adminUser.name || adminUser.email}!`);
+      await login(username, password);
+      toast.success('Acesso autorizado.');
       navigate('/admin/contas');
     } catch (err) {
       const msg = err.message || 'Erro ao fazer login.';
@@ -40,7 +48,7 @@ export default function AdminLogin() {
           </div>
           <h1 className="text-2xl font-bold text-white">Painel Administrativo</h1>
           <p className="text-dark-400 mt-2">
-            Acesso restrito a administradores
+            Acesso exclusivo do administrador master
           </p>
         </div>
 
@@ -56,23 +64,26 @@ export default function AdminLogin() {
             </div>
           )}
 
-          {/* Email */}
+          {/* Username */}
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-1.5">
-              E-mail do administrador
+              Usuário
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              placeholder="admin@empresa.com"
-              className="w-full px-4 py-2.5 rounded-lg bg-dark-800 border border-dark-600
-                         text-white placeholder-dark-500
-                         focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500
-                         transition-colors"
-            />
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                autoComplete="username"
+                placeholder="admin"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-dark-800 border border-dark-600
+                           text-white placeholder-dark-500
+                           focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500
+                           transition-colors"
+              />
+            </div>
           </div>
 
           {/* Password */}
@@ -87,7 +98,7 @@ export default function AdminLogin() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="••••••••"
+                placeholder="••••••••••••••••••••"
                 className="w-full px-4 py-2.5 pr-10 rounded-lg bg-dark-800 border border-dark-600
                            text-white placeholder-dark-500
                            focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500
@@ -116,7 +127,7 @@ export default function AdminLogin() {
             ) : (
               <>
                 <LogIn className="w-4 h-4" />
-                Entrar como Administrador
+                Entrar no Painel
               </>
             )}
           </button>
@@ -124,8 +135,7 @@ export default function AdminLogin() {
 
         {/* Footer */}
         <p className="text-center text-dark-500 text-xs mt-6">
-          Apenas usuários com cargo <span className="text-dark-300">Owner</span> ou{' '}
-          <span className="text-dark-300">Admin</span> podem acessar este painel.
+          Acesso restrito ao administrador master do sistema.
         </p>
       </div>
     </div>

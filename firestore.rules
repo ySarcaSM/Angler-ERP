@@ -7,48 +7,61 @@ service cloud.firestore {
     }
 
     function currentUser() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let docPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(docPath) ? get(docPath).data : null;
     }
 
     function isMember(companyId) {
-      return isAuth() && currentUser().companyId == companyId;
+      let user = currentUser();
+      return isAuth() && user != null && user.companyId == companyId;
     }
 
     function isAdmin(companyId) {
-      return isAuth() && isMember(companyId) &&
-        currentUser().role in ['owner', 'admin'];
+      let user = currentUser();
+      return isAuth() && user != null && user.role in ['owner', 'admin'] && isMember(companyId);
     }
 
+    // Superadmin — verificação por e-mail do Firebase Auth
+    // O e-mail é sempre admin@angler-erp.local (não muda como o UID)
+    function isSuperAdmin() {
+      return isAuth() && request.auth.token.email == 'admin@angler-erp.local';
+    }
+
+    // ─── Users ───
     match /users/{userId} {
-      allow read: if isAuth() && (
+      allow read: if isSuperAdmin() || (isAuth() && (
         request.auth.uid == userId ||
-        currentUser().companyId == resource.data.companyId
-      );
+        (currentUser() != null && currentUser().companyId == resource.data.companyId)
+      ));
       allow create: if isAuth() && request.auth.uid == userId;
-      allow update: if isAuth() && (
+      allow update: if isSuperAdmin() || (isAuth() && (
         request.auth.uid == userId ||
-        currentUser().role in ['owner', 'admin']
-      );
-      allow delete: if isAdmin(resource.data.companyId);
+        (currentUser() != null && currentUser().role in ['owner', 'admin'])
+      ));
+      allow delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
     }
 
+    // ─── Audit Logs ───
     match /auditLogs/{logId} {
-      allow read: if isAdmin(resource.data.companyId);
+      allow read: if isSuperAdmin() || isAdmin(resource.data.companyId);
       allow create: if true;
     }
 
+    // ─── Companies ───
     match /companies/{companyId} {
-      allow read: if isMember(companyId);
-      allow write: if isAuth() && request.auth.uid == companyId;
+      allow read: if isSuperAdmin() || isMember(companyId);
+      allow write: if isSuperAdmin() || (isAuth() && request.auth.uid == companyId);
     }
 
+    // ─── Generic company-scoped collections ───
     match /{collection}/{docId} {
-      allow read, write: if isMember(resource.data.companyId);
-      allow create: if isMember(request.resource.data.companyId);
+      allow read, write: if isSuperAdmin() || isMember(resource.data.companyId);
+      allow create: if isSuperAdmin() || isMember(request.resource.data.companyId);
     }
 
+    // ─── Counters ───
     match /counters/{companyId} {
-      allow read, write: if isMember(companyId);
+      allow read, write: if isSuperAdmin() || isMember(companyId);
     }
   }
 }

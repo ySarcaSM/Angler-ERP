@@ -22,6 +22,33 @@ Sistema de gestão empresarial completo, construído com **React + Firebase**.
 - 📦 **Estoque** — Movimentações, alertas, ajustes manuais
 - 📈 **Relatórios** — Vendas, lucro, margem
 - ⚙️ **Configurações** — Empresa, usuários, log de auditoria
+- 🔐 **Painel Admin** — Gerenciamento master de todas as contas (acesso exclusivo)
+
+## Painel Administrativo
+
+O Angler ERP possui um painel administrativo com acesso exclusivo via credenciais master.
+
+### Configuração
+
+1. Copie `.env.example` para `.env` dentro de `client/`
+2. As variáveis `VITE_ADMIN_USER` e `VITE_ADMIN_PASSWORD` já vêm pré-configuradas
+3. A conta Firebase Auth (`admin@angler-erp.local`) é criada automaticamente no primeiro login
+4. As regras do Firestore (`firestore.rules`) concedem acesso total ao superadmin
+
+### Acesso
+
+- URL: `/admin/login`
+- Usuário: `admin`
+- Senha: definida em `VITE_ADMIN_PASSWORD` (20 caracteres)
+
+### Funcionalidades
+
+- Visualiza **todas as contas** de **todas as empresas**
+- Busca por nome, e-mail ou empresa
+- Filtros por cargo, status e empresa
+- Desativar/reativar contas
+- Excluir contas permanentemente (Firestore + Auth)
+- Visualizar detalhes de cada conta
 
 ## Início Rápido
 
@@ -129,12 +156,16 @@ angler-erp/
 │   │   │   ├── suppliers.js         # Fornecedores
 │   │   │   ├── financial.js         # Financeiro
 │   │   │   ├── stock.js             # Estoque
+│   │   │   ├── admin.js             # Superadmin (login master, CRUD contas)
 │   │   │   ├── settings.js          # Config, usuários, audit log
 │   │   │   └── index.js             # Export central
 │   │   ├── context/
-│   │   │   └── AuthContext.jsx       # Auth state com Firebase
+│   │   │   ├── AuthContext.jsx       # Auth state com Firebase
+│   │   │   └── AdminAuthContext.jsx  # Auth state do superadmin
 │   │   ├── components/              # UI components
-│   │   ├── pages/                   # Páginas por módulo
+│   │   ├── pages/
+│   │   │   ├── admin/               # Painel administrativo master
+│   │   │   └── ...                  # Páginas por módulo
 │   │   └── utils/                   # Formatação
 │   └── .env.example
 ├── package.json
@@ -164,6 +195,7 @@ angler-erp/
 - ✅ RBAC no cliente (owner, admin, manager, operator, viewer)
 - ✅ Audit log de todas as ações
 - ✅ Validação client-side + server-side rules
+- ✅ Painel superadmin com acesso total (credenciais master)
 
 ## Licença
 

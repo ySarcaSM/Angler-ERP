@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { AdminAuthProvider } from './context/AdminAuthContext';
 import Layout from './components/layout/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
@@ -51,9 +52,19 @@ export default function App() {
       <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
 
-      {/* Admin */}
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin/contas" element={<AdminPanel />} />
+      {/* Admin — com contexto próprio, isolado da autenticação normal */}
+      <Route
+        path="/admin/*"
+        element={
+          <AdminAuthProvider>
+            <Routes>
+              <Route path="login" element={<AdminLogin />} />
+              <Route path="contas" element={<AdminPanel />} />
+              <Route path="*" element={<Navigate to="/admin/login" replace />} />
+            </Routes>
+          </AdminAuthProvider>
+        }
+      />
 
       <Route path="/app/*" element={
         <PrivateRoute>
