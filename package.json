@@ -8,5 +8,8 @@
     "build": "cd client && npm run build",
     "preview": "cd client && npm run preview",
     "install:all": "npm install && cd client && npm install"
+  },
+  "dependencies": {
+    "jspdf": "^4.2.1"
   }
 }

@@ -71,7 +71,9 @@ export async function listDocs(collectionPath, options = {}) {
     constraints.push(where(f.field, f.op, f.value));
   }
 
-  constraints.push(orderBy(sortBy, sortDir));
+  if (sortBy) {
+    constraints.push(orderBy(sortBy, sortDir));
+  }
 
   if (lastDoc) {
     constraints.push(startAfter(lastDoc));

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import Layout from './components/layout/Layout';
 import Landing from './pages/Landing';
@@ -16,8 +16,15 @@ import SupplierList from './pages/purchasing/SupplierList';
 import FinancialDashboard from './pages/financial/FinancialDashboard';
 import StockDashboard from './pages/stock/StockDashboard';
 import ReportsPage from './pages/reports/ReportsPage';
+import LogsPage from './pages/logs/LogsPage';
+import NotificationsPage from './pages/notifications/NotificationsPage';
+import ProfileGroupPage from './pages/budgets/ProfileGroupPage';
+import FormulasPage from './pages/budgets/FormulasPage';
+import BudgetsPage from './pages/budgets/BudgetsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import UserManagement from './pages/settings/UserManagement';
+import LocationList from './pages/locations/LocationList';
+import AccessibilityFloatingButton from './components/ui/AccessibilityFloatingButton';
 
 // ─── Admin ───
 import AdminLogin from './pages/admin/AdminLogin';
@@ -47,6 +54,7 @@ export default function App() {
   }
 
   return (
+    <>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
@@ -78,9 +86,16 @@ export default function App() {
               <Route path="/sales/:id" element={<SaleForm />} />
               <Route path="/purchases" element={<PurchaseList />} />
               <Route path="/suppliers" element={<SupplierList />} />
+              <Route path="/locations" element={<LocationList />} />
               <Route path="/financial" element={<FinancialDashboard />} />
               <Route path="/stock" element={<StockDashboard />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/logs" element={<LogsPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/budgets" element={<BudgetsPage />} />
+              <Route path="/budgets/profiles" element={<ProfileGroupPage />} />
+              <Route path="/budgets/profiles/:groupSlug" element={<Navigate to="/app/budgets/profiles" replace />} />
+              <Route path="/budgets/formulas" element={<FormulasPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/users" element={<UserManagement />} />
               <Route path="*" element={<Navigate to="/app" replace />} />
@@ -89,5 +104,7 @@ export default function App() {
         </PrivateRoute>
       } />
     </Routes>
+    <AccessibilityFloatingButton />
+    </>
   );
 }

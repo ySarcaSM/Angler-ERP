@@ -2039,3 +2039,127 @@
     font-size: 0.68rem;
   }
 }
+
+:root {
+  --accessibility-text-scale: 100%;
+}
+
+html {
+  font-size: var(--accessibility-text-scale);
+}
+
+html[data-accessibility-theme='light'] body {
+  background: #f7f7f5;
+  color: #171717;
+}
+
+html[data-accessibility-theme='light'] .bg-dark-950,
+html[data-accessibility-theme='light'] .bg-dark-900,
+html[data-accessibility-theme='light'] .bg-dark-800,
+html[data-accessibility-theme='light'] .card {
+  background: #fff;
+  color: #171717;
+}
+
+html[data-accessibility-theme='light'] .text-dark-100,
+html[data-accessibility-theme='light'] .text-dark-200,
+html[data-accessibility-theme='light'] .text-dark-300,
+html[data-accessibility-theme='light'] .text-dark-400,
+html[data-accessibility-theme='light'] .text-dark-500 {
+  color: #303030;
+}
+
+.accessibility-line-spacing {
+  line-height: 1.65;
+}
+
+.accessibility-line-spacing-wide {
+  line-height: 2;
+}
+
+.accessibility-line-spacing-extra-wide {
+  line-height: 2.3;
+}
+
+.accessibility-letter-spacing {
+  letter-spacing: 0.04em;
+}
+
+.accessibility-letter-spacing-wide {
+  letter-spacing: 0.1em;
+}
+
+.accessibility-font-dyslexic,
+.accessibility-font-dyslexic body {
+  font-family: Verdana, Tahoma, sans-serif;
+}
+
+.accessibility-high-contrast body {
+  background: #000;
+  color: #fff;
+}
+
+.accessibility-high-contrast .card,
+.accessibility-high-contrast .bg-dark-900,
+.accessibility-high-contrast .bg-dark-800,
+.accessibility-high-contrast .input {
+  border-color: #fff;
+}
+
+.accessibility-high-contrast .text-dark-100,
+.accessibility-high-contrast .text-dark-200,
+.accessibility-high-contrast .text-dark-300,
+.accessibility-high-contrast .text-dark-400,
+.accessibility-high-contrast .text-dark-500 {
+  color: #fff;
+}
+
+.accessibility-high-contrast a,
+.accessibility-high-contrast button {
+  color: #fff;
+}
+
+.accessibility-grayscale {
+  filter: grayscale(1);
+}
+
+.accessibility-invert {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.accessibility-highlight-interactive a,
+.accessibility-highlight-interactive button,
+.accessibility-highlight-interactive input,
+.accessibility-highlight-interactive select,
+.accessibility-highlight-interactive textarea {
+  outline: 2px solid #f5d17d;
+  outline-offset: 2px;
+}
+
+.accessibility-enhanced-focus :focus-visible {
+  outline: 3px solid #f5d17d !important;
+  outline-offset: 4px !important;
+  box-shadow: 0 0 0 5px rgba(245, 209, 125, 0.35) !important;
+}
+
+.accessibility-reading-guide body::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--reading-guide-y, 50vh);
+  height: 2px;
+  background: #f5d17d;
+  box-shadow: 0 0 0 9999px rgba(245, 209, 125, 0.08);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+.accessibility-reduced-motion *,
+.accessibility-reduced-motion *::before,
+.accessibility-reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}

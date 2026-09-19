@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { createSale, getSale } from '../../services/firebase/sales';
 import { listClients } from '../../services/firebase/clients';
 import { listProducts } from '../../services/firebase/products';
 import { formatBRL } from '../../utils/format';
 import toast from 'react-hot-toast';
+import { logAudit } from '../../services/firebase/settings';
 
 export default function SaleForm() {
   const navigate = useNavigate();
@@ -47,22 +48,51 @@ export default function SaleForm() {
     items[i] = { ...items[i], [field]: value };
     if (field === 'productId') {
       const p = products.find((pr) => pr.id === value);
-      if (p) { items[i].productName = p.name; items[i].unitPrice = p.sellPrice; }
+      if (p) {
+        items[i].productName = p.name;
+        items[i].unitPrice = Number(p.sellPrice) || 0;
+        items[i].quantity = items[i].quantity === '' ? '' : Math.min(Number(items[i].quantity) || 1, Number(p.stock?.current) || 0);
+      }
     }
-    items[i].total = (items[i].quantity * items[i].unitPrice) - (items[i].discount || 0);
+    if (field === 'quantity') {
+      const product = products.find((p) => p.id === items[i].productId);
+      if (value !== '') {
+        const quantity = Math.max(0, Math.floor(Number(value) || 0));
+        const available = Number(product?.stock?.current) || 0;
+        items[i].quantity = product ? Math.min(quantity, available) : quantity;
+      }
+    }
+    items[i].total = ((Number(items[i].quantity) || 0) * (Number(items[i].unitPrice) || 0)) - (Number(items[i].discount) || 0);
     setForm({ ...form, items });
   };
 
   const subtotal = form.items.reduce((sum, i) => sum + i.total, 0);
-  const total = subtotal - form.discount + form.shipping + form.tax;
+  const discountAmount = subtotal * ((Number(form.discount) || 0) / 100);
+  const total = subtotal - discountAmount + (Number(form.shipping) || 0) + (Number(form.tax) || 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.clientId) return toast.error('Selecione um cliente.');
+    if (!form.items.length || form.items.some((item) => !item.productId)) return toast.error('Adicione pelo menos um produto à venda.');
+    const quantitiesByProduct = form.items.reduce((totals, item) => ({
+      ...totals,
+      [item.productId]: (totals[item.productId] || 0) + Number(item.quantity),
+    }), {});
+    const invalidStock = Object.entries(quantitiesByProduct).find(([productId, quantity]) => {
+      const product = products.find((item) => item.id === productId);
+      return !Number.isInteger(Number(quantity)) || quantity < 1 || quantity > (Number(product?.stock?.current) || 0);
+    });
+    if (invalidStock) {
+      const product = products.find((item) => item.id === invalidStock[0]);
+      const available = Number(product?.stock?.current) || 0;
+      return toast.error(`Estoque insuficiente para ${product?.name || 'este produto'}. Disponível: ${available}; solicitado: ${invalidStock[1]}.`);
+    }
+    if (Number(form.discount) < 0 || Number(form.discount) > 100) return toast.error('O desconto deve estar entre 0% e 100%.');
     setSaving(true);
     try {
       const client = clients.find((c) => c.id === form.clientId);
-      await createSale(company.id, { ...form, clientName: client?.name || form.clientName }, { ...user, displayName: userData?.name || user.email });
+      const createdSale = await createSale(company.id, { ...form, clientName: client?.name || form.clientName }, { ...user, displayName: userData?.name || user.email });
+      await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Venda', entityId: createdSale.id, description: `${userData?.name || 'Usuário'} criou a venda #${createdSale.number || createdSale.id} para ${client?.name || form.clientName}, no valor de ${formatBRL(createdSale.total)}.`, details: { number: createdSale.number, clientName: client?.name || form.clientName, total: createdSale.total, itemCount: form.items.length } });
       toast.success('Venda criada!');
       navigate('/app/sales');
     } catch (err) { toast.error(err.message); }
@@ -93,8 +123,8 @@ export default function SaleForm() {
             {form.items.map((item, i) => (
               <div key={i} className="grid grid-cols-12 gap-3 items-end">
                 <div className="col-span-4">{i === 0 && <label className="label">Produto</label>}<select className="input" value={item.productId} onChange={(e) => updateItem(i, 'productId', e.target.value)}><option value="">Selecione...</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
-                <div className="col-span-2">{i === 0 && <label className="label">Qtd</label>}<input type="number" min="0.01" className="input" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', parseFloat(e.target.value) || 0)} /></div>
-                <div className="col-span-2">{i === 0 && <label className="label">Preço</label>}<input type="number" step="0.01" className="input" value={item.unitPrice} onChange={(e) => updateItem(i, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
+                <div className="col-span-2">{i === 0 && <label className="label">Qtd * {item.productId && <span className="font-normal text-[11px] text-dark-500">(Disponível: {products.find((product) => product.id === item.productId)?.stock?.current || 0})</span>}</label>}<input type="number" inputMode="numeric" step="1" className="input" value={item.quantity} onChange={(e) => updateItem(i, 'quantity', e.target.value)} /></div>
+                <div className="col-span-2">{i === 0 && <label className="label">Preço</label>}<input type="number" step="0.01" className="input bg-dark-950/60" value={item.unitPrice} readOnly /></div>
                 <div className="col-span-2">{i === 0 && <label className="label">Total</label>}<div className="input bg-dark-950 text-dark-300">{formatBRL(item.total)}</div></div>
                 <div className="col-span-2">{i === 0 && <label className="label">&nbsp;</label>}<button type="button" onClick={() => setForm({ ...form, items: form.items.filter((_, j) => j !== i) })} className="btn-ghost btn-sm text-red-400 w-full" disabled={form.items.length === 1}><Trash2 size={14} /></button></div>
               </div>
@@ -107,7 +137,7 @@ export default function SaleForm() {
             <div><label className="label">Observações</label><textarea className="input" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
             <div className="space-y-3">
               <div className="flex justify-between text-sm"><span className="text-dark-400">Subtotal</span><span className="text-dark-200">{formatBRL(subtotal)}</span></div>
-              <div className="flex justify-between text-sm items-center"><span className="text-dark-400">Desconto</span><input type="number" step="0.01" className="input max-w-[120px] text-right" value={form.discount} onChange={(e) => setForm({ ...form, discount: parseFloat(e.target.value) || 0 })} /></div>
+              <div className="flex justify-between text-sm items-center"><span className="text-dark-400">Desconto (%)</span><div className="relative max-w-[120px]"><input type="number" step="0.01" className="input pr-7 text-right" value={form.discount} onChange={(e) => setForm({ ...form, discount: e.target.value })} /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500">%</span></div></div>
               <div className="flex justify-between text-sm items-center"><span className="text-dark-400">Frete</span><input type="number" step="0.01" className="input max-w-[120px] text-right" value={form.shipping} onChange={(e) => setForm({ ...form, shipping: parseFloat(e.target.value) || 0 })} /></div>
               <div className="border-t border-dark-800 pt-3 flex justify-between"><span className="text-lg font-semibold text-dark-100">Total</span><span className="text-lg font-bold text-primary-400">{formatBRL(total)}</span></div>
             </div>

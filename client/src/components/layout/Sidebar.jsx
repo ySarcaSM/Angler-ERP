@@ -3,9 +3,9 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
-  FileText, ChevronLeft, ChevronRight,
+  FileText, MapPin, ClipboardList, Bell, UserRound, Calculator, FileSignature, ChevronLeft, ChevronRight,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 const NAV_SECTIONS = [
   {
@@ -23,6 +23,7 @@ const NAV_SECTIONS = [
       { to: '/app/sales', icon: ShoppingCart, label: 'Vendas' },
       { to: '/app/purchases', icon: Truck, label: 'Compras' },
       { to: '/app/suppliers', icon: FileText, label: 'Fornecedores' },
+      { to: '/app/locations', icon: MapPin, label: 'Localizações' },
     ],
   },
   {
@@ -34,9 +35,19 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    label: 'Orçamentos',
+    items: [
+      { to: '/app/budgets/profiles', icon: UserRound, label: 'Medição' },
+      { to: '/app/budgets/formulas', icon: Calculator, label: 'Fórmulas' },
+      { to: '/app/budgets', icon: FileSignature, label: 'Orçamentos', end: true },
+    ],
+  },
+  {
     label: 'Sistema',
     items: [
       { to: '/app/settings', icon: Settings, label: 'Configurações' },
+      { to: '/app/logs', icon: ClipboardList, label: 'Logs' },
+      { to: '/app/notifications', icon: Bell, label: 'Notificações' },
     ],
   },
 ];
@@ -50,9 +61,11 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Header */}
       <div className="h-16 flex items-center px-4 border-b border-dark-700/50">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-300 to-primary-700 flex items-center justify-center text-dark-950 font-bold text-sm flex-shrink-0 shadow-gold-glow">
-            A
-          </div>
+          <img
+            src="/logo.png"
+            alt="Angler ERP"
+            className="w-9 h-9 object-contain flex-shrink-0"
+          />
           {!collapsed && (
             <div className="min-w-0">
               <div className="text-sm font-bold text-gold truncate">Angler ERP</div>
@@ -108,21 +121,26 @@ export default function Sidebar({ collapsed, onToggle }) {
           {!collapsed && <span>Recolher</span>}
         </button>
 
-        {/* User */}
-        <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400/20 to-primary-700/20 border border-primary-400/20 flex items-center justify-center text-xs font-bold text-primary-300 flex-shrink-0">
-            {user?.name?.[0]}{user?.lastName?.[0] || ''}
-          </div>
+        {/* Company identity */}
+        <div className={`flex items-center gap-3 px-3 py-2 ${collapsed ? 'justify-center' : ''}`}>
+          <img src="/logo.png" alt="Logo da empresa" className="w-8 h-8 object-contain flex-shrink-0" />
           {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-dark-200 truncate">{user?.name}</div>
-              <div className="text-xs text-dark-500 capitalize">{user?.role}</div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-dark-200 truncate">{company?.name || 'Empresa'}</div>
+              <div className="text-xs text-dark-500 truncate">{user?.name || 'Usuário'}</div>
             </div>
           )}
-          <button onClick={logout} className="text-dark-500 hover:text-red-400 transition-colors" title="Sair">
-            <LogOut size={18} />
-          </button>
         </div>
+
+        {/* Logout stays below the company identity */}
+        <button
+          onClick={logout}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-dark-400 hover:text-red-400 hover:bg-dark-800 transition-all ${collapsed ? 'justify-center' : ''}`}
+          title="Sair"
+        >
+          <LogOut size={18} />
+          {!collapsed && <span>Sair</span>}
+        </button>
       </div>
     </aside>
   );

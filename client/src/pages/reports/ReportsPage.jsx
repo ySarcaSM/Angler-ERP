@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, FileDown } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { useAuth } from '../../context/AuthContext';
+import { jsPDF } from 'jspdf';
+import { useAuth } from '../../context/useAuth';
 import { listSales } from '../../services/firebase/sales';
 import { listTransactions } from '../../services/firebase/financial';
 import { formatBRL, timestampToDate } from '../../utils/format';
+import { logAudit } from '../../services/firebase/settings';
 import toast from 'react-hot-toast';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
 
 export default function ReportsPage() {
-  const { company } = useAuth();
+  const { company, user, userData } = useAuth();
   const [salesData, setSalesData] = useState([]);
   const [profit, setProfit] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,11 +49,55 @@ export default function ReportsPage() {
     load();
   }, [company]);
 
+  const handleGeneratePdf = async () => {
+    if (!profit) return;
+
+    const pdf = new jsPDF();
+    const generatedAt = new Date().toLocaleString('pt-BR');
+    const salesCount = salesData.reduce((sum, day) => sum + day.count, 0);
+    const averageSale = salesCount > 0 ? profit.income / salesCount : 0;
+    const companyName = company?.name || 'Minha empresa';
+
+    pdf.setFontSize(18);
+    pdf.text('Relatorio de desempenho', 20, 20);
+    pdf.setFontSize(11);
+    pdf.text(companyName, 20, 29);
+    pdf.text(`Gerado em: ${generatedAt}`, 20, 36);
+
+    pdf.setDrawColor(210, 210, 210);
+    pdf.line(20, 42, 190, 42);
+    pdf.setFontSize(13);
+    pdf.text('Resumo', 20, 53);
+    pdf.setFontSize(11);
+    pdf.text(`Receitas: ${formatBRL(profit.income)}`, 20, 63);
+    pdf.text(`Despesas: ${formatBRL(profit.expense)}`, 20, 71);
+    pdf.text(`Resultado: ${formatBRL(profit.profit)}`, 20, 79);
+    pdf.text(`Margem: ${profit.margin}%`, 20, 87);
+    pdf.text(`Vendas realizadas: ${salesCount}`, 20, 95);
+    pdf.text(`Ticket medio: ${formatBRL(averageSale)}`, 20, 103);
+
+    pdf.setFontSize(13);
+    pdf.text('Vendas por dia', 20, 117);
+    pdf.setFontSize(10);
+    salesData.slice(-20).forEach((day, index) => {
+      const y = 127 + (index * 7);
+      pdf.text(`${day._id}: ${day.count} venda(s) - ${formatBRL(day.total)}`, 20, y);
+    });
+
+    await logAudit(company.id, { user, userName: userData?.name, action: 'export', entity: 'Relatório', description: `${userData?.name || 'Usuário'} baixou o relatório de desempenho em PDF.`, details: { format: 'PDF', report: 'desempenho', salesCount, generatedAt } });
+    pdf.save(`relatorio-desempenho-${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" /></div>;
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-bold text-dark-100">Relatórios</h1><p className="text-dark-500 text-sm mt-1">Análise do desempenho</p></div>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div><h1 className="text-2xl font-bold text-dark-100">Relatórios</h1><p className="text-dark-500 text-sm mt-1">Análise do desempenho</p></div>
+        <button type="button" onClick={handleGeneratePdf} disabled={!profit} className="btn-primary disabled:opacity-50" title="Gerar PDF">
+          <FileDown size={18} /> Gerar PDF
+        </button>
+      </div>
       {profit && (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="card bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 p-5">

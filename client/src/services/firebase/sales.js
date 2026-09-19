@@ -3,9 +3,9 @@
 // ═══════════════════════════════════════════
 
 import {
-  getDoc_, updateDoc_, deleteDoc_, listDocs,
+  getDoc_, updateDoc_, listDocs,
   getBatch, docRef, newDocRef, serverTimestamp, increment,
-} from './firestore';
+} from './firestore.js';
 
 const COLLECTION = 'sales';
 
@@ -33,10 +33,14 @@ export async function createSale(companyId, data, user) {
   // Calculate totals
   const items = data.items.map((item) => ({
     ...item,
-    total: (item.quantity * item.unitPrice) - (item.discount || 0),
+    quantity: Math.floor(Number(item.quantity) || 0),
+    unitPrice: Number(item.unitPrice) || 0,
+    total: (Math.floor(Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)) - (Number(item.discount) || 0),
   }));
   const subtotal = items.reduce((sum, i) => sum + i.total, 0);
-  const total = subtotal - (data.discount || 0) + (data.shipping || 0) + (data.tax || 0);
+  const discountPercent = Number(data.discount) || 0;
+  const discountAmount = subtotal * (discountPercent / 100);
+  const total = subtotal - discountAmount + (Number(data.shipping) || 0) + (Number(data.tax) || 0);
 
   const sale = {
     ...data,
@@ -44,6 +48,8 @@ export async function createSale(companyId, data, user) {
     number: nextNumber,
     items,
     subtotal,
+    discountPercent,
+    discountAmount,
     total,
     status: data.status || 'draft',
     paymentStatus: data.paymentStatus || 'pending',
@@ -146,12 +152,90 @@ export async function approveSale(saleId, companyId) {
 }
 
 export async function cancelSale(saleId) {
-  return updateDoc_(COLLECTION, saleId, {
+  const sale = await getSale(saleId);
+  if (!sale) throw new Error('Venda não encontrada');
+  if (sale.status === 'cancelled') return sale;
+  if (sale.status === 'approved') {
+    throw new Error('Vendas aprovadas só podem ser deletadas');
+  }
+
+  await updateDoc_(COLLECTION, saleId, {
     status: 'cancelled',
     paymentStatus: 'cancelled',
+    cancelledAt: serverTimestamp(),
   });
+  return { ...sale, action: 'cancelled' };
 }
 
-export async function deleteSale(id) {
-  return deleteDoc_(COLLECTION, id);
+export async function deleteSale(saleId) {
+  const sale = await getSale(saleId);
+  if (!sale) throw new Error('Venda não encontrada');
+
+  const batch = getBatch();
+  const saleRef = docRef(COLLECTION, saleId);
+
+  if (sale.status === 'approved') {
+    for (const item of sale.items || []) {
+      if (!item.productId) continue;
+
+      const productDoc = await getDoc_('products', item.productId);
+      if (!productDoc) continue;
+
+      const previousStock = productDoc.stock?.current || 0;
+      const quantity = Math.max(0, Number(item.quantity) || 0);
+      batch.update(docRef('products', item.productId), {
+        'stock.current': increment(quantity),
+        updatedAt: serverTimestamp(),
+      });
+
+      const movementRef = newDocRef('stockMovements');
+      batch.set(movementRef, {
+        companyId: sale.companyId,
+        productId: item.productId,
+        productName: item.productName,
+        type: 'entry',
+        quantity,
+        previousStock,
+        newStock: previousStock + quantity,
+        reason: `Exclusão da venda #${sale.number}`,
+        referenceType: 'sale_deletion',
+        referenceId: saleId,
+        createdAt: serverTimestamp(),
+      });
+    }
+  }
+
+  batch.delete(saleRef);
+  await batch.commit();
+
+  if (sale.status === 'approved') {
+    try {
+      const { data: transactions } = await listDocs('financialTransactions', {
+        filters: [{ field: 'companyId', op: '==', value: sale.companyId }],
+        pageSize: 500,
+        sortBy: null,
+      });
+      const saleTransactions = transactions.filter(
+        (transaction) => transaction.referenceType === 'sale' && transaction.referenceId === saleId,
+      );
+
+      if (saleTransactions.length > 0) {
+        const financialBatch = getBatch();
+        for (const transaction of saleTransactions) {
+          if (transaction.status !== 'cancelled') {
+            financialBatch.update(docRef('financialTransactions', transaction.id), {
+              status: 'cancelled',
+              cancelledAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+        await financialBatch.commit();
+      }
+    } catch (error) {
+      console.warn('Venda deletada, mas o lançamento financeiro não foi atualizado:', error);
+    }
+  }
+
+  return { ...sale, action: 'deleted' };
 }

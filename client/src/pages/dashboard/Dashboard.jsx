@@ -4,9 +4,9 @@ import {
   TrendingDown, AlertTriangle,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { listSales } from '../../services/firebase/sales';
-import { listClients } from '../../services/firebase/clients';
+import { subscribeClientCount } from '../../services/firebase/clients';
 import { listProducts } from '../../services/firebase/products';
 import { getSummary } from '../../services/firebase/financial';
 import { formatBRL, timestampToDate } from '../../utils/format';
@@ -21,17 +21,30 @@ export default function Dashboard() {
   useEffect(() => {
     if (!company?.id) return;
 
+    const unsubscribe = subscribeClientCount(
+      company.id,
+      (totalClients) => setCards((current) => ({ ...current, totalClients })),
+      (error) => console.error('Client count error:', error),
+    );
+
+    return () => unsubscribe();
+  }, [company]);
+
+  useEffect(() => {
+    if (!company?.id) return;
+
     const load = async () => {
       try {
         const companyId = company.id;
-        const [salesRes, clientsRes, productsRes, finSummary] = await Promise.all([
+        const [salesRes, productsRes, finSummary] = await Promise.all([
           listSales(companyId, { pageSize: 50 }),
-          listClients(companyId, { pageSize: 1 }),
           listProducts(companyId, { pageSize: 1 }),
           getSummary(companyId),
         ]);
 
-        const sales = salesRes.data;
+        const sales = Array.from(new Map(
+          salesRes.data.map((sale) => [sale.id, sale]),
+        ).values());
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -63,14 +76,14 @@ export default function Dashboard() {
           .sort((a, b) => b.total - a.total)
           .slice(0, 5);
 
-        setCards({
+        setCards((current) => ({
+          ...current,
           monthRevenue,
           monthSalesCount: monthSales.length,
-          totalClients: clientsRes.data.length > 0 ? clientsRes.data.length : 0,
           totalProducts: allProducts.length,
           lowStockCount,
           monthBalance: finSummary.month.balance,
-        });
+        }));
         setRecentSales(sales.slice(0, 5));
         setTopProducts(top);
       } catch (err) {
@@ -139,7 +152,7 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis type="number" tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
                   <YAxis type="category" dataKey="_id" tick={{ fill: '#94a3b8', fontSize: 11 }} width={120} />
-                  <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, color: '#f1f5f9' }} formatter={(v) => [formatBRL(v), 'Total']} />
+                  <Tooltip cursor={false} contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, color: '#f1f5f9' }} formatter={(v) => [formatBRL(v), 'Total']} />
                   <Bar dataKey="total" fill="#8b5cf6" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -152,7 +165,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="card-header flex items-center justify-between">
             <h3 className="text-sm font-semibold text-dark-200">Vendas Recentes</h3>
-            <a href="/sales" className="text-xs text-primary-400 hover:text-primary-300">Ver todas →</a>
+            <a href="/app/sales" className="text-xs text-primary-400 hover:text-primary-300">Ver todas →</a>
           </div>
           <div className="table-container">
             <table className="table">

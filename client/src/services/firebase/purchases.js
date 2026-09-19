@@ -5,20 +5,25 @@
 import {
   getDoc_, updateDoc_, deleteDoc_, listDocs,
   getBatch, docRef, newDocRef, serverTimestamp, increment,
-} from './firestore';
+} from './firestore.js';
 
 const COLLECTION = 'purchases';
 
 export async function listPurchases(companyId, options = {}) {
-  return listDocs(COLLECTION, {
+  const result = await listDocs(COLLECTION, {
     ...options,
     filters: [
       { field: 'companyId', op: '==', value: companyId },
       ...(options.filters || []),
     ],
-    sortBy: 'createdAt',
-    sortDir: 'desc',
+    sortBy: null,
   });
+  result.data.sort((first, second) => {
+    const firstTime = first.createdAt?.toMillis?.() || new Date(first.createdAt || 0).getTime();
+    const secondTime = second.createdAt?.toMillis?.() || new Date(second.createdAt || 0).getTime();
+    return secondTime - firstTime;
+  });
+  return result;
 }
 
 export async function getPurchase(id) {

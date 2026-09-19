@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  UserPlus, ArrowLeft, ArrowRight, Check, Building2, User, LayoutGrid,
+  UserPlus, ArrowLeft, ArrowRight, Check, Building2, User, LayoutGrid, Wand2,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 
 // ═══════════════════════════════════════════
@@ -48,6 +48,30 @@ function formatPhone(value) {
   if (nums.length <= 2) return nums.length ? `(${nums}` : '';
   if (nums.length <= 7) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
   return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
+}
+
+function getPasswordChecks(password) {
+  return [
+    { label: 'Pelo menos 8 caracteres', valid: password.length >= 8 },
+    { label: 'Uma letra maiúscula', valid: /[A-Z]/.test(password) },
+    { label: 'Uma letra minúscula', valid: /[a-z]/.test(password) },
+    { label: 'Um número', valid: /\d/.test(password) },
+    { label: 'Um caractere especial', valid: /[^A-Za-z0-9]/.test(password) },
+  ];
+}
+
+function createRandomCNPJ() {
+  const base = Array.from({ length: 8 }, () => Math.floor(Math.random() * 10));
+  const branch = [0, 0, 0, 1];
+  const first = [...base, ...branch];
+  const calculateDigit = (numbers, weights) => {
+    const total = numbers.reduce((sum, number, index) => sum + number * weights[index], 0);
+    const remainder = total % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  const digit1 = calculateDigit(first, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  const digit2 = calculateDigit([...first, digit1], [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return formatCNPJ([...first, digit1, digit2].join(''));
 }
 
 // ═══════════════════════════════════════════
@@ -156,6 +180,8 @@ function ModuleToggle({ modKey, label, desc, active, onToggle }) {
 }
 
 function Step1({ account, setAccount, errors }) {
+  const passwordChecks = getPasswordChecks(account.password);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-4">
@@ -185,12 +211,20 @@ function Step1({ account, setAccount, errors }) {
       />
 
       <InputField
-        label="Senha" name="password" type="password" placeholder="Mínimo 6 caracteres" required
+        label="Senha" name="password" type="password" placeholder="Crie uma senha forte" required
         value={account.password}
         onChange={(e) => setAccount({ ...account, password: e.target.value })}
         error={errors.password}
-        minLength={6}
+        minLength={8}
       />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+        {passwordChecks.map((check) => (
+          <div key={check.label} className={check.valid ? 'text-green-400' : 'text-dark-500'}>
+            <Check size={12} className="inline mr-1" />{check.label}
+          </div>
+        ))}
+      </div>
 
       <InputField
         label="Confirmar Senha" name="confirmPassword" type="password" placeholder="Repita a senha" required
@@ -202,12 +236,20 @@ function Step1({ account, setAccount, errors }) {
   );
 }
 
-function Step2({ company, setCompany, errors }) {
+function Step2({ company, setCompany, errors, onFillRandom }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-4">
         <Building2 size={20} className="text-primary-400" />
         <h2 className="text-lg font-semibold text-dark-100">Informações da Empresa</h2>
+        <button
+          type="button"
+          onClick={onFillRandom}
+          className="ml-auto btn-ghost btn-sm flex items-center gap-1.5 text-primary-300"
+          title="Preencher dados aleatórios"
+        >
+          <Wand2 size={14} /> Dados aleatórios
+        </button>
       </div>
 
       <InputField
@@ -369,7 +411,9 @@ export default function Register() {
     if (!account.email.trim()) errs.email = 'Email é obrigatório';
     else if (!validateEmail(account.email)) errs.email = 'Email inválido';
     if (!account.password) errs.password = 'Senha é obrigatória';
-    else if (account.password.length < 6) errs.password = 'Mínimo de 6 caracteres';
+    else if (getPasswordChecks(account.password).some((check) => !check.valid)) {
+      errs.password = 'Use 8+ caracteres, maiúscula, minúscula, número e símbolo';
+    }
     if (account.password !== account.confirmPassword) errs.confirmPassword = 'As senhas não coincidem';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -408,6 +452,25 @@ export default function Register() {
     else if (step === 2 && validateStep2()) setStep(3);
   }
 
+  function fillRandomCompany() {
+    const samples = [
+      ['Norte Sul Distribuidora', 'Norte Sul Distribuidora Ltda', 'Comércio'],
+      ['Ponto Certo Tecnologia', 'Ponto Certo Tecnologia Ltda', 'Tecnologia'],
+      ['Vale Verde Serviços', 'Vale Verde Serviços Empresariais Ltda', 'Serviços'],
+    ];
+    const [companyName, razaoSocial, sector] = samples[Math.floor(Math.random() * samples.length)];
+    setCompany({
+      companyName,
+      razaoSocial,
+      cnpj: createRandomCNPJ(),
+      sector,
+      address: 'Rua das Flores, 123 - Centro - Sao Paulo/SP',
+      companyEmail: `contato${Math.floor(Math.random() * 900 + 100)}@empresa.com.br`,
+      companyPhone: formatPhone(`119${Math.floor(Math.random() * 90000000 + 10000000)}`),
+    });
+    setErrors({});
+  }
+
   function prevStep() {
     setErrors({});
     if (step > 1) setStep(step - 1);
@@ -427,7 +490,7 @@ export default function Register() {
         .filter(([, v]) => v)
         .map(([k]) => k);
 
-      await register({
+      const result = await register({
         email: account.email.trim(),
         password: account.password,
         name: account.name.trim(),
@@ -443,11 +506,14 @@ export default function Register() {
         modulesLocked: lockModules,
       });
 
-      toast.success('Conta criada! Verifique seu email antes de entrar.');
+      toast.success(result.requiresEmailVerification
+        ? 'Conta criada! Verifique seu email antes de entrar.'
+        : 'Conta criada! Você já pode entrar no sistema.');
       navigate('/login');
     } catch (err) {
       const msg = err.code === 'auth/email-already-in-use' ? 'Este email já está cadastrado.'
         : err.code === 'auth/weak-password' ? 'A senha precisa ter pelo menos 6 caracteres.'
+        : err.code === 'auth/company-write-denied' || err.code === 'auth/profile-write-denied' ? err.message
         : err.message;
       toast.error(msg);
     } finally {
@@ -478,7 +544,14 @@ export default function Register() {
 
             <form onSubmit={handleSubmit}>
               {step === 1 && <Step1 account={account} setAccount={setAccount} errors={errors} />}
-              {step === 2 && <Step2 company={company} setCompany={setCompany} errors={errors} />}
+              {step === 2 && (
+                <Step2
+                  company={company}
+                  setCompany={setCompany}
+                  errors={errors}
+                  onFillRandom={fillRandomCompany}
+                />
+              )}
               {step === 3 && (
                 <Step3
                   modules={modules}

@@ -16,8 +16,14 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
+const REGISTRATION_SESSION_KEY = 'angler_registration_in_progress';
+
+export function isRegistrationInProgress() {
+  return sessionStorage.getItem(REGISTRATION_SESSION_KEY) === 'true';
+}
+
 // ─── Register ───
-export async function register({
+async function registerInternal({
   // Account
   email, password, name, lastName,
   // Company
@@ -25,70 +31,131 @@ export async function register({
   // Modules
   enabledModules, modulesLocked,
 }) {
-  // Create Firebase Auth user
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  // Reaproveita uma conta Auth sem perfil apenas quando o documento foi
+  // removido pelo administrador. Isso permite recadastrar sem serviço pago.
+  let cred;
+  let existingAuthAccount = false;
+  try {
+    cred = await createUserWithEmailAndPassword(auth, email, password);
+  } catch (error) {
+    if (error.code !== 'auth/email-already-in-use') throw error;
+
+    try {
+      cred = await signInWithEmailAndPassword(auth, email, password);
+      existingAuthAccount = true;
+    } catch {
+      await sendPasswordResetEmail(auth, email);
+      const recoveryError = new Error(
+        'Este email já existe no Firebase Authentication. Enviamos um link para redefinir a senha; depois, use essa nova senha para concluir o cadastro.'
+      );
+      recoveryError.code = 'auth/account-recovery-required';
+      throw recoveryError;
+    }
+
+    let existingUser = null;
+    try {
+      existingUser = await getDoc(doc(db, 'users', cred.user.uid));
+    } catch (firestoreError) {
+      if (firestoreError.code === 'permission-denied') {
+        // A autenticação já confirmou a posse da conta. Continua para recriar
+        // o perfil removido, mesmo se a regra antiga bloquear este get.
+        console.warn('[Register] Perfil não pôde ser consultado; tentando recriá-lo.');
+      } else {
+        await signOut(auth);
+        throw firestoreError;
+      }
+    }
+    if (existingUser?.exists()) {
+      await signOut(auth);
+      throw error;
+    }
+  }
+
   const user = cred.user;
 
   // Update display name
   await updateProfile(user, { displayName: `${name} ${lastName || ''}`.trim() });
 
-  // Firebase sends the verification link once during account creation.
-  await sendEmailVerification(user);
+  if (!user.emailVerified && !existingAuthAccount) {
+    await sendEmailVerification(user);
+  }
 
   // Create company document
   const companyRef = doc(db, 'companies', user.uid);
-  await setDoc(companyRef, {
-    name: companyName,
-    razaoSocial: razaoSocial || '',
-    cnpj: cnpj || '',
-    sector: sector || '',
-    address: address || '',
-    companyEmail: companyEmail || '',
-    companyPhone: companyPhone || '',
-    createdAt: serverTimestamp(),
-    plan: 'trial',
-    ownerUid: user.uid,
-    settings: {
-      currency: 'BRL',
-      timezone: 'America/Sao_Paulo',
-      taxRegime: 'simples',
-      lowStockThreshold: 10,
-    },
-    modules: {
-      enabled: enabledModules || ['clients', 'products', 'sales', 'purchases', 'suppliers', 'financial', 'stock', 'reports'],
-      locked: modulesLocked || false,
-    },
-  });
+  try {
+    await setDoc(companyRef, {
+      name: companyName,
+      razaoSocial: razaoSocial || '',
+      cnpj: cnpj || '',
+      sector: sector || '',
+      address: address || '',
+      companyEmail: companyEmail || '',
+      companyPhone: companyPhone || '',
+      createdAt: serverTimestamp(),
+      plan: 'trial',
+      ownerUid: user.uid,
+      settings: {
+        currency: 'BRL',
+        timezone: 'America/Sao_Paulo',
+        taxRegime: 'simples',
+        lowStockThreshold: 10,
+      },
+      modules: {
+        enabled: enabledModules || ['clients', 'products', 'sales', 'purchases', 'suppliers', 'financial', 'stock', 'reports'],
+        locked: modulesLocked || false,
+      },
+    });
+  } catch (error) {
+    await signOut(auth);
+    if (error.code === 'permission-denied') {
+      const companyError = new Error('Permissão negada ao criar a empresa. Publique as regras do Firestore no projeto correto.');
+      companyError.code = 'auth/company-write-denied';
+      throw companyError;
+    }
+    throw error;
+  }
 
   // Create user document
   const userRef = doc(db, 'users', user.uid);
-  await setDoc(userRef, {
-    uid: user.uid,
-    email,
-    name,
-    lastName: lastName || '',
-    role: 'owner',
-    companyId: user.uid, // Owner's company = their uid
-    active: true,
-    createdAt: serverTimestamp(),
-  });
+  try {
+    await setDoc(userRef, {
+      uid: user.uid,
+      email,
+      name,
+      lastName: lastName || '',
+      role: 'owner',
+      companyId: user.uid, // Owner's company = their uid
+      active: true,
+      requiresEmailVerification: !existingAuthAccount,
+      createdAt: serverTimestamp(),
+    });
+  } catch (error) {
+    await signOut(auth);
+    if (error.code === 'permission-denied') {
+      const userError = new Error('Permissão negada ao criar o perfil. Publique as regras do Firestore no projeto correto.');
+      userError.code = 'auth/profile-write-denied';
+      throw userError;
+    }
+    throw error;
+  }
 
   await signOut(auth);
 
-  return { user, companyId: user.uid };
+  return { user, companyId: user.uid, requiresEmailVerification: !existingAuthAccount };
+}
+
+export async function register(data) {
+  sessionStorage.setItem(REGISTRATION_SESSION_KEY, 'true');
+  try {
+    return await registerInternal(data);
+  } finally {
+    sessionStorage.removeItem(REGISTRATION_SESSION_KEY);
+  }
 }
 
 // ─── Login ───
 export async function login(email, password) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
-
-  if (!cred.user.emailVerified) {
-    await signOut(auth);
-    const error = new Error('Verifique seu email antes de entrar.');
-    error.code = 'auth/email-not-verified';
-    throw error;
-  }
-
   return cred.user;
 }
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Shield, Users, Trash2, Search, LogOut, RefreshCw,
   UserCheck, UserX, ChevronDown, AlertTriangle, Loader2,
-  Building2, Mail, Calendar, Eye, Copy, CheckCircle2,
+  Building2, Eye,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import {
@@ -28,17 +28,6 @@ function formatDate(date) {
   }).format(date);
 }
 
-function getRoleBadge(role) {
-  const styles = {
-    owner: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    admin: 'bg-red-500/10 text-red-400 border-red-500/20',
-    manager: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    operator: 'bg-green-500/10 text-green-400 border-green-500/20',
-    viewer: 'bg-dark-500/10 text-dark-400 border-dark-500/20',
-  };
-  return styles[role] || styles.viewer;
-}
-
 function getStatusBadge(status) {
   if (status === 'disabled') {
     return 'bg-red-500/10 text-red-400 border-red-500/20';
@@ -55,7 +44,6 @@ export default function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
@@ -103,9 +91,8 @@ export default function AdminPanel() {
       !searchTerm ||
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.companyId?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
 
     const userStatus = user.status || 'active';
     const matchesStatus =
@@ -116,7 +103,7 @@ export default function AdminPanel() {
     const matchesCompany =
       companyFilter === 'all' || user.companyId === companyFilter;
 
-    return matchesSearch && matchesRole && matchesStatus && matchesCompany;
+    return matchesSearch && matchesStatus && matchesCompany;
   });
 
   // ─── Ações ───
@@ -180,7 +167,6 @@ export default function AdminPanel() {
     total: users.length,
     active: users.filter((u) => u.status !== 'disabled').length,
     disabled: users.filter((u) => u.status === 'disabled').length,
-    admins: users.filter((u) => u.role === 'owner' || u.role === 'admin').length,
     companies: companies.length,
   };
 
@@ -239,12 +225,11 @@ export default function AdminPanel() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Total de Contas', value: stats.total, icon: Users, color: 'text-white' },
             { label: 'Ativos', value: stats.active, icon: UserCheck, color: 'text-green-400' },
             { label: 'Desativados', value: stats.disabled, icon: UserX, color: 'text-red-400' },
-            { label: 'Admins/Owners', value: stats.admins, icon: Shield, color: 'text-yellow-400' },
             { label: 'Empresas', value: stats.companies, icon: Building2, color: 'text-blue-400' },
           ].map(({ label, value, icon: Icon, color }) => (
             <div
@@ -291,21 +276,6 @@ export default function AdminPanel() {
 
           {/* Filter dropdowns */}
           <div className={`flex flex-col sm:flex-row gap-3 ${showFilters ? '' : 'hidden sm:flex'}`}>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-4 py-2.5 rounded-lg bg-dark-800 border border-dark-600
-                         text-white focus:outline-none focus:ring-2 focus:ring-red-500/50
-                         transition-colors"
-            >
-              <option value="all">Todos os cargos</option>
-              <option value="owner">Owner</option>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="operator">Operator</option>
-              <option value="viewer">Viewer</option>
-            </select>
-
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -364,9 +334,6 @@ export default function AdminPanel() {
                         Empresa
                       </th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                        Cargo
-                      </th>
-                      <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase tracking-wider">
                         Status
                       </th>
                       <th className="text-left px-6 py-3 text-xs font-medium text-dark-400 uppercase tracking-wider">
@@ -404,14 +371,7 @@ export default function AdminPanel() {
                           </td>
                           <td className="px-6 py-4">
                             <span className="text-xs font-mono text-dark-400 bg-dark-800 px-2 py-1 rounded">
-                              {user.companyId || '—'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${getRoleBadge(user.role)}`}
-                            >
-                              {user.role || 'viewer'}
+                              {user.companyName || user.companyId || '—'}
                             </span>
                           </td>
                           <td className="px-6 py-4">
@@ -500,18 +460,13 @@ export default function AdminPanel() {
 
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border capitalize ${getRoleBadge(user.role)}`}
-                        >
-                          {user.role || 'viewer'}
-                        </span>
-                        <span
                           className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(user.status)}`}
                         >
                           {isDisabled ? 'Desativado' : 'Ativo'}
                         </span>
                         {user.companyId && (
                           <span className="text-xs font-mono text-dark-500 bg-dark-800 px-2 py-0.5 rounded">
-                            {user.companyId}
+                            {user.companyName || user.companyId}
                           </span>
                         )}
                       </div>
@@ -562,30 +517,6 @@ export default function AdminPanel() {
                         </button>
                       </div>
 
-                      {/* Expanded details */}
-                      {isExpanded && (
-                        <div className="bg-dark-800 border border-dark-700 rounded-lg p-3 space-y-2 text-xs">
-                          <p className="text-dark-400 font-medium uppercase tracking-wider">Dados da Conta</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <span className="text-dark-500">UID:</span>
-                              <p className="text-dark-300 font-mono break-all">{user.id}</p>
-                            </div>
-                            <div>
-                              <span className="text-dark-500">Empresa:</span>
-                              <p className="text-dark-300 font-mono">{user.companyId || '—'}</p>
-                            </div>
-                            <div>
-                              <span className="text-dark-500">Criado em:</span>
-                              <p className="text-dark-300">{formatDate(user.createdAt)}</p>
-                            </div>
-                            <div>
-                              <span className="text-dark-500">Atualizado:</span>
-                              <p className="text-dark-300">{formatDate(user.updatedAt)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -603,86 +534,57 @@ export default function AdminPanel() {
           )}
         </div>
 
-        {/* User Detail Panel (desktop) */}
+        {/* User details modal */}
         {selectedUser && (
-          <div className="hidden lg:block bg-dark-900 border border-dark-700 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Detalhes da Conta</h3>
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="text-dark-400 hover:text-white transition-colors text-sm"
-              >
-                Fechar
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-dark-500 mb-1">Nome</p>
-                <p className="text-sm text-white">{selectedUser.name || '—'}</p>
+          <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+            <button
+              aria-label="Fechar detalhes"
+              onClick={() => setSelectedUser(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <div className="relative w-full max-w-2xl bg-dark-900 border border-dark-700 rounded-xl p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-semibold text-white">Detalhes da Conta</h3>
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="text-dark-400 hover:text-white transition-colors text-sm"
+                >
+                  Fechar
+                </button>
               </div>
-              <div>
-                <p className="text-xs text-dark-500 mb-1">E-mail</p>
-                <p className="text-sm text-white">{selectedUser.email || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-dark-500 mb-1">UID</p>
-                <p className="text-sm text-white font-mono break-all">{selectedUser.id}</p>
-              </div>
-              <div>
-                <p className="text-xs text-dark-500 mb-1">Empresa (companyId)</p>
-                <p className="text-sm text-white font-mono">{selectedUser.companyId || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-dark-500 mb-1">Cargo</p>
-                <p className="text-sm text-white capitalize">{selectedUser.role || 'viewer'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-dark-500 mb-1">Status</p>
-                <p className="text-sm text-white">{selectedUser.status === 'disabled' ? 'Desativado' : 'Ativo'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-dark-500 mb-1">Criado em</p>
-                <p className="text-sm text-white">{formatDate(selectedUser.createdAt)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-dark-500 mb-1">Atualizado em</p>
-                <p className="text-sm text-white">{formatDate(selectedUser.updatedAt)}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-dark-500 mb-1">Nome</p>
+                  <p className="text-sm text-white">{selectedUser.name || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-dark-500 mb-1">E-mail</p>
+                  <p className="text-sm text-white break-all">{selectedUser.email || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-dark-500 mb-1">UID</p>
+                  <p className="text-sm text-white font-mono break-all">{selectedUser.id}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-dark-500 mb-1">Empresa</p>
+                  <p className="text-sm text-white break-all">{selectedUser.companyName || selectedUser.companyId || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-dark-500 mb-1">Status</p>
+                  <p className="text-sm text-white">{selectedUser.status === 'disabled' ? 'Desativado' : 'Ativo'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-dark-500 mb-1">Criado em</p>
+                  <p className="text-sm text-white">{formatDate(selectedUser.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-dark-500 mb-1">Atualizado em</p>
+                  <p className="text-sm text-white">{formatDate(selectedUser.updatedAt)}</p>
+                </div>
               </div>
             </div>
           </div>
         )}
-
-        {/* Bootstrap Notice — mostra UID do admin para configurar regras */}
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
-          <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-yellow-200/80 space-y-2">
-            <p className="font-medium text-yellow-300">⚙️ Modo Bootstrap — Regras Firestore</p>
-            <p>
-              As regras do Firestore estão em modo permissivo para permitir o primeiro login.
-              Após configurar, <strong>trave o acesso</strong> substituindo o UID nas regras:
-            </p>
-            <div className="flex items-center gap-2 bg-dark-800 rounded-lg px-3 py-2 font-mono text-xs">
-              <span className="text-dark-400">Seu UID:</span>
-              <code className="text-yellow-300 break-all">{admin?.uid || '...'}</code>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(admin?.uid || '');
-                  toast.success('UID copiado!');
-                }}
-                className="ml-auto p-1 rounded hover:bg-dark-700 text-dark-400 hover:text-yellow-300 transition-colors"
-                title="Copiar UID"
-              >
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <ol className="list-decimal list-inside space-y-1 text-xs text-dark-400">
-              <li>Copie o UID acima</li>
-              <li>Abra <code className="text-dark-300">firestore.rules</code></li>
-              <li>Na função <code className="text-dark-300">isSuperAdmin()</code>, troque por: <code className="text-yellow-300">request.auth.uid == '{admin?.uid || 'SEU_UID'}'</code></li>
-              <li>Faça deploy das regras no Firebase Console</li>
-            </ol>
-          </div>
-        </div>
 
         {/* Info */}
         <div className="flex items-start gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/20">

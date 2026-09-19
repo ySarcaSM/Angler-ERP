@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-export default function Modal({ open, onClose, title, children, size = 'md' }) {
+export default function Modal({ open, onClose, title, children, size = 'md', panelClassName = '', backdropClassName = 'bg-black/60 backdrop-blur-sm' }) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
@@ -23,8 +23,8 @@ export default function Modal({ open, onClose, title, children, size = 'md' }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative w-full ${sizeClasses[size]} bg-dark-900 border border-dark-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col`}>
+      <div className={`absolute inset-0 ${backdropClassName}`} onClick={onClose} />
+      <div className={`relative w-full ${sizeClasses[size]} bg-dark-900 border border-dark-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col ${panelClassName}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-dark-800">
           <h2 className="text-lg font-semibold text-dark-100">{title}</h2>

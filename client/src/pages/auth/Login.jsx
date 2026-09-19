@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, LogIn, ArrowLeft } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 
 export default function Login() {
@@ -26,6 +26,7 @@ export default function Login() {
       const msg = err.code === 'auth/invalid-credential' ? 'Email ou senha incorretos.'
         : err.code === 'auth/user-not-found' ? 'Usuário não encontrado.'
         : err.code === 'auth/wrong-password' ? 'Senha incorreta.'
+        : err.code === 'permission-denied' ? 'Permissão negada ao ler o perfil. Verifique as regras do Firestore.'
         : err.code === 'auth/too-many-requests' ? 'Muitas tentativas. Tente novamente mais tarde.'
         : err.message;
       toast.error(msg);
@@ -52,7 +53,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <Link to="/" className="inline-block">
-              <img src="../logo.png" alt="logo"/>
+              <img src="/logo.png" alt="Angler ERP" className="h-16 w-auto mx-auto object-contain" />
             </Link>
             <h1 className="text-2xl font-bold text-gold">Recuperar Senha</h1>
             <p className="text-dark-500 text-sm mt-1">Informe seu email para receber o link</p>
@@ -80,7 +81,7 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <img src="../logo.png" alt="logo"/>
+              <img src="/logo.png" alt="Angler ERP" className="h-16 w-auto mx-auto object-contain" />
           </Link>
           <h1 className="text-2xl font-bold text-gold">Angler ERP</h1>
           <p className="text-dark-500 text-sm mt-1">Entre na sua conta</p>

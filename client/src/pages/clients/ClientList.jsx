@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, Phone, Mail } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { listClients, createClient, updateClient, deleteClient } from '../../services/firebase/clients';
 import DataTable from '../../components/ui/DataTable';
 import PageHeader from '../../components/ui/PageHeader';
@@ -11,15 +12,39 @@ import toast from 'react-hot-toast';
 
 const EMPTY = { name: '', document: '', email: '', phone: '', whatsapp: '', contact: '', address: { street: '', number: '', neighborhood: '', city: '', state: '', zipCode: '' }, notes: '', status: 'active' };
 
+function formatCPF(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function isValidCPF(value) {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
+  const calculateDigit = (length) => {
+    const sum = digits.slice(0, length).split('').reduce((total, digit, index) => (
+      total + Number(digit) * (length + 1 - index)
+    ), 0);
+    const remainder = (sum * 10) % 11;
+    return remainder === 10 ? 0 : remainder;
+  };
+  return calculateDigit(9) === Number(digits[9]) && calculateDigit(10) === Number(digits[10]);
+}
+
 export default function ClientList() {
   const { company, user, userData } = useAuth();
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search') || '';
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(urlSearch);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const load = useCallback(async () => {
     if (!company?.id) return;
@@ -33,20 +58,35 @@ export default function ClientList() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setForm(EMPTY); setEditing(null); setModal(true); };
-  const openEdit = (c) => { setForm({ ...EMPTY, ...c, address: { ...EMPTY.address, ...c.address } }); setEditing(c.id); setModal(true); };
+  useEffect(() => { setSearch(urlSearch); }, [urlSearch]);
+
+  const openNew = () => { setForm({ ...EMPTY, address: { ...EMPTY.address } }); setErrors({}); setEditing(null); setModal(true); };
+  const openEdit = (c) => { setForm({ ...EMPTY, ...c, address: { ...EMPTY.address, ...c.address } }); setErrors({}); setEditing(c.id); setModal(true); };
+
+  const validateForm = () => {
+    const nextErrors = {};
+    const phoneDigits = form.phone.replace(/\D/g, '');
+    if (form.name.trim().length < 2) nextErrors.name = 'Informe o nome completo.';
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) nextErrors.email = 'Informe um e-mail válido.';
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) nextErrors.phone = 'Informe um telefone válido.';
+    if (!isValidCPF(form.document)) nextErrors.document = 'Informe um CPF válido.';
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setSaving(true);
     try {
       if (editing) {
+        const previousClient = data.find((client) => client.id === editing);
         await updateClient(editing, form);
-        await logAudit(company.id, { user, userName: userData?.name, action: 'update', entity: 'Client', entityId: editing });
+        await logAudit(company.id, { user, userName: userData?.name, action: 'update', entity: 'Cliente', entityId: editing, description: `${userData?.name || 'Usuário'} alterou o cliente ${form.name}.`, details: { antes: { name: previousClient?.name, email: previousClient?.email, phone: previousClient?.phone, status: previousClient?.status }, depois: { name: form.name, email: form.email, phone: form.phone, status: form.status } } });
         toast.success('Cliente atualizado!');
       } else {
-        await createClient(company.id, form);
-        await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Client' });
+        const createdClient = await createClient(company.id, form);
+        await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Cliente', entityId: createdClient.id, description: `${userData?.name || 'Usuário'} criou o cliente ${form.name}.`, details: { name: form.name, email: form.email, phone: form.phone } });
         toast.success('Cliente criado!');
       }
       setModal(false); load();
@@ -58,7 +98,7 @@ export default function ClientList() {
     if (!confirm(`Remover ${c.name}?`)) return;
     try {
       await deleteClient(c.id);
-      await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Client', entityId: c.id });
+      await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Cliente', entityId: c.id, description: `${userData?.name || 'Usuário'} excluiu o cliente ${c.name}.`, details: { name: c.name, email: c.email } });
       toast.success('Removido.'); load();
     } catch (err) { toast.error(err.message); }
   };
@@ -85,15 +125,19 @@ export default function ClientList() {
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
       </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Editar Cliente' : 'Novo Cliente'} size="lg">
+      <Modal
+        open={modal}
+        onClose={() => setModal(false)}
+        title={editing ? 'Editar Cliente' : 'Novo Cliente'}
+        size="lg"
+        backdropClassName="bg-transparent"
+      >
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="label">Nome *</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
-            <div><label className="label">Documento</label><input className="input" value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} /></div>
-            <div><label className="label">Email</label><input type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-            <div><label className="label">Telefone</label><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-            <div><label className="label">WhatsApp</label><input className="input" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></div>
-            <div><label className="label">Contato</label><input className="input" value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} /></div>
+            <div><label className="label">Nome *</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />{errors.name && <p className="text-xs text-red-400 mt-1">{errors.name}</p>}</div>
+            <div><label className="label">CPF *</label><input className="input" value={form.document} onChange={(e) => setForm({ ...form, document: formatCPF(e.target.value) })} inputMode="numeric" maxLength={14} required />{errors.document && <p className="text-xs text-red-400 mt-1">{errors.document}</p>}</div>
+            <div><label className="label">Email *</label><input type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />{errors.email && <p className="text-xs text-red-400 mt-1">{errors.email}</p>}</div>
+            <div><label className="label">Telefone de contato *</label><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })} inputMode="tel" required />{errors.phone && <p className="text-xs text-red-400 mt-1">{errors.phone}</p>}</div>
           </div>
           <div><label className="label">Observações</label><textarea className="input" rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
           <div className="flex justify-end gap-3 pt-4 border-t border-dark-800">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, Eye, EyeOff, LogIn, AlertCircle, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Shield, Eye, EyeOff, LogIn, AlertCircle, User, ArrowLeft } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import toast from 'react-hot-toast';
 
@@ -132,6 +132,14 @@ export default function AdminLogin() {
             )}
           </button>
         </form>
+
+        <Link
+          to="/"
+          className="mt-4 flex items-center justify-center gap-2 text-sm text-dark-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar para a página inicial
+        </Link>
 
         {/* Footer */}
         <p className="text-center text-dark-500 text-xs mt-6">

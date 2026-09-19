@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Warehouse, AlertTriangle, ArrowDown, ArrowUp, Plus } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { listMovements, adjustStock, getSummary } from '../../services/firebase/stock';
 import { listProducts } from '../../services/firebase/products';
 import DataTable from '../../components/ui/DataTable';
@@ -8,9 +8,10 @@ import PageHeader from '../../components/ui/PageHeader';
 import Modal from '../../components/ui/Modal';
 import { formatBRL, formatDate } from '../../utils/format';
 import toast from 'react-hot-toast';
+import { logAudit } from '../../services/firebase/settings';
 
 export default function StockDashboard() {
-  const { company, user } = useAuth();
+  const { company, user, userData } = useAuth();
   const [summary, setSummary] = useState(null);
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +44,8 @@ export default function StockDashboard() {
     e.preventDefault(); setSaving(true);
     try {
       const product = products.find((p) => p.id === form.productId);
-      await adjustStock(company.id, { ...form, productName: product?.name }, user);
+      const adjustment = await adjustStock(company.id, { ...form, productName: product?.name }, user);
+      await logAudit(company.id, { user, userName: userData?.name, action: 'adjust', entity: 'Estoque', entityId: form.productId, description: `${userData?.name || 'Usuário'} ajustou o estoque de ${product?.name || form.productId}: ${form.type === 'entry' ? 'entrada' : 'saída'} de ${form.quantity}.`, details: { productName: product?.name, type: form.type, quantity: form.quantity, previousStock: adjustment.previousStock, newStock: adjustment.newStock, reason: form.reason } });
       toast.success('Estoque ajustado!'); setModal(false); load();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }

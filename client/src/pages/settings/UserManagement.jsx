@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { listUsers, deactivateUser } from '../../services/firebase/settings';
+import { useAuth } from '../../context/useAuth';
+import { listUsers, deactivateUser, logAudit } from '../../services/firebase/settings';
 import { formatDate } from '../../utils/format';
 import toast from 'react-hot-toast';
 
 export default function UserManagement() {
   const navigate = useNavigate();
-  const { company } = useAuth();
+  const { company, user, userData } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +23,7 @@ export default function UserManagement() {
 
   const handleDeactivate = async (u) => {
     if (!confirm(`Desativar ${u.name}?`)) return;
-    try { await deactivateUser(u.uid || u.id); toast.success('Desativado.'); load(); }
+    try { await deactivateUser(u.uid || u.id); await logAudit(company.id, { user, userName: userData?.name, action: 'update', entity: 'Usuário', entityId: u.uid || u.id, description: `${userData?.name || 'Usuário'} desativou o usuário ${u.name || u.email}.`, details: { name: u.name, email: u.email, role: u.role, status: 'disabled' } }); toast.success('Desativado.'); load(); }
     catch (err) { toast.error(err.message); }
   };
 

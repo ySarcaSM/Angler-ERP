@@ -4,7 +4,7 @@
 
 import {
   createDoc, getDoc_, updateDoc_, deleteDoc_, listDocs, countDocs,
-} from './firestore';
+} from './firestore.js';
 
 const COLLECTION = 'products';
 
@@ -15,7 +15,7 @@ export async function listProducts(companyId, options = {}) {
       { field: 'companyId', op: '==', value: companyId },
       ...(options.filters || []),
     ],
-    searchField: ['name', 'code', 'barcode', 'category', 'description'],
+    searchField: ['name', 'description'],
   });
 }
 

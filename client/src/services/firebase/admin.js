@@ -83,8 +83,8 @@ async function getValidToken() {
 /**
  * Login do superadmin.
  * 1. Valida credenciais contra variáveis de ambiente
- * 2. Cria conta Firebase Auth se não existir
- * 3. Faz signInWithEmailAndPassword
+ * 2. Faz signInWithEmailAndPassword na conta existente
+ * 3. Cria a conta apenas na primeira configuração, se ela não existir
  * 4. Cria documento no Firestore para o AuthContext não deslogar
  * 5. Salva sessão no localStorage
  */
@@ -106,21 +106,21 @@ export async function adminLogin(username, password) {
     throw new Error('Credenciais inválidas.');
   }
 
-  // Criar conta se não existir, depois fazer login
+  // Entrar primeiro evita tentar criar uma conta a cada login.
   let credential;
   try {
-    credential = await createUserWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_PASSWORD);
-    console.log('[Admin] Conta criada no Firebase Auth. UID:', credential.user.uid);
-  } catch (createErr) {
-    if (createErr.code === 'auth/email-already-in-use') {
-      try {
-        credential = await signInWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_PASSWORD);
-        console.log('[Admin] Login com conta existente. UID:', credential.user.uid);
-      } catch (signInErr) {
-        console.error('[Admin] Erro ao fazer login:', signInErr);
-        throw new Error('Erro ao autenticar. Verifique as credenciais.');
-      }
-    } else {
+    credential = await signInWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_PASSWORD);
+    console.log('[Admin] Login com conta existente. UID:', credential.user.uid);
+  } catch (signInErr) {
+    if (signInErr.code !== 'auth/user-not-found') {
+      console.error('[Admin] Erro ao fazer login:', signInErr);
+      throw new Error('Erro ao autenticar. Verifique as credenciais.');
+    }
+
+    try {
+      credential = await createUserWithEmailAndPassword(auth, ADMIN_AUTH_EMAIL, ADMIN_PASSWORD);
+      console.log('[Admin] Conta criada na primeira configuração. UID:', credential.user.uid);
+    } catch (createErr) {
       console.error('[Admin] Erro ao criar conta:', createErr);
       throw new Error('Erro ao criar conta admin. Verifique a configuração do Firebase.');
     }
@@ -225,11 +225,23 @@ export async function listAllUsers() {
   );
 
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({
+  const users = snapshot.docs.map((d) => ({
     id: d.id,
     ...d.data(),
     createdAt: d.data().createdAt?.toDate?.() || null,
     updatedAt: d.data().updatedAt?.toDate?.() || null,
+  }));
+
+  const companyIds = [...new Set(users.map((user) => user.companyId).filter(Boolean))];
+  const companyEntries = await Promise.all(companyIds.map(async (companyId) => {
+    const companySnapshot = await getDoc(doc(db, 'companies', companyId));
+    return [companyId, companySnapshot.exists() ? companySnapshot.data().name : null];
+  }));
+  const companyNames = new Map(companyEntries);
+
+  return users.map((user) => ({
+    ...user,
+    companyName: companyNames.get(user.companyId) || null,
   }));
 }
 
@@ -307,59 +319,19 @@ export async function deleteUserDocument(userId) {
 }
 
 /**
- * Tenta excluir a conta do Firebase Auth via REST API.
- */
-export async function deleteAuthUser(targetUid) {
-  await getValidToken();
-  const currentUser = auth.currentUser;
-  if (!currentUser) throw new Error('Admin não está autenticado.');
-
-  const idToken = await currentUser.getIdToken();
-  const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
-  if (!apiKey) throw new Error('VITE_FIREBASE_API_KEY não configurada.');
-
-  try {
-    const response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:delete?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken, targetUid }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      const msg = error?.error?.message || 'Erro desconhecido';
-      if (msg === 'USER_NOT_FOUND') return { deleted: false, reason: 'not_found' };
-      console.warn('Auth delete retornou:', msg);
-      return { deleted: false, reason: msg };
-    }
-
-    return { deleted: true };
-  } catch (err) {
-    console.warn('Erro ao tentar deletar Auth:', err.message);
-    return { deleted: false, reason: err.message };
-  }
-}
-
-/**
- * Exclusão completa: Firestore + tentativa de Auth.
+ * Exclui a conta do painel removendo seu documento no Firestore.
+ *
+ * A exclusão de outro usuário no Firebase Auth exige Admin SDK no backend.
+ * Nunca enviar o token do superadmin para accounts:delete: essa API exclui
+ * a conta associada ao próprio token, encerrando a sessão do administrador.
  */
 export async function deleteUserFull(userId) {
   await deleteUserDocument(userId);
 
-  let authResult;
-  try {
-    authResult = await deleteAuthUser(userId);
-  } catch (err) {
-    authResult = { deleted: false, reason: err.message };
-  }
-
   return {
     firestore: true,
-    auth: authResult.deleted,
-    authDetail: authResult.reason || 'ok',
+    auth: false,
+    authDetail: 'backend_required',
   };
 }
 

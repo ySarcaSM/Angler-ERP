@@ -5,20 +5,29 @@
 import {
   listDocs, getDoc_,
   getBatch, docRef, newDocRef, serverTimestamp,
-} from './firestore';
+} from './firestore.js';
+import { timestampToDate } from '../../utils/format';
 
 const COLLECTION = 'stockMovements';
 
 export async function listMovements(companyId, options = {}) {
-  return listDocs(COLLECTION, {
+  const result = await listDocs(COLLECTION, {
     ...options,
     filters: [
       { field: 'companyId', op: '==', value: companyId },
       ...(options.filters || []),
     ],
-    sortBy: 'createdAt',
-    sortDir: 'desc',
+    sortBy: null,
   });
+
+  return {
+    ...result,
+    data: result.data.sort((first, second) => {
+      const firstDate = timestampToDate(first.createdAt)?.getTime() || 0;
+      const secondDate = timestampToDate(second.createdAt)?.getTime() || 0;
+      return secondDate - firstDate;
+    }),
+  };
 }
 
 export async function adjustStock(companyId, { productId, productName, quantity, type, reason }, user) {

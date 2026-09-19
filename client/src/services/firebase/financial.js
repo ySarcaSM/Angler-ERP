@@ -5,24 +5,28 @@
 import {
   createDoc, getDoc_, updateDoc_, deleteDoc_, listDocs,
   serverTimestamp, timestampToDate,
-} from './firestore';
+} from './firestore.js';
 
 const COLLECTION = 'financialTransactions';
 
 export async function listTransactions(companyId, options = {}) {
-  const filters = [
-    { field: 'companyId', op: '==', value: companyId },
-  ];
-  if (options.type) filters.push({ field: 'type', op: '==', value: options.type });
-  if (options.status) filters.push({ field: 'status', op: '==', value: options.status });
-  if (options.category) filters.push({ field: 'category', op: '==', value: options.category });
-
-  return listDocs(COLLECTION, {
+  const result = await listDocs(COLLECTION, {
     ...options,
-    filters,
-    sortBy: options.sortBy || 'createdAt',
-    sortDir: options.sortDir || 'desc',
+    filters: [{ field: 'companyId', op: '==', value: companyId }],
+    sortBy: null,
   });
+
+  const data = result.data
+    .filter((transaction) => !options.type || transaction.type === options.type)
+    .filter((transaction) => !options.status || transaction.status === options.status)
+    .filter((transaction) => !options.category || transaction.category === options.category)
+    .sort((first, second) => {
+      const firstDate = timestampToDate(first.createdAt)?.getTime() || 0;
+      const secondDate = timestampToDate(second.createdAt)?.getTime() || 0;
+      return secondDate - firstDate;
+    });
+
+  return { ...result, data };
 }
 
 export async function getTransaction(id) { return getDoc_(COLLECTION, id); }

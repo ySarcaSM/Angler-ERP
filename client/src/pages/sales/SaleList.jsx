@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Search, Eye, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { listSales, approveSale, cancelSale } from '../../services/firebase/sales';
+import { useAuth } from '../../context/useAuth';
+import { listSales, approveSale, cancelSale, deleteSale } from '../../services/firebase/sales';
 import DataTable from '../../components/ui/DataTable';
 import PageHeader from '../../components/ui/PageHeader';
 import { formatBRL, formatDate, statusLabel } from '../../utils/format';
 import toast from 'react-hot-toast';
+import { logAudit } from '../../services/firebase/settings';
 
 export default function SaleList() {
   const navigate = useNavigate();
-  const { company } = useAuth();
+  const { company, user, userData } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -31,14 +32,27 @@ export default function SaleList() {
   useEffect(() => { load(); }, [load]);
 
   const handleApprove = async (id) => {
-    try { await approveSale(id, company.id); toast.success('Venda aprovada!'); load(); }
+    try { const sale = data.find((item) => item.id === id); await approveSale(id, company.id); await logAudit(company.id, { user, userName: userData?.name, action: 'approve', entity: 'Venda', entityId: id, description: `${userData?.name || 'Usuário'} aprovou a venda #${sale?.number || id} de ${sale?.clientName || 'cliente'}.`, details: { number: sale?.number, clientName: sale?.clientName, total: sale?.total } }); toast.success('Venda aprovada!'); load(); }
     catch (err) { toast.error(err.message); }
   };
 
   const handleCancel = async (id) => {
     if (!confirm('Cancelar esta venda?')) return;
-    try { await cancelSale(id); toast.success('Venda cancelada.'); load(); }
+    try {
+      const sale = data.find((item) => item.id === id);
+      const result = await cancelSale(id);
+      await logAudit(company.id, { user, userName: userData?.name, action: 'cancel', entity: 'Venda', entityId: id, description: `${userData?.name || 'Usuário'} cancelou a venda #${sale?.number || id} de ${sale?.clientName || 'cliente'}.`, details: { number: sale?.number, clientName: sale?.clientName, total: sale?.total } });
+      toast.success('Venda cancelada.');
+      load();
+    }
     catch (err) { toast.error(err.message); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Deletar esta venda permanentemente?')) return;
+    try { const sale = data.find((item) => item.id === id); await deleteSale(id); await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Venda', entityId: id, description: `${userData?.name || 'Usuário'} excluiu a venda #${sale?.number || id} de ${sale?.clientName || 'cliente'}.`, details: { number: sale?.number, clientName: sale?.clientName, total: sale?.total, status: sale?.status } }); toast.success('Venda deletada.'); }
+    catch (err) { toast.error(err.message); }
+    finally { load(); }
   };
 
   const columns = [
@@ -50,9 +64,10 @@ export default function SaleList() {
     { key: 'createdAt', label: 'Data', render: (v) => <span className="text-dark-500 text-xs">{formatDate(v?.toDate?.() || v)}</span> },
     { key: '_actions', label: '', width: '100px', render: (_, row) => (
       <div className="flex gap-1">
-        <button onClick={(e) => { e.stopPropagation(); navigate(`/sales/${row.id}`); }} className="btn-ghost btn-sm"><Eye size={14} /></button>
+        <button onClick={(e) => { e.stopPropagation(); navigate(`/app/sales/${row.id}`); }} className="btn-ghost btn-sm"><Eye size={14} /></button>
         {(row.status === 'draft' || row.status === 'pending') && <button onClick={(e) => { e.stopPropagation(); handleApprove(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button>}
-        {row.status !== 'cancelled' && <button onClick={(e) => { e.stopPropagation(); handleCancel(row.id); }} className="btn-ghost btn-sm text-red-400"><XCircle size={14} /></button>}
+        {row.status !== 'approved' && row.status !== 'cancelled' && <button onClick={(e) => { e.stopPropagation(); handleCancel(row.id); }} className="btn-ghost btn-sm text-red-400" title="Cancelar venda"><XCircle size={14} /></button>}
+        <button onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }} className="btn-ghost btn-sm text-red-400" title="Deletar venda"><Trash2 size={14} /></button>
       </div>
     )},
   ];
@@ -74,7 +89,7 @@ export default function SaleList() {
             <option value="cancelled">Cancelado</option>
           </select>
         </div>
-        <DataTable columns={columns} data={data} loading={loading} onRowClick={(row) => navigate(`/sales/${row.id}`)} />
+        <DataTable columns={columns} data={data} loading={loading} onRowClick={(row) => navigate(`/app/sales/${row.id}`)} />
       </div>
     </div>
   );

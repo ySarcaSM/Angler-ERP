@@ -4,7 +4,9 @@
 
 import {
   createDoc, getDoc_, updateDoc_, deleteDoc_, listDocs, countDocs,
-} from './firestore';
+} from './firestore.js';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 const COLLECTION = 'clients';
 
@@ -37,4 +39,16 @@ export async function deleteClient(id) {
 
 export async function countClients(companyId) {
   return countDocs(COLLECTION, [{ field: 'companyId', op: '==', value: companyId }]);
+}
+
+export function subscribeClientCount(companyId, onCount, onError) {
+  const clientsQuery = query(
+    collection(db, COLLECTION),
+    where('companyId', '==', companyId),
+  );
+  return onSnapshot(
+    clientsQuery,
+    (snapshot) => onCount(snapshot.size),
+    onError,
+  );
 }

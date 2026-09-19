@@ -1,33 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Save, Users, Clock } from 'lucide-react';
+import { Building2, Save, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { getCompany, updateCompany, listAuditLogs } from '../../services/firebase/settings';
-import { formatDate } from '../../utils/format';
+import { useAuth } from '../../context/useAuth';
+import { getCompany, updateCompany, logAudit } from '../../services/firebase/settings';
+import AccessibilitySettingsPanel from '../../components/settings/AccessibilitySettingsPanel';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
-  const { company: authCompany } = useAuth();
+  const { company: authCompany, user, userData } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', tradeName: '', document: '', email: '', phone: '', settings: { currency: 'BRL', taxRegime: 'simples', lowStockThreshold: 10 } });
-  const [auditLog, setAuditLog] = useState([]);
+  const [originalForm, setOriginalForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!authCompany?.id) return;
-    Promise.all([
-      getCompany(authCompany.id),
-      listAuditLogs(authCompany.id, { pageSize: 20 }),
-    ]).then(([c, log]) => {
-      if (c) setForm({ name: c.name || '', tradeName: c.tradeName || '', document: c.document || '', email: c.email || '', phone: c.phone || '', settings: { ...form.settings, ...c.settings } });
-      setAuditLog(log.data);
+    getCompany(authCompany.id).then((c) => {
+      if (c) {
+        const companyForm = { name: c.name || '', tradeName: c.tradeName || '', document: c.document || '', email: c.email || c.companyEmail || '', phone: c.phone || c.companyPhone || '', settings: { ...form.settings, ...c.settings } };
+        setForm(companyForm);
+        setOriginalForm(companyForm);
+      }
     }).finally(() => setLoading(false));
   }, [authCompany]);
 
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true);
-    try { await updateCompany(authCompany.id, form); toast.success('Salvo!'); }
+    try {
+      await updateCompany(authCompany.id, { ...form, companyEmail: form.email, companyPhone: form.phone });
+      await logAudit(authCompany.id, { user, userName: userData?.name, action: 'update', entity: 'Configurações da empresa', entityId: authCompany.id, description: `${userData?.name || 'Usuário'} atualizou os dados da empresa.`, details: { antes: originalForm, depois: form } });
+      setOriginalForm(form);
+      toast.success('Salvo!');
+    }
     catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   };
@@ -39,7 +44,6 @@ export default function SettingsPage() {
       <div><h1 className="text-2xl font-bold text-dark-100">Configurações</h1><p className="text-dark-500 text-sm mt-1">Gerencie sua empresa</p></div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button onClick={() => navigate('/app/settings/users')} className="card p-5 text-left hover:border-primary-500/30 transition-colors"><Users size={24} className="text-primary-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Usuários</div><div className="text-xs text-dark-500">Gerenciar equipe</div></button>
-        <div className="card p-5"><Clock size={24} className="text-amber-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Log de Atividades</div><div className="text-xs text-dark-500">{auditLog.length} ações recentes</div></div>
       </div>
       <form onSubmit={handleSave}>
         <div className="card">
@@ -56,18 +60,7 @@ export default function SettingsPage() {
         </div>
         <div className="flex justify-end mt-4"><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : <><Save size={18} /> Salvar</>}</button></div>
       </form>
-      <div className="card">
-        <div className="card-header"><h3 className="text-sm font-semibold text-dark-200">Log de Atividades</h3></div>
-        <div className="divide-y divide-dark-800/50 max-h-96 overflow-y-auto">
-          {auditLog.map((log) => (
-            <div key={log.id} className="px-6 py-3 flex items-center justify-between">
-              <div><span className="text-sm text-dark-200">{log.userName}</span><span className="text-sm text-dark-500"> — {log.action} em {log.entity}</span></div>
-              <span className="text-xs text-dark-500">{formatDate(log.createdAt?.toDate?.() || log.createdAt)}</span>
-            </div>
-          ))}
-          {auditLog.length === 0 && <div className="px-6 py-8 text-center text-dark-500 text-sm">Nenhuma atividade</div>}
-        </div>
-      </div>
+      <AccessibilitySettingsPanel />
     </div>
   );
 }
