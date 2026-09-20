@@ -49,6 +49,7 @@ const MATERIAL_PREVIEW = {
 function CutPreview({ profile, result, onDownload }) {
   const material = MATERIAL_PREVIEW[profile?.kind] || MATERIAL_PREVIEW.bag;
   const [previewUrl, setPreviewUrl] = useState('');
+  const [secondaryPreviewUrl, setSecondaryPreviewUrl] = useState('');
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
@@ -56,88 +57,266 @@ function CutPreview({ profile, result, onDownload }) {
     canvas.width = 1200;
     canvas.height = 760;
     const context = canvas.getContext('2d');
-    const scale = canvas.width / 1200;
     const colors = {
-      backpack: { fill: '#fbbf24', dark: '#78350f' },
-      drawstring: { fill: '#fbbf24', dark: '#78350f' },
-      bag: { fill: '#34d399', dark: '#064e3b' },
-      paper: { fill: '#38bdf8', dark: '#0c4a6e' },
-      plastic: { fill: '#e879f9', dark: '#701a75' },
+      backpack: { fill: '#8fd4f6', dark: '#143b52' },
+      drawstring: { fill: '#8fd4f6', dark: '#143b52' },
+      bag: { fill: '#8fd4f6', dark: '#143b52' },
+      paper: { fill: '#8fd4f6', dark: '#143b52' },
+      plastic: { fill: '#8fd4f6', dark: '#143b52' },
     };
     const color = colors[profile?.kind] || colors.bag;
-    const width = Number(result.productWidth) || 0;
-    const height = Number(result.productHeight) || 0;
-    const length = Number(result.productLength) || 0;
-    const cordLength = Number(result.accessoryType === 'cord' ? result.cordLength : result.handleLength) || 0;
+    const quantity = Number(result.quantity) || 100;
+    const materialWidth = Number(result.materialWidth) || 140;
+    const mainPieceWidth = Number(result.mainCut.pieceWidth) || 50;
+    const mainPieceHeight = Number(result.mainCut.pieceLength) || 90;
+    const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
+    const sidePieceHeight = Number(result.sideCut.pieceLength) || 90;
+    const mainPiecesPerRow = Math.max(Number(result.mainCut.piecesPerRow) || 7, 1);
+    const sidePiecesPerRow = Math.max(Number(result.sideCut.piecesPerRow) || 7, 1);
 
     if (!result.quantityValid || !result.accordionValid || result.completeUnitsPerRow < 1 || result.quantity > result.completeUnitsPerRow) {
       setPreviewUrl('');
       return undefined;
     }
 
-    context.scale(scale, scale);
-    context.fillStyle = '#111827';
+    const loadTableImage = () => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = '/mesa.png';
+    });
+
+    const drawCardText = (x, y, width, height, title, lines, fill, titleSize = 12, bodySize = 11) => {
+      context.fillStyle = fill;
+      context.fillRect(x, y, width, height);
+      context.strokeStyle = '#111827';
+      context.lineWidth = 2;
+      context.strokeRect(x, y, width, height);
+      context.fillStyle = '#111827';
+      context.font = `700 ${titleSize}px Arial`;
+      context.fillText(title, x + 12, y + 20);
+      context.font = `400 ${bodySize}px Arial`;
+      lines.forEach((line, index) => {
+        const lineY = y + 42 + (index * 16);
+        context.fillText(line, x + 12, lineY);
+      });
+    };
+
+    const drawDimensionArrow = (startX, startY, endX, endY, label) => {
+      context.strokeStyle = '#111827';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(startX, startY);
+      context.lineTo(endX, endY);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(startX, startY);
+      context.lineTo(startX - 5, startY - 7);
+      context.moveTo(startX, startY);
+      context.lineTo(startX + 5, startY - 7);
+      context.moveTo(endX, endY);
+      context.lineTo(endX - 5, endY + 7);
+      context.moveTo(endX, endY);
+      context.lineTo(endX + 5, endY + 7);
+      context.stroke();
+      context.fillStyle = '#111827';
+      context.font = '700 13px Arial';
+      const labelWidth = context.measureText(label).width;
+      context.fillText(label, ((startX + endX) / 2) - (labelWidth / 2), startY - 10);
+    };
+
+    const drawVerticalText = (x, y, text, lines = 2) => {
+      context.fillStyle = '#111827';
+      context.font = '700 11px Arial';
+      const words = text.split(' ');
+      if (lines === 2) {
+        const mid = Math.ceil(words.length / 2);
+        context.fillText(words.slice(0, mid).join(' '), x, y);
+        context.fillText(words.slice(mid).join(' '), x, y + 14);
+      } else {
+        context.fillText(text, x, y);
+      }
+    };
+
+    context.fillStyle = '#ffffff';
     context.fillRect(0, 0, 1200, 760);
-    context.fillStyle = '#f9fafb';
-    context.font = '600 30px sans-serif';
-    context.fillText('Preview do produto e do melhor corte', 55, 58);
-    context.font = '400 20px sans-serif';
-    context.fillStyle = '#9ca3af';
-    context.fillText(`${material.label} | largura do material: ${formatNumber(result.materialWidth)} cm`, 55, 91);
 
-    const bagX = 140;
-    const bagY = 135;
-    const bagWidth = 330;
-    const bagHeight = 250;
-    context.fillStyle = color.fill;
-    context.strokeStyle = '#f9fafb';
-    context.lineWidth = 5;
-    context.beginPath();
-    context.roundRect(bagX, bagY, bagWidth, bagHeight, 24);
-    context.fill();
-    context.stroke();
-    if (result.hasAccordion) {
-      context.strokeStyle = color.dark;
-      context.lineWidth = 5;
-      drawAccordionSide(context, bagX + 18, bagY + 35, bagHeight - 70, result.accordionWidth, false);
-      drawAccordionSide(context, bagX + bagWidth - 18, bagY + 35, bagHeight - 70, result.accordionWidth, true);
+    const panelX = 0;
+    const panelY = 0;
+    const panelWidth = 1200;
+    const panelHeight = 760;
+
+    context.fillStyle = '#111827';
+    context.font = '700 18px Arial';
+    context.fillText(`PLANO DE CORTE - ${formatNumber(quantity, 0)} SACOLAS DE TNT (LARGURA DO TNT: ${formatNumber(materialWidth, 0)} cm)`, panelX + 18, panelY + 28);
+    context.font = '600 11px Arial';
+    context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (100 un) | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (100 un)`, panelX + 18, panelY + 46);
+
+    const wasteBlockOffset = 74 + 10;
+    const pieceSpacingOffset = 14;
+    const stripX = 130 + wasteBlockOffset + pieceSpacingOffset;
+    const stripY = 90;
+    const stripWidth = 940;
+    const stripHeight = 150;
+    const sweep = stripWidth / 7;
+
+    const tableLeft = 40;
+    const tableTop = 0;
+    const tableRight = 1160;
+    const tableBottom = 590;
+
+    loadTableImage().then((tableImage) => {
+      if (tableImage) {
+        const tableWidth = tableRight - tableLeft;
+        const tableHeight = tableBottom - tableTop;
+        context.drawImage(tableImage, tableLeft, tableTop, tableWidth, tableHeight);
+      } else {
+        context.strokeStyle = '#111827';
+        context.lineWidth = 2;
+        context.strokeRect(tableLeft, tableTop, tableRight - tableLeft, tableBottom - tableTop);
+        context.beginPath();
+        context.moveTo(tableLeft + 10, tableTop + 10);
+        context.lineTo(tableRight - 10, tableTop + 10);
+        context.moveTo(tableLeft + 10, tableTop + 10);
+        context.lineTo(tableLeft + 10, tableBottom - 10);
+        context.moveTo(tableRight - 10, tableTop + 10);
+        context.lineTo(tableRight - 10, tableBottom - 10);
+        context.stroke();
+      }
+
+      const lengthLineOffset = 90;
+      const lengthLineStartX = stripX + -5 - lengthLineOffset;
+      const lengthLineEndX = stripX + stripWidth - 10 - lengthLineOffset;
+
+      context.strokeStyle = '#111827';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(lengthLineStartX, stripY - 26);
+      context.lineTo(lengthLineEndX, stripY - 26);
+      context.stroke();
+
+      context.fillStyle = '#111827';
+      context.font = '700 13px Arial';
+      const labelWidth = context.measureText('300 cm (comprimento da mesa)').width;
+      context.fillText('300 cm (comprimento da mesa)', ((lengthLineStartX + lengthLineEndX) / 2) - (labelWidth / 2), stripY - 36);
+
+      const widthLabel = '159 cm (largura da mesa)';
+      const widthMeasureX = tableLeft + 34;
+      const widthMeasureY = tableTop + (tableBottom - tableTop) / 2;
+      const widthMeasureGap = 0;
+      context.save();
+      context.translate(widthMeasureX, widthMeasureY);
+      context.rotate(-Math.PI / 2);
+      context.font = '700 13px Arial';
+      const widthLabelWidth = context.measureText(widthLabel).width;
+      context.fillText(widthLabel, -(widthLabelWidth / 2), 4);
+      context.restore();
+
+      context.strokeStyle = '#111827';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.moveTo(widthMeasureX + widthMeasureGap + 16, widthMeasureY - 188);
+      context.lineTo(widthMeasureX + widthMeasureGap + 16, widthMeasureY + 188);
+      context.stroke();
+
+    const wasteBoxX = tableLeft - 86 + 183;
+    const wasteBoxY = stripY + 18;
+    const wasteBoxW = 74;
+    const wasteBoxH = 365;
+    context.fillStyle = 'rgba(160, 160, 160, 0.28)';
+    context.fillRect(wasteBoxX, wasteBoxY, wasteBoxW, wasteBoxH);
+
+    const wasteLabel = 'Sobra lateral';
+    const wasteValue = '19 cm';
+    const wasteNote = '(em cada lado)';
+    const wasteTextColor = '#111827';
+    const wasteFontBase = Math.min(10, Math.max(7, Math.floor(Math.min(wasteBoxW / 7, wasteBoxH / 9))));
+    const wasteCenterY = wasteBoxY + wasteBoxH / 2;
+
+    context.fillStyle = wasteTextColor;
+    context.font = `700 ${wasteFontBase}px Arial`;
+    const wasteLabelWidth = context.measureText(wasteLabel).width;
+    if (wasteLabelWidth <= wasteBoxW - 12) {
+      context.fillText(wasteLabel, wasteBoxX + (wasteBoxW - wasteLabelWidth) / 2, wasteCenterY - 24);
+    } else {
+      context.font = `700 ${Math.max(7, wasteFontBase - 1)}px Arial`;
+      context.fillText(wasteLabel, wasteBoxX + 6, wasteCenterY - 24);
     }
-    context.fillStyle = color.dark;
-    context.font = '700 24px sans-serif';
-    context.fillText(profile?.kind === 'backpack' || profile?.kind === 'drawstring' ? 'MOCHILA' : 'PRODUTO', bagX + 95, bagY + 185);
-    drawDimension(context, bagX - 30, bagY, bagX - 30, bagY + bagHeight, `${formatNumber(height)} cm`, 'vertical');
-    drawDimension(context, bagX, bagY + bagHeight + 45, bagX + bagWidth, bagY + bagHeight + 45, `${formatNumber(width)} cm`, 'horizontal');
-    drawDimension(context, bagX + bagWidth + 85, bagY + bagHeight - 70, bagX + bagWidth + 85, bagY + bagHeight, `${formatNumber(length)} cm`, 'vertical');
 
-    const cordLabel = result.accessoryType === 'cord' ? 'Cordão' : 'Alça';
-    const cordQuantity = Number(result.accessoryType === 'cord' ? result.cordQuantity : result.handleQuantity) || 0;
-    context.fillStyle = '#d1d5db';
-    context.font = '600 21px sans-serif';
-    context.textAlign = 'left';
-    context.fillText(`${cordLabel} separado`, 55, 510);
-    context.strokeStyle = color.fill;
-    context.lineWidth = 10;
-    context.beginPath();
-    context.moveTo(55, 575);
-    context.bezierCurveTo(115, 535, 255, 615, 325, 575);
-    context.stroke();
-    drawDimension(context, 55, 610, 325, 610, `${formatNumber(cordLength)} cm`, 'horizontal');
-    context.fillStyle = '#9ca3af';
-    context.font = '400 19px sans-serif';
-    context.fillText(`${formatNumber(cordQuantity, 0)} unidade(s) por mochila`, 55, 680);
+    context.font = `700 ${Math.max(9, wasteFontBase + 2)}px Arial`;
+    const wasteValueWidth = context.measureText(wasteValue).width;
+    context.fillText(wasteValue, wasteBoxX + (wasteBoxW - wasteValueWidth) / 2, wasteCenterY + 4);
 
-    drawCutStrip(context, 620, 155, 520, 100, result.mainCut, color.fill, 'Peças principais', result.usableMaterialWidth, result.quantity * 2);
-    const accordionIndicator = result.hasAccordion ? `${formatNumber(result.productLength * 2, 0)}(${result.accordionWidth >= 0 ? '+' : ''}${formatNumber(result.accordionWidth * 2, 1)})` : undefined;
-    drawCutStrip(context, 620, 315, 520, 100, result.sideCut, color.fill, result.hasAccordion ? 'Peças laterais / sanfona' : 'Peças laterais', result.materialWidth, result.quantity * 2, accordionIndicator);
-    drawCombinedCutStrip(context, 620, 455, 520, 45, result, color.fill);
-    context.fillStyle = '#d1d5db';
-    context.font = '600 21px sans-serif';
-    context.fillText(`Corte combinado: ${formatNumber(result.mainCut.pieceWidth * 2)} + ${formatNumber(result.sideCut.pieceWidth * 2)} = ${formatNumber(result.materialPerBackpack)} cm | sobra: ${formatNumber(result.sharedLeftover)} cm`, 620, 530);
-    context.font = '400 19px sans-serif';
-    context.fillStyle = '#9ca3af';
-    context.fillText(`Quantidade: ${formatNumber(result.quantity, 0)} mochila(s) | sobra compartilhada: ${formatNumber(result.sharedLeftover)} cm`, 620, 560);
-    context.fillText('As medidas acompanham os campos do formulário.', 620, 590);
+    context.font = `700 ${Math.max(7, wasteFontBase - 1)}px Arial`;
+    const wasteNoteWidth = context.measureText(wasteNote).width;
+    if (wasteNoteWidth <= wasteBoxW - 10) {
+      context.fillText(wasteNote, wasteBoxX + (wasteBoxW - wasteNoteWidth) / 2, wasteCenterY + 30);
+    } else {
+      context.fillText(wasteNote, wasteBoxX + 6, wasteCenterY + 30);
+    }
+
+    context.fillStyle = '#111827';
+    context.font = '700 11px Arial';
+    context.fillText('Largura', stripX + stripWidth + 8, stripY + 32);
+    context.fillText('total do TNT', stripX + stripWidth + 8, stripY + 46);
+    context.fillText(`${formatNumber(materialWidth, 0)} cm`, stripX + stripWidth + 8, stripY + 60);
+
+    const cardY = 520;
+    const cardGap = 22;
+    const cardWidth = (panelWidth - 120 - (cardGap * 2)) / 3;
+    const cardHeight = 170;
+    const cardStartX = 60;
+    const totalFaixas = Math.max(1, Math.ceil(quantity / Math.max(mainPiecesPerRow, 1)));
+    const totalComprimentoCm = Math.max(0, (mainPieceWidth + sidePieceWidth) * 2 * quantity);
+    const totalComprimentoM = totalComprimentoCm / 100;
+
+    drawCardText(cardStartX, cardY, cardWidth, cardHeight, 'APROVEITAMENTO POR FAIXA DE 300 cm', [
+      `Peças principais (${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm): ${formatNumber(mainPiecesPerRow, 0)} unidades por faixa`,
+      `Sanfona (${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm): ${formatNumber(sidePiecesPerRow, 0)} unidades por faixa`,
+      `Total por faixa: ${formatNumber(Math.max(1, Math.floor(quantity / totalFaixas)), 0)} sacolas completas`,
+      `Para ${formatNumber(quantity, 0)} sacolas: ${formatNumber(totalFaixas, 0)} faixas de 300 cm`,
+      `Cálculo para ${formatNumber(quantity, 0)} sacolas`,
+    ], '#dfeaf5', 12, 9.5);
+
+    drawCardText(cardStartX + cardWidth + cardGap, cardY, cardWidth, cardHeight, 'CONSUMO DE TNT', [
+      `Comprimento total: ${formatNumber(totalComprimentoCm, 0)} cm`,
+      `Comprimento total em metros lineares: ${formatNumber(totalComprimentoM, 2)} m`,
+      `Largura do rolo: ${formatNumber(materialWidth, 0)} cm`,
+      `(com pequena sobra lateral de 19 cm de cada lado)`,
+    ], '#f5dfe8', 12, 9.5);
+
+    drawCardText(cardStartX + (cardWidth + cardGap) * 2, cardY, cardWidth, cardHeight, 'DICAS', [
+      '• Ajuste a peça principal na maior direção do rolo.',
+      '• Aproveite a largura útil do material para reduzir sobras.',
+      '• Revise a sanfona antes do corte final para evitar perdas.',
+      '• Faça o cálculo por faixa antes de confirmar a produção.',
+    ], '#dff2df', 12, 9.5);
+
+    context.fillStyle = '#0a0b0e';
+    context.font = '700 14px Arial';
+    context.fillText('LAYOUT SIMPLES, RÁPIDO E COM MÍNIMO DE DESPERDÍCIO', panelX + 150, panelY + panelHeight - 18);
+
     setPreviewUrl(canvas.toDataURL('image/png'));
+
+    if (materialWidth > 150) {
+      const duplicateCanvas = document.createElement('canvas');
+      duplicateCanvas.width = canvas.width;
+      duplicateCanvas.height = canvas.height;
+      const duplicateContext = duplicateCanvas.getContext('2d');
+      duplicateContext.drawImage(canvas, 0, 0);
+      duplicateContext.clearRect(0, 0, 1200, 70);
+      duplicateContext.fillStyle = '#ffffff';
+      duplicateContext.fillRect(0, 0, 1200, 70);
+      duplicateContext.fillStyle = '#111827';
+      duplicateContext.font = '700 18px Arial';
+      duplicateContext.fillText(`PLANO DE CORTE - 2 SACOLAS DE TNT (LARGURA DO TNT: ${formatNumber(materialWidth, 0)} cm)`, 18, 30);
+      duplicateContext.font = '600 11px Arial';
+      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (100 un) | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (100 un)`, 18, 52);
+      setSecondaryPreviewUrl(duplicateCanvas.toDataURL('image/png'));
+    } else {
+      setSecondaryPreviewUrl('');
+    }
+    });
   }, [material.label, profile, result]);
 
   const handleDownload = async () => {
@@ -164,7 +343,18 @@ function CutPreview({ profile, result, onDownload }) {
         <span className={`rounded-full border px-3 py-1 text-xs font-medium ${material.border} ${material.softTone}`}>{material.label}</span>
       </div>
       <div className="card-body space-y-5">
-        {previewUrl ? <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="w-full rounded-xl border border-dark-700 bg-dark-900" /> : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe na largura de material informada (${formatNumber(result.materialWidth)} cm).` : `Preview indisponível: a quantidade desejada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.completeUnitsPerRow, 0)} mochila(s) por fileira.`}</div>}
+        {previewUrl ? (
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 1</div>
+            <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />
+          </div>
+        ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe na largura de material informada (${formatNumber(result.materialWidth)} cm).` : `Preview indisponível: a quantidade desejada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.completeUnitsPerRow, 0)} mochila(s) por fileira.`}</div>}
+        {secondaryPreviewUrl && (
+          <div className="space-y-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 2</div>
+            <img src={secondaryPreviewUrl} alt="Preview complementar para material acima de 150 cm" className="w-full rounded-xl border border-dark-700 bg-dark-900" />
+          </div>
+        )}
         <div className="flex justify-end">
           <button type="button" onClick={handleDownload} disabled={!previewUrl || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
             <Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}
