@@ -26,6 +26,15 @@ export async function createCompanyAccessRequest({ companyId, requesterUid, emai
   return { id: ref.id };
 }
 
+export async function listCompanyMembers(companyId) {
+  const snapshot = await getDocs(query(
+    collection(db, 'companyMembers'),
+    where('companyId', '==', companyId),
+    where('active', '==', true),
+  ));
+  return snapshot.docs.map((item) => ({ id: item.id, uid: item.data().userId, ...item.data() }));
+}
+
 export async function listPendingCompanyAccessRequests(companyId) {
   const q = query(
     collection(db, 'companyAccessRequests'),
