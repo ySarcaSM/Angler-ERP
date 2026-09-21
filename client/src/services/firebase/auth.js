@@ -283,6 +283,90 @@ export async function joinCompany({ invitation, name, lastName, password }) {
     sessionStorage.removeItem(REGISTRATION_SESSION_KEY);
   }
 }
+
+export async function loginWithCompanyInvitation({ invitation, email, password }) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const invitedEmail = invitation.email.trim().toLowerCase();
+  if (normalizedEmail !== invitedEmail) {
+    const error = new Error('Este convite foi enviado para outro email.');
+    error.code = 'auth/invitation-email-mismatch';
+    throw error;
+  }
+  if (invitation.status !== 'active') {
+    const error = new Error('Este convite não está mais disponível.');
+    error.code = 'auth/invitation-inactive';
+    throw error;
+  }
+
+  let credential;
+  try {
+    credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
+  } catch (error) {
+    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+      const loginError = new Error('Email ou senha incorretos. O usuário precisa ter uma conta Angler antes de aceitar este convite.');
+      loginError.code = 'auth/company-login-invalid-credential';
+      throw loginError;
+    }
+    throw error;
+  }
+
+  const joinedUser = credential.user;
+  const userRef = doc(db, 'users', joinedUser.uid);
+  const snapshot = await getDoc(userRef);
+  if (!snapshot.exists()) {
+    await signOut(auth);
+    throw new Error('O perfil da conta não foi encontrado. Crie sua conta no Angler antes de aceitar o convite.');
+  }
+
+  const existingData = snapshot.data();
+  const memberships = { ...(existingData.memberships || {}) };
+  if (existingData.companyId && !memberships[existingData.companyId]) {
+    memberships[existingData.companyId] = {
+      role: existingData.role,
+      active: true,
+      migratedAt: serverTimestamp(),
+    };
+  }
+
+  const currentMembership = memberships[invitation.companyId];
+  if (currentMembership?.active || existingData.companyId === invitation.companyId) {
+    await signOut(auth);
+    const error = new Error('Esta conta já está vinculada a esta empresa.');
+    error.code = 'auth/already-company-member';
+    throw error;
+  }
+
+  memberships[invitation.companyId] = {
+    role: invitation.role,
+    active: true,
+    invitationId: invitation.id,
+    joinedAt: serverTimestamp(),
+  };
+
+  const batch = writeBatch(db);
+  batch.update(userRef, {
+    companyId: invitation.companyId,
+    role: invitation.role,
+    invitationId: invitation.id,
+    memberships,
+    active: true,
+  });
+  batch.update(doc(db, 'companyInvitations', invitation.id), {
+    status: 'accepted',
+    acceptedBy: joinedUser.uid,
+    acceptedAt: serverTimestamp(),
+  });
+
+  try {
+    await batch.commit();
+  } catch (error) {
+    await signOut(auth);
+    throw error;
+  }
+
+  return { user: joinedUser, companyId: invitation.companyId, role: invitation.role };
+}
+
 export async function getCompanyData(companyId) {
   try {
     const companyDoc = await getDoc(doc(db, 'companies', companyId));
