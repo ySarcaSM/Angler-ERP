@@ -10,6 +10,7 @@ import {
   resetPassword as fbResetPassword,
   isRegistrationInProgress,
   switchActiveCompany,
+  getPersonalCompanyId as getOwnedPersonalCompanyId,
 } from '../services/firebase/auth';
 import { getStoredAdminSession } from '../services/firebase/admin';
 import { listApprovedCompanyAccessRequests } from '../services/firebase/companyAccess';
@@ -21,11 +22,24 @@ import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, getAccessibilityP
 
 const activeCompanyStorageKey = (uid) => `angler-active-company-${uid}`;
 
-function getPersonalCompanyId(userData) {
-  return userData?.personalCompanyId || (userData?.memberships && Object.keys(userData.memberships).find((id) => userData.memberships[id]?.role === 'owner')) || userData?.companyId;
+async function resolvePersonalCompanyId(userData) {
+  if (!userData?.uid) return userData?.personalCompanyId || null;
+  if (userData.personalCompanyId) return userData.personalCompanyId;
+
+  const membershipOwnerId = userData.memberships
+    && Object.keys(userData.memberships).find((id) => userData.memberships[id]?.personal === true);
+
+  if (membershipOwnerId) return membershipOwnerId;
+
+  const ownerMembershipId = userData.memberships
+    && Object.keys(userData.memberships).find((id) => userData.memberships[id]?.role === 'owner' && userData.memberships[id]?.active !== false);
+
+  if (ownerMembershipId) return ownerMembershipId;
+
+  return getOwnedPersonalCompanyId(userData.uid);
 }
 
-async function loadCompanies(userData) {
+async function loadCompanies(userData, personalCompanyId) {
   const memberships = userData?.memberships || {};
   const ids = Object.keys(memberships).filter((id) => memberships[id]?.active !== false);
 
@@ -47,15 +61,16 @@ async function loadCompanies(userData) {
     if (requestItem.companyId && !ids.includes(requestItem.companyId)) ids.push(requestItem.companyId);
   });
 
-  const legacyCompanyIds = [
-    userData?.personalCompanyId,
-    userData?.companyId,
-    userData?.accessRequestCompanyId,
-  ].filter(Boolean);
+  if (personalCompanyId && !ids.includes(personalCompanyId)) {
+    ids.push(personalCompanyId);
+  }
 
-  legacyCompanyIds.forEach((id) => {
-    if (!ids.includes(id)) ids.push(id);
-  });
+  // companyId é apenas o contexto ativo. Só deve ser considerado aqui
+  // quando também houver membership ou solicitação aprovada para a empresa.
+  if (userData?.companyId && !ids.includes(userData.companyId)
+    && (memberships[userData.companyId]?.active || approvedRequests.some((item) => item.companyId === userData.companyId))) {
+    ids.push(userData.companyId);
+  }
 
   const companies = await Promise.all(ids.map(async (id) => {
     const data = await getCompanyData(id);
@@ -111,8 +126,8 @@ export function AuthProvider({ children }) {
               return;
             }
 
-            const companies = await loadCompanies(uData);
-            const personalCompanyId = getPersonalCompanyId(uData);
+            const personalCompanyId = await resolvePersonalCompanyId(uData);
+            const companies = await loadCompanies(uData, personalCompanyId);
             const storedCompanyId = localStorage.getItem(activeCompanyStorageKey(firebaseUser.uid));
             const activeCompanyId = companies.some((item) => item.id === storedCompanyId)
               ? storedCompanyId
@@ -191,8 +206,8 @@ export function AuthProvider({ children }) {
       throw error;
     }
 
-    const companies = await loadCompanies(loadedUserData);
-    const personalCompanyId = getPersonalCompanyId(loadedUserData);
+    const personalCompanyId = await resolvePersonalCompanyId(loadedUserData);
+    const companies = await loadCompanies(loadedUserData, personalCompanyId);
     localStorage.setItem(activeCompanyStorageKey(fbUser.uid), personalCompanyId);
     setAvailableCompanies(companies);
     setUser(fbUser);
@@ -218,8 +233,8 @@ export function AuthProvider({ children }) {
     if (!user?.uid || !userData) return;
     const target = availableCompanies.find((item) => item.id === companyId);
     if (!target) throw new Error('Você não possui acesso a esta empresa.');
-    const role = target.id === getPersonalCompanyId(userData)
-      ? (userData.memberships?.[target.id]?.role || 'owner')
+    const role = target.id === userData.personalCompanyId
+      ? 'owner'
       : (target.membershipRole || userData.memberships?.[target.id]?.role || userData.role);
     await switchActiveCompany(user.uid, companyId, role);
     localStorage.setItem(activeCompanyStorageKey(user.uid), companyId);
