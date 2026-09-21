@@ -43,9 +43,12 @@ export default function ModulesPage() {
 
   const saveModules = async (nextLocked = locked) => {
     if (!company?.id || !isOwner) return;
+    // Keep DOM events out of the Firestore payload if this function is ever
+    // used directly as an event handler.
+    const lockedValue = typeof nextLocked === 'boolean' ? nextLocked : locked;
     setSaving(true);
     try {
-      await updateCompany(company.id, { modules: { enabled, locked: nextLocked } });
+      await updateCompany(company.id, { modules: { enabled, locked: lockedValue } });
       await logAudit(company.id, {
         user,
         userName: userData?.name,
@@ -53,10 +56,10 @@ export default function ModulesPage() {
         entity: 'Módulos',
         entityId: company.id,
         description: `${userData?.name || 'Proprietário'} atualizou os módulos ativos da empresa.`,
-        details: { enabled, locked: nextLocked },
+        details: { enabled, locked: lockedValue },
       });
       await refreshCompany();
-      setLocked(nextLocked);
+      setLocked(lockedValue);
       toast.success('Módulos atualizados.');
     } catch (error) {
       toast.error(error.message || 'Não foi possível atualizar os módulos.');
