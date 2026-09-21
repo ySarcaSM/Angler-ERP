@@ -60,7 +60,7 @@ function ModuleRoute({ moduleKey, children }) {
 
 function WriteRoute({ children }) {
   const { userData } = useAuth();
-  return ['viewer', 'operator'].includes(userData?.role) ? <Navigate to="/app" replace /> : children;
+  return userData?.role === 'viewer' ? <Navigate to="/app" replace /> : children;
 }
 
 function OperatorHome() {
