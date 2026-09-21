@@ -12,6 +12,7 @@ import {
   switchActiveCompany,
 } from '../services/firebase/auth';
 import { getStoredAdminSession } from '../services/firebase/admin';
+import { listApprovedCompanyAccessRequests } from '../services/firebase/companyAccess';
 import { isCurrentUserAdmin } from '../services/firebase/admin';
 import toast from 'react-hot-toast';
 import { AuthContext } from './AuthContextValue';
@@ -28,9 +29,24 @@ async function loadCompanies(userData) {
   const memberships = userData?.memberships || {};
   const ids = Object.keys(memberships).filter((id) => memberships[id]?.active !== false);
 
+  // Recupera aprovações antigas caso o acesso tenha sido aprovado antes da
+  // estrutura de memberships estar consistente no documento do usuário.
+  let approvedRequests = [];
+  if (userData?.uid) {
+    try {
+      approvedRequests = await listApprovedCompanyAccessRequests(userData.uid);
+    } catch (error) {
+      console.warn('[Auth] Não foi possível carregar acessos aprovados:', error);
+    }
+  }
+
   // Mantém acessos antigos/legados que podem estar registrados no contexto
   // da solicitação aprovada, mesmo que ainda não tenham sido refletidos
   // corretamente no mapa de memberships.
+  approvedRequests.forEach((requestItem) => {
+    if (requestItem.companyId && !ids.includes(requestItem.companyId)) ids.push(requestItem.companyId);
+  });
+
   const legacyCompanyIds = [
     userData?.personalCompanyId,
     userData?.companyId,
@@ -46,7 +62,9 @@ async function loadCompanies(userData) {
     if (!data) return null;
 
     const membership = memberships[id];
+    const approvedRequest = approvedRequests.find((item) => item.companyId === id);
     const membershipRole = membership?.role
+      || approvedRequest?.role
       || (id === userData?.companyId ? userData?.role : null);
 
     return {
@@ -54,6 +72,7 @@ async function loadCompanies(userData) {
       membershipRole,
       membershipActive: membership?.active !== false,
       membershipModules: Array.isArray(membership?.modules) ? membership.modules : [],
+      accessRequestId: membership?.accessRequestId || approvedRequest?.id || null,
     };
   }));
 
