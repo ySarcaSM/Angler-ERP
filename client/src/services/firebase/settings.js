@@ -5,6 +5,7 @@
 import {
   doc, getDoc, updateDoc, collection, query, where, getDocs,
   serverTimestamp,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import {
@@ -58,6 +59,74 @@ export async function createCompanyInvitation({ companyId, email, role, createdB
     status: 'active',
     createdBy: createdBy || null,
   });
+}
+
+
+export async function updateCompanyUserAccess({ companyId, uid, role, modules }) {
+  const userRef = doc(db, 'users', uid);
+  const memberRef = doc(db, 'companyMembers', `${companyId}_${uid}`);
+  const userSnapshot = await getDoc(userRef);
+  if (!userSnapshot.exists()) throw new Error('Usuário não encontrado.');
+
+  const userData = userSnapshot.data();
+  const batch = writeBatch(db);
+  const currentMembership = userData.memberships?.[companyId] || {};
+  const nextMembership = {
+    ...currentMembership,
+    role,
+    active: true,
+    modules,
+  };
+
+  batch.update(userRef, {
+    memberships: {
+      ...(userData.memberships || {}),
+      [companyId]: nextMembership,
+    },
+    ...(userData.companyId === companyId ? { role } : {}),
+    updatedAt: serverTimestamp(),
+  });
+
+  batch.set(memberRef, {
+    companyId,
+    userId: uid,
+    email: userData.email || '',
+    name: userData.name || '',
+    role,
+    active: true,
+    modules,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+
+  await batch.commit();
+}
+
+export async function listDeletionRequests(companyId) {
+  const snapshot = await getDocs(query(
+    collection(db, 'deletionRequests'),
+    where('companyId', '==', companyId),
+    where('status', '==', 'pending'),
+  ));
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+}
+
+export async function rejectDeletionRequest(requestItem) {
+  await updateDoc(doc(db, 'deletionRequests', requestItem.id), {
+    status: 'rejected',
+    reviewedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function approveDeletionRequest(requestItem) {
+  const batch = writeBatch(db);
+  batch.delete(doc(db, requestItem.collection, requestItem.documentId));
+  batch.update(doc(db, 'deletionRequests', requestItem.id), {
+    status: 'approved',
+    reviewedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  await batch.commit();
 }
 
 // ─── Audit Log ───
