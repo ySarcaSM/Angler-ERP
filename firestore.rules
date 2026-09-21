@@ -96,12 +96,6 @@ service cloud.firestore {
             request.resource.data.companyId in resource.data.memberships &&
             resource.data.memberships[request.resource.data.companyId].active == true &&
             request.resource.data.role == resource.data.memberships[request.resource.data.companyId].role) ||
-          (resource.data.accessRequestCompanyId == request.resource.data.companyId &&
-            resource.data.accessRequestId is string &&
-            get(/databases/$(database)/documents/companyAccessRequests/$(resource.data.accessRequestId)).data.status == 'approved' &&
-            get(/databases/$(database)/documents/companyAccessRequests/$(resource.data.accessRequestId)).data.requesterUid == request.auth.uid &&
-            get(/databases/$(database)/documents/companyAccessRequests/$(resource.data.accessRequestId)).data.companyId == request.resource.data.companyId &&
-            get(/databases/$(database)/documents/companyAccessRequests/$(resource.data.accessRequestId)).data.role == request.resource.data.role) ||
           request.resource.data.companyId == resource.data.companyId ||
           (
             exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId)) &&
@@ -127,8 +121,8 @@ service cloud.firestore {
 
       allow update: if isSuperAdmin() ||
         isAdmin(resource.data.companyId) ||
-        isAccessRequestOwnerApproval(userId) ||
-        isCompanyMembershipUpdate(userId) ||
+        (isAuth() && 'accessControl' in request.resource.data && isAccessRequestOwnerApproval(userId)) ||
+        (isAuth() && 'accessControl' in request.resource.data && isCompanyMembershipUpdate(userId)) ||
         (isAuth() && request.auth.uid == userId && isCompanySwitch());
 
       allow delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
