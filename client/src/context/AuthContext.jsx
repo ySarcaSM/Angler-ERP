@@ -207,12 +207,21 @@ export function AuthProvider({ children }) {
     return updatedCompany;
   }, [userData?.companyId]);
 
-  const hasPermission = useCallback((perm) => {
+  const getEffectiveModules = useCallback(() => {
+    if (!company) return [];
+    const companyModules = Array.isArray(company.modules?.enabled) ? company.modules.enabled : [];
+    if (userData?.role === 'owner') return companyModules;
+    const membership = userData?.memberships?.[company.id];
+    return Array.isArray(membership?.modules) ? membership.modules : companyModules;
+  }, [company, userData]);
+
+  const hasPermission = useCallback((perm, moduleKey) => {
     if (!userData) return false;
-    if (userData.role === 'owner') return true;
-    // Server-side rules handle real enforcement
-    return true;
-  }, [userData]);
+    if (moduleKey && !getEffectiveModules().includes(moduleKey)) return false;
+    if (userData.role === 'owner' || userData.role === 'admin') return true;
+    if (userData.role === 'operator') return ['read', 'create', 'update', 'delete-request'].includes(perm);
+    return perm === 'read';
+  }, [userData, getEffectiveModules]);
 
   const value = {
     user,
@@ -225,6 +234,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     refreshCompany,
     hasPermission,
+    getEffectiveModules,
     availableCompanies,
     switchCompany,
     selectCompanyContext,
