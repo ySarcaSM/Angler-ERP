@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, updateDoc, where, writeBatch, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, query, updateDoc, where, writeBatch, serverTimestamp, addDoc, FieldPath } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
 export async function createCompanyAccessRequest({ companyId, requesterUid, email, name }) {
@@ -44,13 +44,11 @@ export async function approveCompanyAccessRequest(requestItem, role) {
   batch.update(userRef, {
     accessRequestId: requestItem.id,
     accessRequestCompanyId: requestItem.companyId,
-    memberships: {
-      [requestItem.companyId]: {
-        role,
-        active: true,
-        accessRequestId: requestItem.id,
-        joinedAt: serverTimestamp(),
-      },
+    [new FieldPath('memberships', requestItem.companyId)]: {
+      role,
+      active: true,
+      accessRequestId: requestItem.id,
+      joinedAt: serverTimestamp(),
     },
     updatedAt: serverTimestamp(),
   });
