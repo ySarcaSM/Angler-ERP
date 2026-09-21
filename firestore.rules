@@ -64,7 +64,7 @@ service cloud.firestore {
         isAdmin(requestDoc.data.companyId) &&
         request.resource.data.memberships[requestDoc.data.companyId].active == true &&
         request.resource.data.memberships[requestDoc.data.companyId].accessRequestId == request.resource.data.accessRequestId &&
-        request.resource.data.memberships[requestDoc.data.companyId].role in ['admin', 'manager', 'operator', 'viewer'] &&
+        request.resource.data.memberships[requestDoc.data.companyId].role in ['owner', 'admin', 'manager', 'operator', 'viewer'] &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessRequestId', 'accessRequestCompanyId', 'updatedAt']);
     }
 
