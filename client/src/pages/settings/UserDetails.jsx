@@ -78,7 +78,9 @@ export default function UserDetails() {
 
         const membership = data.memberships?.[company.id];
         const currentRole = membership?.role || data.role || 'viewer';
-        const configuredModules = data.modules || membership?.modules || availableModules;
+        const configuredModules = currentRole === 'viewer'
+          ? availableModules
+          : (data.modules || membership?.modules || availableModules);
 
         setProfile({ ...data, isExternal });
         setRole(currentRole);
@@ -200,7 +202,11 @@ export default function UserDetails() {
               <p className="text-sm text-dark-500 mt-1">O cargo define o que o usuário pode fazer nos módulos liberados.</p>
             </div>
 
-            <select className="input max-w-md" value={role} onChange={(event) => setRole(event.target.value)}>
+            <select className="input max-w-md" value={role} onChange={(event) => {
+              const nextRole = event.target.value;
+              setRole(nextRole);
+              if (nextRole === 'viewer') setModules(availableModules);
+            }}>
               {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
 
@@ -233,33 +239,35 @@ export default function UserDetails() {
             )}
           </section>
 
-          <section className="card p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
-              <p className="text-sm text-dark-500 mt-1">Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.</p>
-            </div>
+          {role !== 'viewer' && (
+            <section className="card p-6 space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
+                <p className="text-sm text-dark-500 mt-1">Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.</p>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {MODULES.filter(([key]) => availableModules.includes(key)).map(([key, label]) => {
-                const active = modules.includes(key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => toggleModule(key)}
-                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-400/50 bg-primary-400/10' : 'border-dark-700 bg-dark-900/40'}`}
-                  >
-                    <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500' : 'border-dark-600'}`}>
-                      {active && <Check size={14} className="text-dark-950" />}
-                    </span>
-                    <span className="text-sm text-dark-200">{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {MODULES.filter(([key]) => availableModules.includes(key)).map(([key, label]) => {
+                  const active = modules.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleModule(key)}
+                      className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-400/50 bg-primary-400/10' : 'border-dark-700 bg-dark-900/40'}`}
+                    >
+                      <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500' : 'border-dark-600'}`}>
+                        {active && <Check size={14} className="text-dark-950" />}
+                      </span>
+                      <span className="text-sm text-dark-200">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
-          <div className="flex justify-end">
+
             <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
               <Save size={18} /> {saving ? 'Salvando...' : 'Salvar permissões'}
             </button>
