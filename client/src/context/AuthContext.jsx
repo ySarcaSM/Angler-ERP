@@ -311,7 +311,7 @@ export function AuthProvider({ children }) {
     if (!userData) return false;
     if (moduleKey && !getEffectiveModules().includes(moduleKey)) return false;
     if (userData.role === 'owner' || userData.role === 'admin') return true;
-    if (userData.role === 'operator') return perm === 'read';
+    if (userData.role === 'operator') return ['read', 'create', 'update', 'delete-request'].includes(perm);
     return perm === 'read';
   }, [userData, getEffectiveModules]);
 
