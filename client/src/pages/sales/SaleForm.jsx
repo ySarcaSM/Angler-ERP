@@ -73,6 +73,7 @@ export default function SaleForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isViewer) return;
     if (!form.clientId) return toast.error('Selecione um cliente.');
     if (!form.items.length || form.items.some((item) => !item.productId)) return toast.error('Adicione pelo menos um produto à venda.');
     const quantitiesByProduct = form.items.reduce((totals, item) => ({
