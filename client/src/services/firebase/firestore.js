@@ -8,6 +8,7 @@ import {
   serverTimestamp, increment, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import { getAuth } from 'firebase/auth';
 
 // ─── Generic CRUD ───
 
@@ -41,9 +42,47 @@ export async function updateDoc_(collectionPath, id, data) {
 }
 
 export async function deleteDoc_(collectionPath, id) {
+  const authUser = getAuth().currentUser;
   const docRef = doc(db, collectionPath, id);
-  await deleteDoc(docRef);
-  return { id };
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) return { id };
+
+  const data = snapshot.data();
+  const companyId = data.companyId;
+
+  if (!authUser || !companyId) {
+    throw new Error('Não foi possível identificar a empresa deste registro.');
+  }
+
+  const userSnapshot = await getDoc(doc(db, 'users', authUser.uid));
+  const userData = userSnapshot.exists() ? userSnapshot.data() : null;
+  const membership = userData?.memberships?.[companyId];
+  const role = companyId === userData?.companyId ? userData?.role : membership?.role;
+
+  if (role === 'owner' || role === 'admin') {
+    await deleteDoc(docRef);
+    return { id };
+  }
+
+  if (role === 'operator') {
+    await addDoc(collection(db, 'deletionRequests'), {
+      companyId,
+      requesterUid: authUser.uid,
+      requesterName: userData?.name || authUser.displayName || authUser.email || 'Usuário',
+      collection: collectionPath,
+      documentId: id,
+      documentData: data,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    const error = new Error('Solicitação de exclusão enviada para aprovação do administrador ou proprietário.');
+    error.code = 'deletion-request-created';
+    throw error;
+  }
+
+  throw new Error('Seu perfil possui apenas permissão de visualização.');
 }
 
 export async function getDoc_(collectionPath, id) {
