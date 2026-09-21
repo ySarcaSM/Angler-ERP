@@ -78,10 +78,38 @@ export default function ModulesPage() {
     setStampOpen(false);
   };
 
+  const restoreModules = async () => {
+    if (!company?.id || !isOwner || locked) return;
+    const restoredEnabled = [...defaultEnabled];
+    setSaving(true);
+    try {
+      await updateCompany(company.id, { modules: { enabled: restoredEnabled, locked } });
+      await logAudit(company.id, {
+        user,
+        userName: userData?.name,
+        action: 'update',
+        entity: 'Módulos',
+        entityId: company.id,
+        description: `${userData?.name || 'Proprietário'} restaurou todos os módulos ativos da empresa.`,
+        details: { enabled: restoredEnabled, locked },
+      });
+      await refreshCompany();
+      setEnabled(restoredEnabled);
+      toast.success('Todos os módulos foram restaurados.');
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível restaurar os módulos.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl">
       <PageHeader title="Módulos" subtitle="Escolha os recursos disponíveis para sua empresa" action={isOwner && (
-        <button type="button" onClick={() => saveModules()} disabled={saving} className="btn-primary disabled:opacity-50"><Save size={18} /> {saving ? 'Salvando...' : 'Salvar módulos'}</button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={restoreModules} disabled={saving || locked} title={locked ? 'Remova o carimbo para restaurar os módulos.' : undefined} className="btn-secondary disabled:opacity-50">Restaurar módulos</button>
+          <button type="button" onClick={() => saveModules()} disabled={saving} className="btn-primary disabled:opacity-50"><Save size={18} /> {saving ? 'Salvando...' : 'Salvar módulos'}</button>
+        </div>
       )} />
       {!isOwner && <div className="card p-4 text-sm text-dark-400">Somente o proprietário da empresa pode alterar os módulos ativos.</div>}
       <div className="card">
