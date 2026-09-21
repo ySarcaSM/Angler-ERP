@@ -12,7 +12,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import {
-  doc, setDoc, getDoc, serverTimestamp, writeBatch,
+  doc, setDoc, getDoc, updateDoc, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
@@ -143,6 +143,9 @@ async function registerInternal({
       companyId: user.uid, // Owner's company = their uid
       active: true,
       requiresEmailVerification: !existingAuthAccount,
+      memberships: {
+        [user.uid]: { role: 'owner', active: true, createdAt: serverTimestamp() },
+      },
       createdAt: serverTimestamp(),
     });
   } catch (error) {
@@ -198,37 +201,63 @@ export async function getUserData(uid) {
   }
 }
 
+export async function switchActiveCompany(uid, companyId, role) {
+  const userRef = doc(db, 'users', uid);
+  const snapshot = await getDoc(userRef);
+  if (!snapshot.exists()) throw new Error('Perfil da conta não encontrado.');
+  const data = snapshot.data();
+  const membership = data.memberships?.[companyId];
+  const legacyMember = data.companyId === companyId;
+  if (!membership?.active && !legacyMember) throw new Error('Você não possui acesso a esta empresa.');
+  const nextRole = membership?.role || role || data.role;
+  await updateDoc(userRef, { companyId, role: nextRole });
+  return { companyId, role: nextRole };
+}
+
 export async function joinCompany({ invitation, name, lastName, password }) {
   sessionStorage.setItem(REGISTRATION_SESSION_KEY, 'true');
   try {
     const email = invitation.email.trim().toLowerCase();
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-    const newUser = credential.user;
+    let credential;
+    let existingAccount = false;
+    try {
+      credential = await createUserWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+      if (error.code !== 'auth/email-already-in-use') throw error;
+      credential = await signInWithEmailAndPassword(auth, email, password);
+      existingAccount = true;
+    }
 
-    await updateProfile(newUser, { displayName: `${name} ${lastName || ''}`.trim() });
-    if (!newUser.emailVerified) await sendEmailVerification(newUser);
+    const joinedUser = credential.user;
+    const userRef = doc(db, 'users', joinedUser.uid);
+    const existingSnapshot = await getDoc(userRef);
+    const existingData = existingSnapshot.exists() ? existingSnapshot.data() : null;
+    if (existingAccount && !existingData) throw new Error('Sua conta de acesso existe, mas o perfil do Angler não foi encontrado. Entre no sistema primeiro ou contate o administrador.');
+
+    const memberships = { ...(existingData?.memberships || {}) };
+    if (existingData?.companyId && !memberships[existingData.companyId]) memberships[existingData.companyId] = { role: existingData.role, active: true, migratedAt: serverTimestamp() };
+    if (memberships[invitation.companyId]?.active || existingData?.companyId === invitation.companyId) {
+      const alreadyMemberError = new Error('Esta conta já está vinculada a esta empresa.');
+      alreadyMemberError.code = 'auth/already-company-member';
+      throw alreadyMemberError;
+    }
+    memberships[invitation.companyId] = { role: invitation.role, active: true, invitationId: invitation.id, joinedAt: serverTimestamp() };
+
+    if (!existingAccount) {
+      await updateProfile(joinedUser, { displayName: `${name} ${lastName || ''}`.trim() });
+      if (!joinedUser.emailVerified) await sendEmailVerification(joinedUser);
+    }
 
     const batch = writeBatch(db);
-    batch.set(doc(db, 'users', newUser.uid), {
-      uid: newUser.uid,
-      email,
-      name,
-      lastName: lastName || '',
-      role: invitation.role,
-      companyId: invitation.companyId,
-      invitationId: invitation.id,
-      active: true,
-      requiresEmailVerification: true,
-      createdAt: serverTimestamp(),
-    });
-    batch.update(doc(db, 'companyInvitations', invitation.id), {
-      status: 'accepted',
-      acceptedBy: newUser.uid,
-      acceptedAt: serverTimestamp(),
-    });
+    if (existingAccount) {
+      batch.update(userRef, { name: existingData.name || name, lastName: existingData.lastName || lastName || '', companyId: invitation.companyId, role: invitation.role, invitationId: invitation.id, memberships, active: true });
+    } else {
+      batch.set(userRef, { uid: joinedUser.uid, email, name, lastName: lastName || '', role: invitation.role, companyId: invitation.companyId, invitationId: invitation.id, memberships, active: true, requiresEmailVerification: true, createdAt: serverTimestamp() });
+    }
+    batch.update(doc(db, 'companyInvitations', invitation.id), { status: 'accepted', acceptedBy: joinedUser.uid, acceptedAt: serverTimestamp() });
     await batch.commit();
     await signOut(auth);
-    return { email };
+    return { email, existingAccount, companyId: invitation.companyId };
   } catch (error) {
     if (auth.currentUser) await signOut(auth);
     throw error;
@@ -236,8 +265,6 @@ export async function joinCompany({ invitation, name, lastName, password }) {
     sessionStorage.removeItem(REGISTRATION_SESSION_KEY);
   }
 }
-
-// ─── Get company data ───
 export async function getCompanyData(companyId) {
   try {
     const companyDoc = await getDoc(doc(db, 'companies', companyId));
