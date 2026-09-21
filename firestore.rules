@@ -66,7 +66,21 @@ service cloud.firestore {
         : null;
     }
 
-    function operatorCanAccessCollection(companyId, collectionName) {
+    function operatorCanReadCollection(companyId, collectionName) {
+      let group = operatorGroupForCompany(companyId);
+
+      return
+        (group == 'management' &&
+          collectionName in ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'stockMovements', 'counters'])
+        ||
+        (group == 'financial' &&
+          collectionName in ['financialTransactions', 'sales', 'purchases', 'products', 'stockMovements', 'counters'])
+        ||
+        (group == 'budgets' &&
+          collectionName in ['budgets', 'formulas']);
+    }
+
+    function operatorCanWriteCollection(companyId, collectionName) {
       let group = operatorGroupForCompany(companyId);
 
       return
@@ -86,14 +100,14 @@ service cloud.firestore {
           roleForCompany(companyId) != 'operator') ||
         (isMember(companyId) &&
           roleForCompany(companyId) == 'operator' &&
-          operatorCanAccessCollection(companyId, collectionName));
+          operatorCanReadCollection(companyId, collectionName));
     }
 
     function canWriteCollection(companyId, collectionName) {
       return isSuperAdmin() || isAdmin(companyId) ||
         (isMember(companyId) &&
           roleForCompany(companyId) == 'operator' &&
-          operatorCanAccessCollection(companyId, collectionName));
+          operatorCanWriteCollection(companyId, collectionName));
     }
 
     function canWriteData(companyId) {
