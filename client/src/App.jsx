@@ -53,7 +53,8 @@ function OwnerRoute({ children }) {
 }
 
 function ModuleRoute({ moduleKey, children }) {
-  const { getEffectiveModules } = useAuth();
+  const { getEffectiveModules, userData } = useAuth();
+  if (userData?.role === 'viewer' && moduleKey === 'measurement') return <Navigate to="/app" replace />;
   return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
 }
 
