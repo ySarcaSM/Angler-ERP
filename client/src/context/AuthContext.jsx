@@ -273,7 +273,7 @@ export function AuthProvider({ children }) {
   const getEffectiveModules = useCallback(() => {
     if (!company) return [];
     const companyModules = Array.isArray(company.modules?.enabled) ? company.modules.enabled : [];
-    if (userData?.role === 'owner') return companyModules;
+    if (['owner', 'viewer'].includes(userData?.role)) return companyModules;
     const membership = userData?.memberships?.[company.id];
     return Array.isArray(membership?.modules) ? membership.modules : companyModules;
   }, [company, userData]);
