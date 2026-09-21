@@ -226,7 +226,7 @@ export default function UserManagement() {
               <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-dark-100">{u.name} {u.lastName}</span>{roleBadge(u.role)}{!u.active && <span className="badge badge-danger">Inativo</span>}</div>
               <div className="text-xs text-dark-500">{u.email}</div>
             </div>
-            {isOwner && (
+            {(isOwner || isAdmin) && (
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => navigate(`/app/users/${u.uid || u.id}`)}
