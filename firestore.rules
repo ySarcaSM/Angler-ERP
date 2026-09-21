@@ -128,14 +128,10 @@ service cloud.firestore {
       return isAuth() &&
         user != null &&
         user.companyId is string &&
-        (
-          (user.companyId == request.auth.uid && user.role in ['owner', 'admin']) ||
-          ('memberships' in user &&
-            user.companyId in user.memberships &&
-            user.memberships[user.companyId].active == true &&
-            user.memberships[user.companyId].role in ['owner', 'admin'])
-        ) &&
-        exists(/databases/$(database)/documents/companyMembers/$(user.companyId)_$(userId));
+        isAdmin(user.companyId) &&
+        'memberships' in resource.data &&
+        user.companyId in resource.data.memberships &&
+        resource.data.memberships[user.companyId].active == true;
     }
 
     function isAccessRequestOwnerApproval(userId) {
