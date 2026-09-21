@@ -130,6 +130,11 @@ export default function UserManagement() {
         <div>
           <h1 className="text-2xl font-bold text-dark-100">Usuários</h1>
           <p className="text-sm text-dark-500 mt-1">Gerencie os acessos à sua empresa.</p>
+          {company?.id && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-dark-800 px-3 py-2 text-xs text-dark-300">
+              <span>ID da empresa:</span><code className="font-mono text-primary-300 select-all">{company.id}</code>
+            </div>
+          )}
         </div>
       </div>
 
