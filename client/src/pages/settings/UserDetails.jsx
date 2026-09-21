@@ -80,11 +80,21 @@ export default function UserDetails() {
         const currentRole = membership?.role || data.role || 'viewer';
         const configuredModules = membership?.modules || data.modules || availableModules;
 
+        // Todos os módulos continuam disponíveis para personalização,
+        // mas o estado inicial segue a configuração global da empresa.
+        // Assim, módulos desativados começam desmarcados para este usuário.
+        const enabledCompanyModules = Array.isArray(company?.modules?.enabled)
+          ? company.modules.enabled
+          : availableModules;
+        const hasIndividualConfiguration = Array.isArray(configuredModules)
+          && Boolean(membership?.modules || data.modules);
+        const initialModules = hasIndividualConfiguration
+          ? configuredModules.filter((key) => availableModules.includes(key))
+          : availableModules.filter((key) => enabledCompanyModules.includes(key));
+
         setProfile({ ...data, isExternal, companyRole: currentRole });
         setRole(currentRole);
-        setModules(Array.isArray(configuredModules)
-          ? configuredModules.filter((key) => availableModules.includes(key))
-          : availableModules);
+        setModules(initialModules);
       } catch (err) {
         toast.error(err.message || 'Não foi possível carregar o usuário.');
       } finally {
