@@ -5,7 +5,7 @@ import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 
 export default function Login() {
-  const { login, resetPassword } = useAuth();
+  const { login, resetPassword, availableCompanies, userData } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +21,9 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success('Bem-vindo!');
-      navigate('/app');
+      const personalCompanyId = userData?.personalCompanyId || userData?.companyId;
+      const hasOtherCompanies = availableCompanies.some((item) => item.id !== personalCompanyId);
+      navigate(hasOtherCompanies ? '/escolher-conta' : '/app');
     } catch (err) {
       const msg = err.code === 'auth/invalid-credential' ? 'Email ou senha incorretos.'
         : err.code === 'auth/user-not-found' ? 'Usuário não encontrado.'
