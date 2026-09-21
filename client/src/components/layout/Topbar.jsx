@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Menu, Bell, Search } from 'lucide-react';
+import { Menu, Bell, Search, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { listProducts } from '../../services/firebase/products';
@@ -9,6 +9,7 @@ import { listSuppliers } from '../../services/firebase/suppliers';
 import { listSales } from '../../services/firebase/sales';
 import { listPurchases } from '../../services/firebase/purchases';
 import { loadNotifications } from '../../utils/notifications';
+import toast from 'react-hot-toast';
 
 function normalize(value) {
   return value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -16,15 +17,16 @@ function normalize(value) {
 
 export default function Topbar({ onMenuToggle }) {
   const navigate = useNavigate();
-  const { company } = useAuth();
+  const { company, availableCompanies, switchCompany } = useAuth();
   const [search, setSearch] = useState('');
+  const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [dismissedNotifications, setDismissedNotifications] = useState([]);
   const [readNotifications, setReadNotifications] = useState([]);
 
-  const moduleTargets = [
+  const handleCompanyChange = async (companyId) => {\n    if (companyId === company?.id) { setCompanyMenuOpen(false); return; }\n    try { await switchCompany(companyId); setCompanyMenuOpen(false); toast.success('Empresa alterada.'); }\n    catch (error) { toast.error(error.message || 'Não foi possível trocar de empresa.'); }\n  };\n\n  const moduleTargets = [
     { words: ['produto', 'produtos'], path: '/app/products' },
     { words: ['cliente', 'clientes'], path: '/app/clients' },
     { words: ['venda', 'vendas'], path: '/app/sales' },
@@ -140,6 +142,23 @@ export default function Topbar({ onMenuToggle }) {
           <Menu size={20} />
         </button>
 
+        {availableCompanies.length > 1 && (
+          <div className="relative">
+            <button type="button" onClick={() => setCompanyMenuOpen((open) => !open)} className="flex items-center gap-2 max-w-[260px] bg-dark-800 border border-dark-700/50 rounded-xl px-3 py-2 text-sm text-dark-200 hover:bg-dark-700">
+              <span className="truncate">{company?.name || 'Empresa'}</span><ChevronDown size={16} className="flex-shrink-0" />
+            </button>
+            {companyMenuOpen && (
+              <div className="absolute left-0 top-12 w-72 bg-dark-900 border border-dark-700 rounded-xl shadow-2xl overflow-hidden z-50">
+                {availableCompanies.map((item) => (
+                  <button key={item.id} type="button" onClick={() => handleCompanyChange(item.id)} className={`w-full text-left px-4 py-3 hover:bg-dark-800 ${item.id === company?.id ? 'bg-primary-400/10 text-primary-300' : 'text-dark-200'}`}>
+                    <div className="font-medium truncate">{item.name}</div>
+                    <div className="text-xs text-dark-500 mt-1">{item.membershipRole || 'Membro'}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <form onSubmit={handleSearch} className="hidden sm:flex items-center gap-2 bg-dark-800 border border-dark-700/50 rounded-xl px-4 py-2 w-72">
           <Search size={16} className="text-dark-500" />
           <input
