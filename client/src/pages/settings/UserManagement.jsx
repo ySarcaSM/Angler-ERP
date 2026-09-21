@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Eye, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, Eye, Trash2, X, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
-import { listUsers, deactivateUser, logAudit } from '../../services/firebase/settings';
+import { listUsers, deactivateUser, logAudit, listDeletionRequests, approveDeletionRequest, rejectDeletionRequest } from '../../services/firebase/settings';
 import {
   listPendingCompanyAccessRequests,
   listCompanyMembers,
@@ -23,21 +23,25 @@ const ROLE_LABELS = {
 export default function UserManagement() {
   const navigate = useNavigate();
   const { company, user, userData } = useAuth();
+  const isOwner = userData?.role === 'owner';
+  const isAdmin = userData?.role === 'admin';
   const [users, setUsers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [requestOpen, setRequestOpen] = useState(null);
   const [selectedRole, setSelectedRole] = useState('operator');
   const [processing, setProcessing] = useState(false);
+  const [deletionRequests, setDeletionRequests] = useState([]);
 
   const load = async () => {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [companyUsers, companyMembers, pendingRequests] = await Promise.all([
+      const [companyUsers, companyMembers, pendingRequests, pendingDeletions] = await Promise.all([
         listUsers(company.id),
         listCompanyMembers(company.id),
-        listPendingCompanyAccessRequests(company.id),
+        isOwner ? listPendingCompanyAccessRequests(company.id) : Promise.resolve([]),
+        (isOwner || isAdmin) ? listDeletionRequests(company.id) : Promise.resolve([]),
       ]);
       const mergedUsers = [...companyUsers];
       companyMembers.forEach((member) => {
@@ -54,6 +58,7 @@ export default function UserManagement() {
       });
       setUsers(mergedUsers);
       setRequests(pendingRequests);
+      setDeletionRequests(pendingDeletions);
     } catch (err) {
       toast.error(err.message || 'Não foi possível carregar os usuários.');
     } finally {
@@ -84,6 +89,36 @@ export default function UserManagement() {
       toast.error(err.message || 'Não foi possível aprovar o acesso.');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleApproveDeletion = async (requestItem) => {
+    if (!confirm('Aprovar esta exclusão? O registro será removido permanentemente.')) return;
+    try {
+      await approveDeletionRequest(requestItem);
+      await logAudit(company.id, {
+        user,
+        userName: userData?.name,
+        action: 'delete',
+        entity: requestItem.collection,
+        entityId: requestItem.documentId,
+        description: `${userData?.name || 'Administrador'} aprovou uma solicitação de exclusão.`,
+        details: { collection: requestItem.collection, documentId: requestItem.documentId, requesterUid: requestItem.requesterUid },
+      });
+      toast.success('Exclusão aprovada.');
+      await load();
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível aprovar a exclusão.');
+    }
+  };
+
+  const handleRejectDeletion = async (requestItem) => {
+    try {
+      await rejectDeletionRequest(requestItem);
+      toast.success('Solicitação de exclusão recusada.');
+      await load();
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível recusar a solicitação.');
     }
   };
 
@@ -137,6 +172,27 @@ export default function UserManagement() {
           )}
         </div>
       </div>
+
+      {deletionRequests.length > 0 && (
+        <section className="card p-5 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-dark-100 flex items-center gap-2"><ShieldAlert size={18} className="text-amber-400" /> Solicitações de exclusão</h2>
+            <p className="text-sm text-dark-500 mt-1">Operadores precisam da aprovação de um administrador ou proprietário para excluir registros.</p>
+          </div>
+          {deletionRequests.map((requestItem) => (
+            <div key={requestItem.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-dark-800">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-dark-100">{requestItem.collection} / {requestItem.documentId}</div>
+                <div className="text-xs text-dark-500">Solicitado por {requestItem.requesterName || requestItem.requesterUid}</div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => handleApproveDeletion(requestItem)} className="btn-primary btn-sm"><Check size={15} /> Aprovar</button>
+                <button onClick={() => handleRejectDeletion(requestItem)} className="btn-ghost btn-sm text-red-400"><X size={15} /> Recusar</button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       {requests.length > 0 && (
         <section className="card p-5 space-y-4">
