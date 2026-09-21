@@ -13,7 +13,7 @@ service cloud.firestore {
 
     function isMember(companyId) {
       let user = currentUser();
-      return isAuth() && user != null && user.companyId == companyId;
+      return isAuth() && user != null && (\n        user.companyId == companyId ||\n        ('memberships' in user && companyId in user.memberships && user.memberships[companyId].active == true)\n      );
     }
 
     function isAdmin(companyId) {
