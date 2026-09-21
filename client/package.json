@@ -17,7 +17,8 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^6.28.0",
-    "recharts": "^2.14.0"
+    "recharts": "^2.14.0",
+    "firebase-functions": "^6.3.2"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
