@@ -141,11 +141,12 @@ async function registerInternal({
       name,
       lastName: lastName || '',
       role: 'owner',
-      companyId: user.uid, // Owner's company = their uid
+      companyId: user.uid, // contexto ativo inicial = empresa pessoal
+      personalCompanyId: user.uid,
       active: true,
       requiresEmailVerification: !existingAuthAccount,
       memberships: {
-        [user.uid]: { role: 'owner', active: true, createdAt: serverTimestamp() },
+        [user.uid]: { role: 'owner', active: true, personal: true, createdAt: serverTimestamp() },
       },
       createdAt: serverTimestamp(),
     });
