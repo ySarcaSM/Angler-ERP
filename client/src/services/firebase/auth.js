@@ -5,6 +5,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
   signOut,
   sendPasswordResetEmail,
   sendEmailVerification,
@@ -220,12 +221,29 @@ export async function joinCompany({ invitation, name, lastName, password }) {
     const email = invitation.email.trim().toLowerCase();
     let credential;
     let existingAccount = false;
+
+    // Se a conta já existe, autentica diretamente. Isso evita o signUp que
+    // gera HTTP 400 (auth/email-already-in-use) no console do navegador.
+    let signInMethods = [];
     try {
-      credential = await createUserWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-      if (error.code !== 'auth/email-already-in-use') throw error;
+      signInMethods = await fetchSignInMethodsForEmail(auth, email);
+    } catch (lookupError) {
+      // Projetos com proteção contra enumeração podem bloquear este lookup.
+      // Nesse caso usamos o fallback create -> signIn abaixo.
+      console.warn('[JoinCompany] Lookup de métodos indisponível; usando fallback.', lookupError);
+    }
+
+    if (signInMethods.includes('password')) {
       credential = await signInWithEmailAndPassword(auth, email, password);
       existingAccount = true;
+    } else {
+      try {
+        credential = await createUserWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        if (error.code !== 'auth/email-already-in-use') throw error;
+        credential = await signInWithEmailAndPassword(auth, email, password);
+        existingAccount = true;
+      }
     }
 
     const joinedUser = credential.user;
