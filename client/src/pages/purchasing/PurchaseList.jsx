@@ -13,6 +13,7 @@ import { logAudit } from '../../services/firebase/settings';
 
 export default function PurchaseList() {
   const { company, user, userData } = useAuth();
+  const isViewer = userData?.role === 'viewer';
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -93,7 +94,7 @@ export default function PurchaseList() {
     { key: 'total', label: 'Total', render: (v) => <span className="font-semibold text-dark-100">{formatBRL(v)}</span> },
     { key: 'status', label: 'Status', render: (v) => <span className={{ draft: 'badge-neutral', ordered: 'badge-info', received: 'badge-success', cancelled: 'badge-danger' }[v] || 'badge-neutral'}>{statusLabel(v)}</span> },
     { key: 'createdAt', label: 'Data', render: (v) => <span className="text-dark-500 text-xs">{formatDate(v?.toDate?.() || v)}</span> },
-    { key: '_actions', label: '', width: '60px', render: (_, row) => (row.status === 'ordered' || row.status === 'draft') ? <button onClick={(e) => { e.stopPropagation(); handleReceive(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button> : null },
+    { key: '_actions', label: '', width: '60px', render: (_, row) => (!isViewer && (row.status === 'ordered' || row.status === 'draft')) ? <button onClick={(e) => { e.stopPropagation(); handleReceive(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button> : null },
   ];
 
   return (
@@ -108,7 +109,7 @@ export default function PurchaseList() {
         <form onSubmit={handleCreate} className="space-y-5">
           <div><label className="label">Fornecedor *</label><select className="input" value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })} required><option value="">Selecione...</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-dark-200">Itens</h3><button type="button" onClick={() => setForm({ ...form, items: [...form.items, { productId: '', productName: '', quantity: 1, unitCost: 0 }] })} className="btn-secondary btn-sm"><Plus size={14} /> Adicionar</button></div>
+            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-dark-200">Itens</h3>{!isViewer && <button type="button" onClick={() => setForm({ ...form, items: [...form.items, { productId: '', productName: '', quantity: 1, unitCost: 0 }] })} className="btn-secondary btn-sm"><Plus size={14} /> Adicionar</button></div>
             {form.items.map((item, index) => <div key={index} className="grid grid-cols-12 gap-3 items-end"><div className="col-span-5"><label className="label">Produto *</label><select className="input" value={item.productId} onChange={(event) => updateItem(index, 'productId', event.target.value)} required><option value="">Selecione...</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></div><div className="col-span-2"><label className="label">Qtd *</label><input type="number" step="1" min="1" className="input" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} required /></div><div className="col-span-3"><label className="label">Custo unitário</label><input type="number" step="0.01" className="input" value={item.unitCost} onChange={(event) => updateItem(index, 'unitCost', event.target.value)} /></div><button type="button" className="btn-ghost btn-sm text-red-400 col-span-2" onClick={() => setForm({ ...form, items: form.items.filter((_, rowIndex) => rowIndex !== index) })} disabled={form.items.length === 1}><Trash2 size={14} /></button></div>)}
           </div>
           <div className="flex justify-end gap-3 border-t border-dark-800 pt-4"><button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Criar Compra'}</button></div>
