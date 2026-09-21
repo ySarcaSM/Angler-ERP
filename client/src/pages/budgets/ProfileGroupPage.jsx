@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calculator, Download, DollarSign } from 'lucide-react';
+import { Download, DollarSign } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import { findProfileGroup } from '../../data/budgetProfiles';
@@ -8,7 +8,7 @@ import { formatBRL } from '../../utils/format';
 import { useAuth } from '../../context/useAuth';
 import { logAudit } from '../../services/firebase/settings';
 
-const DEFAULT_FORM = { profileSlug: '', height: 30, width: 25, length: 10, accordionWidth: 0, quantity: 100, materialWidth: 140, waste: 10, accessoryType: 'cord', handleLength: 60, handleQuantity: 2, cordLength: 140, cordQuantity: 1 };
+const DEFAULT_FORM = { profileSlug: '', height: 30, width: 25, length: 10, accordionWidth: 0, quantity: 100, materialWidth: 150, waste: 10, accessoryType: 'cord', handleLength: 60, handleQuantity: 2, cordLength: 140, cordQuantity: 1 };
 const DEFAULT_BUDGET = { materialCostPerMeter: 0, accessoryCostPerMeter: 0, laborCostPerUnit: 0, unitPrice: 0 };
 
 function formatNumber(value, digits = 2) {
@@ -38,6 +38,31 @@ function calculateCut(materialWidth, pieceWidth, pieceLength, quantity, allowRot
   }, null);
 }
 
+// Acomodação física: cada eixo é arredondado para baixo antes de multiplicar.
+// Frações e rotações não formam uma nova peça ou fileira válida.
+function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWidth = 0) {
+  const usableLength = 262; // 300 cm da mesa, menos 19 cm de cada lateral
+  const usableWidth = Math.min(Math.max(0, materialWidth), 150);
+  const piecesPerRow = pieceWidth > 0 ? Math.floor(usableLength / pieceWidth) : 0;
+  const rows = pieceHeight > 0 ? Math.floor(usableWidth / pieceHeight) : 0;
+  const lengthLeftover = usableLength - (piecesPerRow * pieceWidth);
+  const widthLeftover = usableWidth - (rows * pieceHeight);
+
+  return {
+    width: usableWidth,
+    usableLength,
+    piecesPerRow,
+    wholePiecesPerRow: piecesPerRow,
+    rows,
+    verticalRows: rows,
+    rowLayouts: Array.from({ length: rows }, () => ({ piecesPerRow })),
+    capacity: piecesPerRow * rows,
+    lengthLeftover,
+    widthLeftover,
+    accordionFits: accordionWidth <= 0 || accordionWidth <= Math.max(lengthLeftover, widthLeftover),
+  };
+}
+
 const MATERIAL_PREVIEW = {
   backpack: { label: 'Material da mochila', tone: 'bg-amber-400', softTone: 'bg-amber-400/10', border: 'border-amber-400/40' },
   drawstring: { label: 'Nylon / TNT', tone: 'bg-amber-400', softTone: 'bg-amber-400/10', border: 'border-amber-400/40' },
@@ -45,6 +70,116 @@ const MATERIAL_PREVIEW = {
   paper: { label: 'Papel', tone: 'bg-sky-400', softTone: 'bg-sky-400/10', border: 'border-sky-400/40' },
   plastic: { label: 'Plástico', tone: 'bg-fuchsia-400', softTone: 'bg-fuchsia-400/10', border: 'border-fuchsia-400/40' },
 };
+
+function PhysicalCalculationPreview({ profile, result, onDownload }) {
+  const material = MATERIAL_PREVIEW[profile?.kind] || MATERIAL_PREVIEW.bag;
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [downloading, setDownloading] = useState(false);
+  const plan = result.tablePlan;
+
+  useEffect(() => {
+    if (!result.canCut || !plan?.capacity) {
+      setPreviewUrl('');
+      return undefined;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 760;
+    const context = canvas.getContext('2d');
+    const table = { x: 70, y: 110, width: 1060, height: 500 };
+    const scaleX = table.width / 300;
+    const scaleY = table.height / 159;
+    const cutX = table.x + (19 * scaleX);
+    const cutY = table.y + ((159 - plan.width) * scaleY);
+    const cutWidth = 262 * scaleX;
+    const cutHeight = plan.width * scaleY;
+    const pieceWidth = result.productWidth * scaleX;
+    const pieceHeight = result.productHeight * scaleY;
+    const piecesThisPlan = Math.min(result.quantity, plan.capacity);
+
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#111827';
+    context.font = '700 22px Arial';
+    context.fillText(`PLANO DE CORTE — ${formatNumber(piecesThisPlan, 0)} unidade(s)`, 48, 42);
+    context.font = '500 14px Arial';
+    context.fillStyle = '#374151';
+    context.fillText(`Mesa: 300 × 159 cm | área útil: 262 × ${formatNumber(plan.width, 0)} cm | material: ${material.label}`, 48, 68);
+
+    context.fillStyle = '#e5e7eb';
+    context.fillRect(table.x, table.y, table.width, table.height);
+    context.strokeStyle = '#111827';
+    context.lineWidth = 3;
+    context.strokeRect(table.x, table.y, table.width, table.height);
+    context.fillStyle = 'rgba(107, 114, 128, 0.42)';
+    context.fillRect(table.x, table.y, 19 * scaleX, table.height);
+    context.fillRect(table.x + table.width - (19 * scaleX), table.y, 19 * scaleX, table.height);
+    context.fillStyle = '#f8fafc';
+    context.fillRect(cutX, cutY, cutWidth, cutHeight);
+
+    for (let index = 0; index < piecesThisPlan; index += 1) {
+      const row = Math.floor(index / plan.piecesPerRow);
+      const column = index % plan.piecesPerRow;
+      const x = cutX + (column * pieceWidth);
+      const y = cutY + (row * pieceHeight);
+      context.fillStyle = '#8fd4f6';
+      context.fillRect(x, y, pieceWidth, pieceHeight);
+      context.strokeStyle = '#27506a';
+      context.lineWidth = 1.5;
+      context.strokeRect(x, y, pieceWidth, pieceHeight);
+      drawResponsivePieceLabel(context, x, y, pieceWidth, pieceHeight, `${formatNumber(result.productWidth, 0)} × ${formatNumber(result.productHeight, 0)} cm`, '#143b52');
+    }
+
+    context.fillStyle = '#111827';
+    context.font = '700 14px Arial';
+    context.fillText('300 cm', table.x + (table.width / 2) - 24, table.y - 18);
+    context.save();
+    context.translate(table.x - 28, table.y + (table.height / 2));
+    context.rotate(-Math.PI / 2);
+    context.fillText('159 cm', -26, 0);
+    context.restore();
+    context.font = '600 13px Arial';
+    context.fillText(`Por fileira: ⌊262 ÷ ${formatNumber(result.productWidth, 0)}⌋ = ${plan.piecesPerRow}`, 70, 655);
+    context.fillText(`Por coluna: ⌊${formatNumber(plan.width, 0)} ÷ ${formatNumber(result.productHeight, 0)}⌋ = ${plan.rows}`, 70, 680);
+    context.fillText(`Capacidade: ${plan.piecesPerRow} × ${plan.rows} = ${plan.capacity} | sobras: ${formatNumber(plan.lengthLeftover, 0)} cm no comprimento e ${formatNumber(plan.widthLeftover, 0)} cm na largura`, 70, 705);
+    if (result.hasAccordion) context.fillText(`Sanfona de ${formatNumber(result.accordionWidth, 0)} cm: ${result.accordionFits ? 'acomodada na sobra disponível.' : 'não cabe na sobra disponível.'}`, 70, 730);
+    setPreviewUrl(canvas.toDataURL('image/png'));
+    return undefined;
+  }, [material.label, plan, result]);
+
+  const handleDownload = async () => {
+    if (!previewUrl || downloading) return;
+    setDownloading(true);
+    try {
+      await onDownload();
+      const link = document.createElement('a');
+      link.href = previewUrl;
+      link.download = 'plano-de-corte.png';
+      link.click();
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const message = !result.quantityValid ? 'Informe uma quantidade maior que zero.'
+    : !result.materialWidthValid ? 'A largura do material deve estar entre 1 e 150 cm.'
+      : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm não cabe na largura útil do material.`
+        : !result.productWidthValid ? `A largura de ${formatNumber(result.productWidth)} cm excede os 262 cm úteis da mesa.`
+          : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe na sobra física deste encaixe.`
+            : 'Não há peças inteiras que caibam neste plano.';
+
+  return (
+    <div className="card border-dark-700">
+      <div className="card-header flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold text-dark-200">Preview do plano de corte</h2><p className="mt-1 text-xs text-dark-500">Cada eixo é arredondado para baixo antes da multiplicação.</p></div><span className={`rounded-full border px-3 py-1 text-xs font-medium ${material.border} ${material.softTone}`}>{material.label}</span></div>
+      <div className="card-body space-y-4">
+        {previewUrl ? <img src={previewUrl} alt={`Plano de corte de ${profile?.name}`} className="w-full rounded-xl border border-dark-700 bg-dark-900" /> : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{message}</div>}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-dark-400"><span><strong className="text-dark-200">{formatNumber(result.plansNeeded, 0)}</strong> plano(s) para a quantidade solicitada</span><span><strong className="text-dark-200">{formatNumber(result.tablePlan?.capacity || 0, 0)}</strong> unidade(s) por plano</span></div>
+        <div className="flex justify-end"><button type="button" onClick={handleDownload} disabled={!previewUrl || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"><Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}</button></div>
+      </div>
+    </div>
+  );
+}
 
 function CutPreview({ profile, result, onDownload }) {
   const material = MATERIAL_PREVIEW[profile?.kind] || MATERIAL_PREVIEW.bag;
@@ -71,10 +206,8 @@ function CutPreview({ profile, result, onDownload }) {
     const mainPieceHeight = Number(result.mainCut.pieceLength) || 90;
     const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
     const sidePieceHeight = Number(result.sideCut.pieceLength) || 90;
-    const mainPiecesPerRow = Math.max(Number(result.mainCut.piecesPerRow) || 7, 1);
-    const sidePiecesPerRow = Math.max(Number(result.sideCut.piecesPerRow) || 7, 1);
 
-    if (!result.quantityValid || !result.accordionValid || result.completeUnitsPerRow < 1 || result.quantity > result.completeUnitsPerRow) {
+    if (!result.quantityValid || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {
       setPreviewUrl('');
       return undefined;
     }
@@ -148,9 +281,11 @@ function CutPreview({ profile, result, onDownload }) {
 
     context.fillStyle = '#111827';
     context.font = '700 18px Arial';
-    context.fillText(`PLANO DE CORTE - ${formatNumber(quantity, 0)} SACOLAS DE TNT (LARGURA DO TNT: ${formatNumber(materialWidth, 0)} cm)`, panelX + 18, panelY + 28);
+    const firstPlan = result.cutPlans?.[0];
+    const previewQuantity = Math.min(quantity, firstPlan?.capacity || 0);
+    context.fillText(`PLANO DE CORTE 1 - ${formatNumber(previewQuantity, 0)} SACOLAS (LARGURA: ${formatNumber(firstPlan?.width || materialWidth, 0)} cm)`, panelX + 18, panelY + 28);
     context.font = '600 11px Arial';
-    context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (100 un) | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (100 un)`, panelX + 18, panelY + 46);
+    context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)` : ''}`, panelX + 18, panelY + 46);
 
     const wasteBlockOffset = 74 + 10;
     const pieceSpacingOffset = 14;
@@ -223,8 +358,13 @@ function CutPreview({ profile, result, onDownload }) {
     const wasteBoxY = stripY + 18;
     const wasteBoxW = 74;
     const wasteBoxH = 365;
+    const materialBoxX = tableRight - (wasteBoxX - tableLeft) - wasteBoxW;
+    const materialBoxY = wasteBoxY;
+    const materialBoxW = wasteBoxW;
+    const materialBoxH = wasteBoxH;
     context.fillStyle = 'rgba(160, 160, 160, 0.28)';
     context.fillRect(wasteBoxX, wasteBoxY, wasteBoxW, wasteBoxH);
+    context.fillRect(materialBoxX, materialBoxY, materialBoxW, materialBoxH);
 
     const wasteLabel = 'Sobra lateral';
     const wasteValue = '19 cm';
@@ -255,27 +395,237 @@ function CutPreview({ profile, result, onDownload }) {
       context.fillText(wasteNote, wasteBoxX + 6, wasteCenterY + 30);
     }
 
-    context.fillStyle = '#111827';
-    context.font = '700 11px Arial';
-    context.fillText('Largura', stripX + stripWidth + 8, stripY + 32);
-    context.fillText('total do TNT', stripX + stripWidth + 8, stripY + 46);
-    context.fillText(`${formatNumber(materialWidth, 0)} cm`, stripX + stripWidth + 8, stripY + 60);
+    const materialLabel = 'Largura total';
+    const materialNote = 'do TNT';
+    const materialValue = `${formatNumber(firstPlan?.width || materialWidth, 0)} cm`;
+    const materialCenterY = materialBoxY + materialBoxH / 2;
+    context.fillStyle = wasteTextColor;
+    context.font = `700 ${wasteFontBase}px Arial`;
+    [materialLabel, materialNote].forEach((line, index) => {
+      const lineWidth = context.measureText(line).width;
+      context.fillText(line, materialBoxX + ((materialBoxW - lineWidth) / 2), materialCenterY - 24 + (index * 14));
+    });
+    context.font = `700 ${Math.max(9, wasteFontBase + 2)}px Arial`;
+    const materialValueWidth = context.measureText(materialValue).width;
+    context.fillText(materialValue, materialBoxX + ((materialBoxW - materialValueWidth) / 2), materialCenterY + 22);
+
+    // Peças de corte dentro da mesa: seguem o mesmo arranjo da referência,
+    // mas usam as dimensões e a quantidade de peças do cálculo atual.
+    const cutAreaX = wasteBoxX + wasteBoxW + 10;
+    const cutAreaRight = materialBoxX - 10;
+    const cutAreaWidth = cutAreaRight - cutAreaX;
+    const tableLengthCm = 300;
+    const lateralWasteCm = 19;
+    const usableTableLengthCm = tableLengthCm - (lateralWasteCm * 2);
+    const tableWidthCm = 159;
+    const maxMaterialHeightCm = 150;
+    const materialPlanDrawHeight = wasteBoxH * (maxMaterialHeightCm / tableWidthCm);
+    const mainAreaY = wasteBoxY + (wasteBoxH - materialPlanDrawHeight);
+    const verticalCentimeterScale = materialPlanDrawHeight / maxMaterialHeightCm;
+    const cutHeightCm = Number(result.productHeight) || mainPieceHeight;
+    const mainAreaHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
+    const materialPlanBottom = mainAreaY + materialPlanDrawHeight;
+    const cutWidthCm = Number(result.productWidth) || mainPieceWidth;
+    const firstCutPlan = result.cutPlans?.[0];
+    const mainGap = 0;
+    const centimeterScale = cutAreaWidth / usableTableLengthCm;
+    const mainStartX = cutAreaX;
+    const mainPieceDrawWidth = cutWidthCm * centimeterScale;
+    const mainPiecesToDraw = previewQuantity;
+    const mainLabel = `${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm`;
+    const rowsToDraw = firstCutPlan?.rowLayouts || [];
+    let currentRowY = mainAreaY;
+    let remainingPiecesToDraw = mainPiecesToDraw;
+    rowsToDraw.forEach((layout) => {
+      const pieceWidthCm = layout.rotated ? cutHeightCm : cutWidthCm;
+      const pieceHeightCm = layout.rotated ? cutWidthCm : cutHeightCm;
+      const pieceDrawWidth = pieceWidthCm * centimeterScale;
+      const pieceDrawHeight = pieceHeightCm * verticalCentimeterScale;
+      const label = layout.rotated ? `${mainLabel} (girada)` : mainLabel;
+      const piecesThisRow = Math.min(remainingPiecesToDraw, layout.piecesPerRow);
+      for (let column = 0; column < piecesThisRow; column += 1) {
+        const pieceX = mainStartX + (column * (pieceDrawWidth + mainGap));
+        context.fillStyle = color.fill;
+        context.fillRect(pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight);
+        context.strokeStyle = '#27506a';
+        context.lineWidth = 1.5;
+        context.strokeRect(pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight);
+        drawResponsivePieceLabel(context, pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight, label, color.dark);
+      }
+      remainingPiecesToDraw -= piecesThisRow;
+      currentRowY += pieceDrawHeight;
+    });
+
+    // Marca no próprio tampo as duas sobras resultantes da grade completa.
+    // Elas são calculadas depois de acomodar somente peças inteiras em cada eixo.
+    const gridDrawWidth = (firstCutPlan.placedColumns * mainPieceDrawWidth) + (Math.max(0, firstCutPlan.placedColumns - 1) * mainGap);
+    const gridDrawHeight = firstCutPlan.placedRows * mainAreaHeight;
+    const lengthWasteX = mainStartX + gridDrawWidth;
+    const lengthWasteWidth = Math.max(0, cutAreaRight - lengthWasteX);
+    const widthWasteY = mainAreaY + gridDrawHeight;
+    const widthWasteHeight = Math.max(0, materialPlanBottom - widthWasteY);
+    if (lengthWasteWidth > 0 && gridDrawHeight > 0) {
+      const wasteLineY = mainAreaY + (gridDrawHeight / 2);
+      const lengthWasteLabel = `Sobra: ${formatNumber(firstCutPlan.placedLengthLeftover, 0)} cm`;
+      context.strokeStyle = '#111827';
+      context.fillStyle = '#111827';
+      context.lineWidth = 1.5;
+      context.beginPath();
+      context.moveTo(lengthWasteX, wasteLineY);
+      context.lineTo(cutAreaRight, wasteLineY);
+      context.moveTo(lengthWasteX, wasteLineY);
+      context.lineTo(lengthWasteX + 5, wasteLineY - 3);
+      context.moveTo(lengthWasteX, wasteLineY);
+      context.lineTo(lengthWasteX + 5, wasteLineY + 3);
+      context.moveTo(cutAreaRight, wasteLineY);
+      context.lineTo(cutAreaRight - 5, wasteLineY - 3);
+      context.moveTo(cutAreaRight, wasteLineY);
+      context.lineTo(cutAreaRight - 5, wasteLineY + 3);
+      context.stroke();
+      let lengthWasteFontSize = 10;
+      context.font = `700 ${lengthWasteFontSize}px Arial`;
+      while (lengthWasteFontSize > 5 && context.measureText(lengthWasteLabel).width > Math.max(lengthWasteWidth - 4, 1)) {
+        lengthWasteFontSize -= 1;
+        context.font = `700 ${lengthWasteFontSize}px Arial`;
+      }
+      const lengthLabelWidth = context.measureText(lengthWasteLabel).width;
+      context.fillText(lengthWasteLabel, ((lengthWasteX + cutAreaRight) / 2) - (lengthLabelWidth / 2), wasteLineY - 6);
+    }
+    if (widthWasteHeight > 0) {
+      const wasteLineX = mainStartX + 18;
+      context.strokeStyle = '#111827';
+      context.fillStyle = '#111827';
+      context.lineWidth = 1.5;
+      context.beginPath();
+      context.moveTo(wasteLineX, widthWasteY);
+      context.lineTo(wasteLineX, materialPlanBottom);
+      context.moveTo(wasteLineX, widthWasteY);
+      context.lineTo(wasteLineX - 3, widthWasteY + 5);
+      context.moveTo(wasteLineX, widthWasteY);
+      context.lineTo(wasteLineX + 3, widthWasteY + 5);
+      context.moveTo(wasteLineX, materialPlanBottom);
+      context.lineTo(wasteLineX - 3, materialPlanBottom - 5);
+      context.moveTo(wasteLineX, materialPlanBottom);
+      context.lineTo(wasteLineX + 3, materialPlanBottom - 5);
+      context.stroke();
+      const widthWasteLabel = `Sobra: ${formatNumber(firstCutPlan.placedWidthLeftover, 0)} cm`;
+      context.save();
+      context.translate(wasteLineX + 12, widthWasteY + (widthWasteHeight / 2));
+      context.rotate(-Math.PI / 2);
+      let widthWasteFontSize = 10;
+      context.font = `700 ${widthWasteFontSize}px Arial`;
+      while (widthWasteFontSize > 5 && context.measureText(widthWasteLabel).width > Math.max(widthWasteHeight - 4, 1)) {
+        widthWasteFontSize -= 1;
+        context.font = `700 ${widthWasteFontSize}px Arial`;
+      }
+      context.fillText(widthWasteLabel, -(context.measureText(widthWasteLabel).width / 2), 0);
+      context.restore();
+    }
+
+    // Cotas por peça, como na referência: uma linha de dimensão acima de
+    // cada coluna, com setas/ticks nas extremidades e o valor centralizado.
+    if (mainPiecesToDraw > 0) {
+      const dimensionY = mainAreaY - 10;
+      context.strokeStyle = '#111827';
+      context.fillStyle = '#111827';
+      context.lineWidth = 1;
+      context.font = '700 8px Arial';
+      const drawnPiecesInFirstRow = Math.min(firstCutPlan.wholePiecesPerRow, mainPiecesToDraw, quantity);
+      for (let column = 0; column < drawnPiecesInFirstRow; column += 1) {
+        const startX = mainStartX + (column * (mainPieceDrawWidth + mainGap));
+        const endX = startX + mainPieceDrawWidth;
+        context.beginPath();
+        context.moveTo(startX, dimensionY);
+        context.lineTo(endX, dimensionY);
+        context.moveTo(startX, dimensionY - 4);
+        context.lineTo(startX, dimensionY + 4);
+        context.moveTo(endX, dimensionY - 4);
+        context.lineTo(endX, dimensionY + 4);
+        context.moveTo(startX, dimensionY);
+        context.lineTo(startX + 4, dimensionY - 3);
+        context.moveTo(startX, dimensionY);
+        context.lineTo(startX + 4, dimensionY + 3);
+        context.moveTo(endX, dimensionY);
+        context.lineTo(endX - 4, dimensionY - 3);
+        context.moveTo(endX, dimensionY);
+        context.lineTo(endX - 4, dimensionY + 3);
+        context.stroke();
+        const label = `${formatNumber(cutWidthCm, 0)} cm`;
+        const labelWidth = context.measureText(label).width;
+        context.fillText(label, startX + ((mainPieceDrawWidth - labelWidth) / 2), dimensionY - 4);
+      }
+    }
+    const mainPiecesDrawnWidth = cutAreaWidth;
+
+    const sideStartX = mainStartX + mainPiecesDrawnWidth + mainGap;
+    const availableSideWidth = cutAreaRight - sideStartX;
+    let sidePiecesToDraw = 0;
+    if (result.hasAccordion && availableSideWidth > 0) {
+      const sideGap = 3;
+      const sidePieceDrawWidth = sidePieceWidth * centimeterScale;
+      const sidePieceDrawHeight = Math.min(sidePieceHeight * verticalCentimeterScale, materialPlanBottom - mainAreaY);
+      const maxSidePiecesInPlan = Math.floor((availableSideWidth + sideGap) / (sidePieceDrawWidth + sideGap));
+      sidePiecesToDraw = Math.max(0, Math.min(quantity, maxSidePiecesInPlan));
+      const sideLabel = `${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm`;
+      for (let index = 0; index < sidePiecesToDraw; index += 1) {
+        const pieceX = sideStartX + (index * (sidePieceDrawWidth + sideGap));
+        context.fillStyle = '#8edb91';
+        context.fillRect(pieceX, mainAreaY, sidePieceDrawWidth, sidePieceDrawHeight);
+        context.strokeStyle = '#3b7c45';
+        context.lineWidth = 1;
+        context.strokeRect(pieceX, mainAreaY, sidePieceDrawWidth, sidePieceDrawHeight);
+        context.save();
+        context.translate(pieceX + (sidePieceDrawWidth / 2), mainAreaY + (sidePieceDrawHeight / 2));
+        context.rotate(-Math.PI / 2);
+        context.fillStyle = '#16371c';
+        context.font = '700 9px Arial';
+        const sideLabelWidth = context.measureText(sideLabel).width;
+        context.fillText(sideLabel, -(sideLabelWidth / 2), 3);
+        context.restore();
+
+        const sideMeasureY = mainAreaY - 9;
+        const sideMeasureLabel = `${formatNumber(sidePieceWidth, 0)} cm`;
+        context.strokeStyle = '#111827';
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(pieceX, sideMeasureY);
+        context.lineTo(pieceX + sidePieceDrawWidth, sideMeasureY);
+        context.moveTo(pieceX, sideMeasureY - 3);
+        context.lineTo(pieceX, sideMeasureY + 3);
+        context.moveTo(pieceX + sidePieceDrawWidth, sideMeasureY - 3);
+        context.lineTo(pieceX + sidePieceDrawWidth, sideMeasureY + 3);
+        context.stroke();
+        context.fillStyle = '#111827';
+        context.font = '700 8px Arial';
+        const sideMeasureLabelWidth = context.measureText(sideMeasureLabel).width;
+        context.fillText(sideMeasureLabel, pieceX + ((sidePieceDrawWidth - sideMeasureLabelWidth) / 2), sideMeasureY - 4);
+
+        context.strokeStyle = '#3b7c45';
+        context.setLineDash([3, 3]);
+        context.beginPath();
+        context.moveTo(pieceX + (sidePieceDrawWidth / 2), mainAreaY);
+        context.lineTo(pieceX + (sidePieceDrawWidth / 2), mainAreaY + sidePieceDrawHeight);
+        context.stroke();
+        context.setLineDash([]);
+      }
+    }
 
     const cardY = 520;
     const cardGap = 22;
     const cardWidth = (panelWidth - 120 - (cardGap * 2)) / 3;
     const cardHeight = 170;
     const cardStartX = 60;
-    const totalFaixas = Math.max(1, Math.ceil(quantity / Math.max(mainPiecesPerRow, 1)));
-    const totalComprimentoCm = Math.max(0, (mainPieceWidth + sidePieceWidth) * 2 * quantity);
+    const totalFaixas = quantity;
+    const totalComprimentoCm = Math.max(0, (mainPieceWidth + (result.hasAccordion ? sidePieceWidth : 0)) * quantity);
     const totalComprimentoM = totalComprimentoCm / 100;
 
     drawCardText(cardStartX, cardY, cardWidth, cardHeight, 'APROVEITAMENTO POR FAIXA DE 300 cm', [
-      `Peças principais (${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm): ${formatNumber(mainPiecesPerRow, 0)} unidades por faixa`,
-      `Sanfona (${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm): ${formatNumber(sidePiecesPerRow, 0)} unidades por faixa`,
-      `Total por faixa: ${formatNumber(Math.max(1, Math.floor(quantity / totalFaixas)), 0)} sacolas completas`,
-      `Para ${formatNumber(quantity, 0)} sacolas: ${formatNumber(totalFaixas, 0)} faixas de 300 cm`,
-      `Cálculo para ${formatNumber(quantity, 0)} sacolas`,
+      `Grade máxima: ${formatNumber(firstCutPlan.wholePiecesPerRow, 0)} × ${formatNumber(firstCutPlan.verticalRows, 0)} = ${formatNumber(firstCutPlan.capacity, 0)} mochilas`,
+      `Acomodadas neste tampo: ${formatNumber(firstCutPlan.placedPieces, 0)} mochila(s)`,
+      `Espaço vago útil: ${formatNumber(firstCutPlan.emptyPositions, 0)} posição(ões) (${formatNumber(firstCutPlan.emptyPositionArea, 0)} cm²)`,
+      `Faixa residual: ${formatNumber(firstCutPlan.lengthLeftover, 0)} cm no comprimento`,
+      `Área residual das bordas: ${formatNumber(firstCutPlan.residualEdgeArea, 0)} cm²`,
+      `Área total de sobra: ${formatNumber(firstCutPlan.placedAreaLeftover || 0, 0)} cm²`,
     ], '#dfeaf5', 12, 9.5);
 
     drawCardText(cardStartX + cardWidth + cardGap, cardY, cardWidth, cardHeight, 'CONSUMO DE TNT', [
@@ -298,7 +648,7 @@ function CutPreview({ profile, result, onDownload }) {
 
     setPreviewUrl(canvas.toDataURL('image/png'));
 
-    if (materialWidth > 150) {
+    if (result.plansToCut?.length > 1) {
       const duplicateCanvas = document.createElement('canvas');
       duplicateCanvas.width = canvas.width;
       duplicateCanvas.height = canvas.height;
@@ -309,9 +659,36 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillRect(0, 0, 1200, 70);
       duplicateContext.fillStyle = '#111827';
       duplicateContext.font = '700 18px Arial';
-      duplicateContext.fillText(`PLANO DE CORTE - 2 SACOLAS DE TNT (LARGURA DO TNT: ${formatNumber(materialWidth, 0)} cm)`, 18, 30);
+      const secondPlan = result.plansToCut[1];
+      duplicateContext.fillText(`PLANO DE CORTE 2 - ${formatNumber(secondPlan.capacity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
       duplicateContext.font = '600 11px Arial';
-      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (100 un) | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (100 un)`, 18, 52);
+      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlan.capacity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(secondPlan.capacity, 0)} un)` : ''}`, 18, 52);
+
+      // O segundo plano não é uma cópia do primeiro: limpa o desenho anterior
+      // e posiciona somente as fileiras que cabem na largura restante.
+      duplicateContext.fillStyle = '#eef2f7';
+      duplicateContext.fillRect(cutAreaX, mainAreaY, cutAreaWidth, materialPlanDrawHeight);
+      const secondRows = Math.max(0, secondPlan.verticalRows);
+      const secondPiecesPerRow = Math.max(0, secondPlan.wholePiecesPerRow);
+      const secondPiecesToDraw = Math.min(secondPlan.capacity, Math.max(0, quantity - (firstPlan?.capacity || 0)), secondRows * secondPiecesPerRow);
+      for (let index = 0; index < secondPiecesToDraw; index += 1) {
+        const row = Math.floor(index / secondPiecesPerRow);
+        const column = index % secondPiecesPerRow;
+        const pieceX = mainStartX + (column * (mainPieceDrawWidth + mainGap));
+        const pieceY = mainAreaY + (row * mainAreaHeight);
+        duplicateContext.fillStyle = color.fill;
+        duplicateContext.fillRect(pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight);
+        duplicateContext.strokeStyle = '#27506a';
+        duplicateContext.lineWidth = 1.5;
+        duplicateContext.strokeRect(pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight);
+        drawResponsivePieceLabel(duplicateContext, pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight, mainLabel, color.dark);
+      }
+      const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * mainAreaHeight));
+      if (unusedHeight > 0) {
+        duplicateContext.fillStyle = 'rgba(156, 163, 175, 0.5)';
+        duplicateContext.fillRect(cutAreaX, mainAreaY + (secondRows * mainAreaHeight), cutAreaWidth, unusedHeight);
+        drawResponsivePieceLabel(duplicateContext, cutAreaX, mainAreaY + (secondRows * mainAreaHeight), cutAreaWidth, unusedHeight, `${formatNumber(150 - secondPlan.width, 0)} cm fora do plano`, '#374151');
+      }
       setSecondaryPreviewUrl(duplicateCanvas.toDataURL('image/png'));
     } else {
       setSecondaryPreviewUrl('');
@@ -348,7 +725,7 @@ function CutPreview({ profile, result, onDownload }) {
             <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 1</div>
             <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />
           </div>
-        ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe na largura de material informada (${formatNumber(result.materialWidth)} cm).` : `Preview indisponível: a quantidade desejada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.completeUnitsPerRow, 0)} mochila(s) por fileira.`}</div>}
+        ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm excede o limite vertical de ${formatNumber(result.maxMaterialHeight)} cm do material.` : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe no comprimento útil de 262 cm.` : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe em nenhuma sobra física do plano.` : `Preview indisponível: a quantidade desejada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.completeUnitsPerRow, 0)} mochila(s) por conjunto de planos.`}</div>}
         {secondaryPreviewUrl && (
           <div className="space-y-2">
             <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 2</div>
@@ -361,8 +738,8 @@ function CutPreview({ profile, result, onDownload }) {
           </button>
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-dark-400">
-          <span><strong className="text-dark-200">{formatNumber(result.completeUnitsPerRow, 0)}</strong> mochila(s) completas por fileira</span>
-          <span><strong className="text-dark-200">{formatNumber(result.rowsNeeded, 0)}</strong> fileira(s) para a quantidade informada</span>
+          <span><strong className="text-dark-200">{formatNumber(result.completeUnitsPerRow, 0)}</strong> mochila(s) por conjunto de plano(s)</span>
+          <span><strong className="text-dark-200">{formatNumber(result.rowsNeeded, 0)}</strong> conjunto(s) para a quantidade informada</span>
           <span>As áreas coloridas representam o material aproveitado.</span>
         </div>
       </div>
@@ -489,29 +866,55 @@ export default function ProfileGroupPage() {
     const sideWidth = Math.max(0, length + accordionWidth);
     const quantity = Math.max(0, Math.floor(Number(form.quantity) || 0));
     const wasteFactor = 1 + ((Number(form.waste) || 0) / 100);
-    const bodyArea = profile?.kind === 'paper' || profile?.kind === 'plastic'
-      ? (2 * height * (width + sideWidth))
-      : (2 * height * width) + (2 * height * sideWidth);
+    // Cada unidade corresponde a um único corte de material.
+    const bodyArea = height * (width + sideWidth);
     const areaPerUnit = (bodyArea / 10000) * wasteFactor;
     const totalArea = areaPerUnit * quantity;
     const materialWidth = Math.max(Number(form.materialWidth) || 1, 1);
+    const tableLengthCm = 300;
+    const lateralWasteCm = 19;
+    const usableCutLength = tableLengthCm - (lateralWasteCm * 2);
+    const maxMaterialHeight = 150;
     const quantityValid = quantity > 0;
-    const accordionValid = sideWidth > 0 && sideWidth <= materialWidth;
-    const usableMaterialWidth = materialWidth;
-    const mainCut = calculateCut(usableMaterialWidth, width, height, quantity * 2);
-    const sideCut = calculateCut(materialWidth, sideWidth, height, quantity * 2, false);
-    const materialPerBackpack = (mainCut.pieceWidth * 2) + (sideCut.pieceWidth * 2);
-    const completeUnitsPerRow = materialPerBackpack > 0 ? Math.floor(materialWidth / materialPerBackpack) : 0;
-    const sharedLeftover = materialPerBackpack > 0 ? materialWidth - (Math.min(quantity, Math.max(completeUnitsPerRow, 1)) * materialPerBackpack) : materialWidth;
-    const linearMaterial = Math.max(mainCut.length, sideCut.length) * wasteFactor;
+    const materialWidthValid = materialWidth > 0 && materialWidth <= maxMaterialHeight;
+    const materialHeightValid = height > 0 && height <= materialWidth;
+    const productWidthValid = width > 0 && width <= usableCutLength;
+    const accordionValid = length > 0;
+    const usableMaterialWidth = usableCutLength;
+    const mainCut = calculateCut(usableCutLength, width, height, quantity, false);
+    const sideCut = calculateCut(usableCutLength, sideWidth, height, quantity, false);
+    const materialPerBackpack = mainCut.pieceWidth || 0;
+    const baseTablePlan = calculateTablePlan(materialWidth, width, height, accordionWidth);
+    const placedPieces = Math.min(quantity, baseTablePlan.capacity);
+    const placedRows = baseTablePlan.piecesPerRow > 0 ? Math.ceil(placedPieces / baseTablePlan.piecesPerRow) : 0;
+    const placedColumns = placedPieces > 0 ? Math.min(baseTablePlan.piecesPerRow, placedPieces) : 0;
+    const tablePlan = {
+      ...baseTablePlan,
+      placedPieces,
+      placedRows,
+      placedColumns,
+      placedLengthLeftover: baseTablePlan.usableLength - (placedColumns * width),
+      placedWidthLeftover: baseTablePlan.width - (placedRows * height),
+      placedAreaLeftover: (baseTablePlan.usableLength * baseTablePlan.width) - (placedPieces * width * height),
+      emptyPositions: Math.max(0, baseTablePlan.capacity - placedPieces),
+      emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedPieces) * width * height,
+      residualEdgeArea: (baseTablePlan.usableLength * baseTablePlan.width) - (baseTablePlan.capacity * width * height),
+    };
+    const completeUnitsPerRow = tablePlan.capacity;
+    const plansNeeded = completeUnitsPerRow > 0 ? Math.ceil(quantity / completeUnitsPerRow) : 0;
+    const remainingBackpacks = completeUnitsPerRow > 0 ? quantity % completeUnitsPerRow : quantity;
+    const sharedLeftover = tablePlan.lengthLeftover;
+    const linearMaterial = plansNeeded * tableLengthCm * wasteFactor;
     const usesCord = profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord');
     const usesHandle = profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle');
     const handleMaterial = usesHandle ? (Number(form.handleLength) || 0) * (Number(form.handleQuantity) || 0) * quantity / 100 : 0;
     const cordMaterial = usesCord ? (Number(form.cordLength) || 0) * (Number(form.cordQuantity) || 0) * quantity / 100 : 0;
-    const validCompleteUnitsPerRow = accordionValid ? completeUnitsPerRow : 0;
-    const rowsNeeded = validCompleteUnitsPerRow > 0 ? Math.ceil(quantity / validCompleteUnitsPerRow) : 0;
+    const accordionFits = tablePlan.accordionFits;
+    const canCut = quantityValid && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && completeUnitsPerRow > 0;
+    const validCompleteUnitsPerRow = canCut ? completeUnitsPerRow : 0;
+    const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
-    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, rowsNeeded, quantity, quantityValid, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, productHeight: height, productWidth: width, productLength: length, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
+    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: height, productWidth: width, productLength: length, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
   const budgetResult = useMemo(() => {
@@ -555,25 +958,36 @@ export default function ProfileGroupPage() {
               </>}
             </div>
             <div className="px-6 pb-6">
-              <button type="button" className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => setBudgetOpen(true)} disabled={!result.quantityValid || !result.accordionValid || result.completeUnitsPerRow < 1 || result.quantity > result.completeUnitsPerRow}>
+              <button type="button" className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed" onClick={() => setBudgetOpen(true)} disabled={!result.canCut}>
                 <DollarSign size={17} /> Orçamento rápido
               </button>
             </div>
           </div>
-          <div className="card border-primary-400/20">
-            <div className="card-header flex items-center gap-2"><Calculator size={18} className="text-primary-400" /><h2 className="text-sm font-semibold text-dark-200">Estimativa de materiais</h2></div>
-            <div className="card-body grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div><div className="text-xs text-dark-500">Área por unidade</div><div className="text-xl font-bold text-primary-300">{formatNumber(result.areaPerUnit)} m²</div></div>
-              <div><div className="text-xs text-dark-500">Área total</div><div className="text-xl font-bold text-primary-300">{formatNumber(result.totalArea)} m²</div></div>
-              <div><div className="text-xs text-dark-500">Material linear</div><div className="text-xl font-bold text-emerald-400">{formatNumber(result.linearMaterial)} cm</div></div>
-              <div><div className="text-xs text-dark-500">Alças / cordões</div><div className="text-xl font-bold text-amber-400">{formatNumber(result.handleMaterial + result.cordMaterial)} m</div></div>
-              <div><div className="text-xs text-dark-500">Mochilas completas / fileira</div><div className="text-xl font-bold text-blue-400">{formatNumber(result.completeUnitsPerRow, 0)}</div><div className="text-xs text-dark-500">{formatNumber(result.rowsNeeded, 0)} fileira(s) no total</div></div>
+          <div className="rounded-xl border border-primary-400/30 bg-primary-400/10 px-6 py-5 text-center">
+            <div className="text-sm font-medium text-primary-200">Capacidade máxima de corte</div>
+            <div className="mt-1 text-3xl font-bold text-primary-300">{formatNumber(result.completeUnitsPerRow, 0)} mochilas</div>
+            <div className="mt-4 grid grid-cols-1 gap-3 text-left text-sm md:grid-cols-2">
+              <div className="rounded-lg bg-dark-800/60 p-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-dark-500">Total acomodado</div>
+                <div className="mt-1 font-semibold text-dark-100">{formatNumber(result.completeUnitsPerRow, 0)} mochila(s) inteira(s) por tampo</div>
+                <div className="mt-2 text-xs text-dark-400">Arranjo para a quantidade informada: {formatNumber(result.tablePlan?.placedColumns || 0, 0)} mochila(s) no comprimento × {formatNumber(result.tablePlan?.placedRows || 0, 0)} mochila(s) na largura.</div>
+              </div>
+              <div className="rounded-lg bg-dark-800/60 p-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-dark-500">Sobras físicas</div>
+                <div className="mt-1 text-xs text-dark-300">Comprimento: 262 − ({formatNumber(result.tablePlan?.placedColumns || 0, 0)} × {formatNumber(result.productWidth, 0)}) = <strong className="text-dark-100">{formatNumber(result.tablePlan?.placedLengthLeftover || 0, 0)} cm</strong></div>
+                <div className="mt-1 text-xs text-dark-300">Largura: {formatNumber(result.tablePlan?.width || 0, 0)} − ({formatNumber(result.tablePlan?.placedRows || 0, 0)} × {formatNumber(result.productHeight, 0)}) = <strong className="text-dark-100">{formatNumber(result.tablePlan?.placedWidthLeftover || 0, 0)} cm</strong></div>
+              </div>
             </div>
-            <div className="px-6 pb-6 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-dark-400">
-              <div className="rounded-lg bg-dark-800/60 p-3">Encaixe combinado: <strong className="text-dark-200">{formatNumber(result.materialPerBackpack)} cm</strong> por mochila · sobra de {formatNumber(result.sharedLeftover)} cm</div>
-              <div className="rounded-lg bg-dark-800/60 p-3">Peças laterais / sanfona: <strong className="text-dark-200">{result.sideCut.piecesPerRow} peça(s)</strong> por fileira</div>
-              <div className="rounded-lg bg-primary-400/10 p-3 text-primary-200">Cálculo considera rolo de {formatNumber(result.materialWidth)} cm e compara as duas orientações de corte.</div>
+            <div className="mt-3 space-y-1 text-sm text-dark-300">
+              <div>Sobram {formatNumber(result.tablePlan?.placedLengthLeftover || 0, 0)} cm no comprimento útil da mesa — espaço insuficiente para mais uma mochila de {formatNumber(result.productWidth, 0)} cm.</div>
+              <div>Sobram {formatNumber(result.tablePlan?.placedWidthLeftover || 0, 0)} cm na largura da mesa — espaço insuficiente para mais uma mochila de {formatNumber(result.productHeight, 0)} cm.</div>
             </div>
+            <div className="mt-3 text-sm text-dark-300">Sobra física para a quantidade informada: {formatNumber(result.tablePlan?.placedLengthLeftover || 0, 0)} cm no comprimento e {formatNumber(result.tablePlan?.placedWidthLeftover || 0, 0)} cm na largura.</div>
+            <div className="mt-1 text-sm font-medium text-dark-200">Área total de sobra: {formatNumber(result.tablePlan?.placedAreaLeftover || 0, 0)} cm².</div>
+            <div className="mt-1 text-sm text-dark-300">Espaço vago útil: {formatNumber(result.tablePlan?.emptyPositions || 0, 0)} posição(ões) para mochila(s), equivalente a {formatNumber(result.tablePlan?.emptyPositionArea || 0, 0)} cm².</div>
+            <div className="mt-1 text-sm text-dark-300">Sobra residual das bordas: {formatNumber(result.tablePlan?.residualEdgeArea || 0, 0)} cm².</div>
+            {result.hasAccordion && <div className={`mt-2 text-sm font-medium ${result.accordionFits ? 'text-emerald-300' : 'text-amber-200'}`}>{result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth, 0)} cm será acomodada na sobra disponível.` : `A sanfona de ${formatNumber(result.accordionWidth, 0)} cm não cabe na sobra disponível.`}</div>}
+            {result.remainingBackpacks > 0 && <div className="mt-3 text-sm font-semibold text-amber-200">Sobram {formatNumber(result.remainingBackpacks, 0)} mochila(s) para o próximo conjunto de corte.</div>}
           </div>
           <CutPreview profile={profile} result={result} onDownload={handleDownloadPreview} />
       </div>
@@ -604,8 +1018,8 @@ export default function ProfileGroupPage() {
               <div className="text-xs text-dark-400 mt-1">Resultado total: {formatBRL(budgetResult.profitTotal)}</div>
             </div>
             <div className="text-xs text-dark-500">Custo estimado para {formatNumber(form.quantity, 0)} unidade(s), com base nos valores informados.</div>
+            </div>
           </div>
-        </div>
       </Modal>
     </div>
   );
