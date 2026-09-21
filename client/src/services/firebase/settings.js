@@ -63,7 +63,7 @@ export async function createCompanyInvitation({ companyId, email, role, createdB
 }
 
 
-export async function updateCompanyUserAccess({ companyId, uid, role, modules }) {
+export async function updateCompanyUserAccess({ companyId, uid, role, modules, operatorGroup = null }) {
   const userRef = doc(db, 'users', uid);
   const memberRef = doc(db, 'companyMembers', `${companyId}_${uid}`);
   const userSnapshot = await getDoc(userRef);
@@ -77,6 +77,7 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
     role,
     active: true,
     modules,
+    operatorGroup: role === 'operator' ? operatorGroup : null,
   };
 
   batch.update(userRef, {
@@ -100,6 +101,7 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
     role,
     active: true,
     modules,
+    operatorGroup: role === 'operator' ? operatorGroup : null,
     updatedAt: serverTimestamp(),
   }, { merge: true });
 
@@ -112,6 +114,7 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
     role,
     active: true,
     modules,
+    operatorGroup: role === 'operator' ? operatorGroup : null,
     updatedAt: serverTimestamp(),
   }, { merge: true });
 
