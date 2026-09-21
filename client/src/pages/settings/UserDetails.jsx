@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Mail, Shield, UserRound } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Check, Mail, Save, Shield, UserRound } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
-import { getUser, getCompanyMember } from '../../services/firebase/settings';
+import { getUser, getCompanyMember, updateCompanyUserAccess } from '../../services/firebase/settings';
 import toast from 'react-hot-toast';
 
 const ROLE_LABELS = {
@@ -13,12 +13,44 @@ const ROLE_LABELS = {
   viewer: 'Visualizador',
 };
 
+const ROLE_OPTIONS = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'manager', label: 'Gerente' },
+  { value: 'operator', label: 'Operador' },
+  { value: 'viewer', label: 'Visualizador' },
+];
+
+const MODULES = [
+  ['clients', 'Clientes'],
+  ['products', 'Produtos'],
+  ['sales', 'Vendas'],
+  ['purchases', 'Compras'],
+  ['suppliers', 'Fornecedores'],
+  ['locations', 'Localizações'],
+  ['financial', 'Financeiro'],
+  ['stock', 'Estoque'],
+  ['reports', 'Relatórios'],
+  ['assistant', 'Assistente de IA'],
+  ['measurement', 'Medição'],
+  ['formulas', 'Fórmulas'],
+  ['budgets', 'Orçamentos'],
+];
+
 export default function UserDetails() {
   const navigate = useNavigate();
   const { userId } = useParams();
   const { company } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [role, setRole] = useState('viewer');
+  const [modules, setModules] = useState([]);
+  const [adminConfirmation, setAdminConfirmation] = useState('');
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const availableModules = useMemo(() => {
+    const enabled = company?.modules?.enabled;
+    return Array.isArray(enabled) ? enabled : MODULES.map(([key]) => key);
+  }, [company?.modules?.enabled]);
 
   useEffect(() => {
     const load = async () => {
@@ -27,6 +59,7 @@ export default function UserDetails() {
 
       try {
         let data = null;
+        let isExternal = false;
 
         try {
           data = await getUser(userId);
@@ -36,13 +69,18 @@ export default function UserDetails() {
 
         if (!data || data.companyId !== company.id) {
           data = await getCompanyMember(company.id, userId);
+          isExternal = true;
         }
 
-        if (!data) {
-          throw new Error('Usuário não encontrado nesta empresa.');
-        }
+        if (!data) throw new Error('Usuário não encontrado nesta empresa.');
 
-        setProfile(data);
+        const membership = data.memberships?.[company.id];
+        const currentRole = data.role || membership?.role || 'viewer';
+        const configuredModules = data.modules || membership?.modules || availableModules;
+
+        setProfile({ ...data, isExternal });
+        setRole(currentRole);
+        setModules(Array.isArray(configuredModules) ? configuredModules.filter((key) => availableModules.includes(key)) : availableModules);
       } catch (err) {
         toast.error(err.message || 'Não foi possível carregar o usuário.');
       } finally {
@@ -51,7 +89,39 @@ export default function UserDetails() {
     };
 
     load();
-  }, [company?.id, userId]);
+  }, [company?.id, userId, availableModules]);
+
+  const toggleModule = (key) => {
+    setModules((current) => current.includes(key)
+      ? current.filter((item) => item !== key)
+      : [...current, key]);
+  };
+
+  const handleSave = async () => {
+    if (!profile || !company?.id) return;
+
+    if (role === 'admin' && adminConfirmation.trim().toUpperCase() !== 'ADMINISTRADOR') {
+      toast.error('Digite ADMINISTRADOR para confirmar a mudança para administrador.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateCompanyUserAccess({
+        companyId: company.id,
+        uid: userId,
+        role,
+        modules,
+      });
+      setProfile((current) => ({ ...current, role, modules }));
+      setAdminConfirmation('');
+      toast.success('Permissões do usuário atualizadas.');
+    } catch (err) {
+      toast.error(err.message || 'Não foi possível atualizar as permissões.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -74,24 +144,23 @@ export default function UserDetails() {
 
   const fullName = [profile.name, profile.lastName].filter(Boolean).join(' ') || 'Usuário Angler';
   const initials = [profile.name?.[0], profile.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U';
+  const isOwner = role === 'owner';
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/app/users')} className="btn-ghost" title="Voltar para usuários">
           <ArrowLeft size={18} /> Voltar
         </button>
         <div>
           <h1 className="text-2xl font-bold text-dark-100">Usuário</h1>
-          <p className="text-sm text-dark-500 mt-1">Detalhes e acesso deste usuário à empresa.</p>
+          <p className="text-sm text-dark-500 mt-1">Configure o cargo e os módulos disponíveis para este usuário.</p>
         </div>
       </div>
 
       <section className="card p-6">
         <div className="flex items-center gap-4 pb-6 border-b border-dark-800">
-          <div className="w-16 h-16 rounded-2xl bg-dark-700 flex items-center justify-center text-lg font-bold text-dark-200">
-            {initials}
-          </div>
+          <div className="w-16 h-16 rounded-2xl bg-dark-700 flex items-center justify-center text-lg font-bold text-dark-200">{initials}</div>
           <div className="min-w-0">
             <h2 className="text-xl font-semibold text-dark-100">{fullName}</h2>
             <p className="text-sm text-dark-500">{profile.email || 'Sem e-mail informado'}</p>
@@ -100,32 +169,84 @@ export default function UserDetails() {
 
         <div className="grid gap-4 sm:grid-cols-2 mt-6">
           <div className="rounded-xl bg-dark-800 p-4">
-            <div className="flex items-center gap-2 text-xs text-dark-500 mb-2">
-              <Mail size={14} /> E-mail
-            </div>
+            <div className="flex items-center gap-2 text-xs text-dark-500 mb-2"><Mail size={14} /> E-mail</div>
             <div className="text-sm text-dark-100 break-all">{profile.email || '—'}</div>
           </div>
-
           <div className="rounded-xl bg-dark-800 p-4">
-            <div className="flex items-center gap-2 text-xs text-dark-500 mb-2">
-              <Shield size={14} /> Cargo
-            </div>
+            <div className="flex items-center gap-2 text-xs text-dark-500 mb-2"><Shield size={14} /> Cargo atual</div>
             <div className="text-sm text-dark-100">{ROLE_LABELS[profile.role] || profile.role || '—'}</div>
           </div>
-
           <div className="rounded-xl bg-dark-800 p-4">
-            <div className="flex items-center gap-2 text-xs text-dark-500 mb-2">
-              <UserRound size={14} /> Status
-            </div>
+            <div className="flex items-center gap-2 text-xs text-dark-500 mb-2"><UserRound size={14} /> Status</div>
             <div className="text-sm text-dark-100">{profile.active === false ? 'Inativo' : 'Ativo'}</div>
           </div>
-
           <div className="rounded-xl bg-dark-800 p-4">
             <div className="text-xs text-dark-500 mb-2">ID do usuário</div>
             <code className="text-sm text-primary-300 font-mono select-all">{profile.uid || profile.id || userId}</code>
           </div>
         </div>
       </section>
+
+      {!isOwner && (
+        <>
+          <section className="card p-6 space-y-5">
+            <div>
+              <h2 className="text-lg font-semibold text-dark-100">Cargo</h2>
+              <p className="text-sm text-dark-500 mt-1">O cargo define o que o usuário pode fazer nos módulos liberados.</p>
+            </div>
+
+            <select className="input max-w-md" value={role} onChange={(event) => setRole(event.target.value)}>
+              {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+
+            {role === 'admin' && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+                <label className="label">Confirmação obrigatória</label>
+                <p className="text-sm text-dark-400">Para promover este usuário a Administrador, digite <strong className="text-dark-100">ADMINISTRADOR</strong>.</p>
+                <input
+                  className="input max-w-md"
+                  value={adminConfirmation}
+                  onChange={(event) => setAdminConfirmation(event.target.value)}
+                  placeholder="ADMINISTRADOR"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+          </section>
+
+          <section className="card p-6 space-y-5">
+            <div>
+              <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
+              <p className="text-sm text-dark-500 mt-1">Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {MODULES.filter(([key]) => availableModules.includes(key)).map(([key, label]) => {
+                const active = modules.includes(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleModule(key)}
+                    className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-400/50 bg-primary-400/10' : 'border-dark-700 bg-dark-900/40'}`}
+                  >
+                    <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500' : 'border-dark-600'}`}>
+                      {active && <Check size={14} className="text-dark-950" />}
+                    </span>
+                    <span className="text-sm text-dark-200">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="flex justify-end">
+            <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
+              <Save size={18} /> {saving ? 'Salvando...' : 'Salvar permissões'}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
