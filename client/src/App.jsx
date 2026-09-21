@@ -26,6 +26,7 @@ import FormulasPage from './pages/budgets/FormulasPage';
 import BudgetsPage from './pages/budgets/BudgetsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import UserManagement from './pages/settings/UserManagement';
+import UserDetails from './pages/settings/UserDetails';
 import LocationList from './pages/locations/LocationList';
 import ModulesPage from './pages/modules/ModulesPage';
 import AccessibilityFloatingButton from './components/ui/AccessibilityFloatingButton';
@@ -71,7 +72,6 @@ export default function App() {
       <Route path="/empresa/:companyId" element={<CompanyAccessRequest />} />
       <Route path="/escolher-conta" element={<PrivateRoute><AccountChooser /></PrivateRoute>} />
 
-      {/* Admin — com contexto próprio, isolado da autenticação normal */}
       <Route
         path="/admin/*"
         element={
@@ -115,6 +115,7 @@ export default function App() {
               <Route path="/budgets/formulas" element={<FormulasPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/modules" element={<ModulesPage />} />
+              <Route path="/users/:userId" element={<OwnerRoute><UserDetails /></OwnerRoute>} />
               <Route path="/users" element={<OwnerRoute><UserManagement /></OwnerRoute>} />
               <Route path="/settings/users" element={<Navigate to="/app/users" replace />} />
               <Route path="*" element={<Navigate to="/app" replace />} />
