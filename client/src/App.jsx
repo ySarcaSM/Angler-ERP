@@ -139,6 +139,8 @@ export default function App() {
           </Layout>
         </PrivateRoute>
       } />
+
+      <Route path="*" element={<Navigate to={isAuthenticated ? "/app" : "/login"} replace />} />
     </Routes>
     <AccessibilityFloatingButton />
     </>
