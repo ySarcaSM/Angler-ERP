@@ -32,9 +32,17 @@ service cloud.firestore {
       );
     }
 
-    function isAdmin(companyId) {
+    function isCompanyOwner(companyId) {
       return isAuth() &&
-        roleForCompany(companyId) in ['owner', 'admin'];
+        exists(/databases/$(database)/documents/companies/$(companyId)) &&
+        get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == request.auth.uid;
+    }
+
+    function isAdmin(companyId) {
+      return isAuth() && (
+        isCompanyOwner(companyId) ||
+        roleForCompany(companyId) in ['owner', 'admin']
+      );
     }
 
     function isOwner(companyId) {
@@ -154,7 +162,7 @@ service cloud.firestore {
     }
 
     match /companies/{companyId}/members/{userId} {
-      allow get, list: if isSuperAdmin() || isAdmin(companyId);
+      allow get, list: if isSuperAdmin() || isCompanyOwner(companyId) || isAdmin(companyId);
       allow create: if isSuperAdmin() ||
         (isAuth() && request.auth.uid == companyId && userId == request.auth.uid) ||
         isAdmin(companyId);
