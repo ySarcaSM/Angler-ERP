@@ -1,5 +1,7 @@
 import React from 'react';
 import { Building2, UserRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getCompanyAccessDiagnostics } from '../../services/firebase/companyAccess';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 
@@ -9,6 +11,15 @@ export default function AccountChooser() {
   const personalCompanyId = userData?.personalCompanyId || userData?.uid || userData?.companyId;
   const personal = availableCompanies.find((item) => item.id === personalCompanyId);
   const external = availableCompanies.filter((item) => item.id !== personalCompanyId);
+  const [diagnostics, setDiagnostics] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCompanyAccessDiagnostics(userData)
+      .then((data) => { if (!cancelled) setDiagnostics(data); })
+      .catch((error) => { if (!cancelled) setDiagnostics({ error: error?.message || 'Erro ao executar diagnóstico.' }); });
+    return () => { cancelled = true; };
+  }, [userData]);
 
   const enter = async (companyId) => {
     await selectCompanyContext(companyId);
@@ -40,6 +51,10 @@ export default function AccountChooser() {
             </button>
           ))}
         </div>
+        <details className="mt-6 border border-dark-800 rounded-lg p-4">
+          <summary className="cursor-pointer text-sm text-dark-400">Diagnóstico temporário de acesso</summary>
+          <pre className="mt-4 text-xs text-dark-400 whitespace-pre-wrap overflow-auto max-h-96">{JSON.stringify(diagnostics, null, 2)}</pre>
+        </details>
       </section>
     </main>
   );
