@@ -22,7 +22,7 @@ export default function Topbar({ onMenuToggle }) {
   const [notifications, setNotifications] = useState([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [dismissedNotifications, setDismissedNotifications] = useState([]);
-  const [showAllNotifications, setShowAllNotifications] = useState(false);
+  const [readNotifications, setReadNotifications] = useState([]);
 
   const moduleTargets = [
     { words: ['produto', 'produtos'], path: '/app/products' },
@@ -47,10 +47,13 @@ export default function Topbar({ onMenuToggle }) {
   useEffect(() => {
     if (!company?.id) return;
     const storageKey = `angler-dismissed-notifications-${company.id}`;
+    const readStorageKey = `angler-read-notifications-${company.id}`;
     try {
       setDismissedNotifications(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+      setReadNotifications(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
     } catch {
       setDismissedNotifications([]);
+      setReadNotifications([]);
     }
 
     const loadTopbarNotifications = async () => {
@@ -69,8 +72,10 @@ export default function Topbar({ onMenuToggle }) {
     return () => window.removeEventListener('angler:notifications-updated', handleNotificationsUpdate);
   }, [company]);
 
-  const unreadNotifications = notifications.filter((notification) => !dismissedNotifications.includes(notification.id));
-  const displayedNotifications = showAllNotifications ? notifications : unreadNotifications;
+  const unreadNotifications = notifications.filter((notification) => (
+    !dismissedNotifications.includes(notification.id) && !readNotifications.includes(notification.id)
+  ));
+  const displayedNotifications = unreadNotifications;
 
   const dismissNotification = (notificationId) => {
     if (!company?.id) return;
@@ -81,10 +86,9 @@ export default function Topbar({ onMenuToggle }) {
 
   const showAllAndMarkAsRead = () => {
     if (!company?.id) return;
-    const nextDismissed = [...new Set([...dismissedNotifications, ...notifications.map((notification) => notification.id)])];
-    setDismissedNotifications(nextDismissed);
-    localStorage.setItem(`angler-dismissed-notifications-${company.id}`, JSON.stringify(nextDismissed));
-    setShowAllNotifications(true);
+    const nextRead = [...new Set([...readNotifications, ...notifications.map((notification) => notification.id)])];
+    setReadNotifications(nextRead);
+    localStorage.setItem(`angler-read-notifications-${company.id}`, JSON.stringify(nextRead));
   };
 
   const handleSearch = async (event) => {
@@ -180,10 +184,10 @@ export default function Topbar({ onMenuToggle }) {
               {notifications.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => navigate('/app/notifications')}
+                  onClick={() => { showAllAndMarkAsRead(); setNotificationsOpen(false); navigate('/app/notifications'); }}
                   className="w-full px-4 py-3 text-xs text-primary-300 hover:bg-dark-800 transition-colors"
                 >
-                  {showAllNotifications ? 'Ver não lidas' : 'Ver todas as notificações'}
+                  Ver todas as notificações
                 </button>
               )}
             </div>

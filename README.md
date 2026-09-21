@@ -25,6 +25,16 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 
 ## Tecnologias
 
+## Usuários e convites
+
+O owner encontra **Sistema > Usuários** para consultar a equipe, desativar contas que não sejam owner e gerar links de convite. Ao criar um convite, informe o e-mail do destinatário e o perfil de acesso (`admin`, `manager`, `operator` ou `viewer`).
+
+O link é de uso único e só pode ser concluído com o e-mail convidado. A pessoa abre `/join/<id-do-convite>`, informa nome e senha, verifica o e-mail e então passa a acessar os dados da mesma empresa. Publique as regras atualizadas antes de usar esse fluxo:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
 | Camada | Tecnologias |
 | --- | --- |
 | Front-end | React 18, React Router, Vite e Tailwind CSS |

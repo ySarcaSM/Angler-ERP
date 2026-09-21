@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 export default function SettingsPage() {
   const { company: authCompany, user, userData } = useAuth();
   const navigate = useNavigate();
+  const isOwner = userData?.role === 'owner';
   const [form, setForm] = useState({ name: '', tradeName: '', document: '', email: '', phone: '', settings: { currency: 'BRL', taxRegime: 'simples', lowStockThreshold: 10 } });
   const [originalForm, setOriginalForm] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,9 +43,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div><h1 className="text-2xl font-bold text-dark-100">Configurações</h1><p className="text-dark-500 text-sm mt-1">Gerencie sua empresa</p></div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button onClick={() => navigate('/app/settings/users')} className="card p-5 text-left hover:border-primary-500/30 transition-colors"><Users size={24} className="text-primary-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Usuários</div><div className="text-xs text-dark-500">Gerenciar equipe</div></button>
-      </div>
+      {isOwner && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button onClick={() => navigate('/app/users')} className="card p-5 text-left hover:border-primary-500/30 transition-colors"><Users size={24} className="text-primary-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Usuários</div><div className="text-xs text-dark-500">Gerenciar equipe</div></button>
+      </div>}
       <form onSubmit={handleSave}>
         <div className="card">
           <div className="card-header flex items-center gap-2"><Building2 size={18} className="text-primary-400" /><h3 className="text-sm font-semibold text-dark-200">Dados da Empresa</h3></div>

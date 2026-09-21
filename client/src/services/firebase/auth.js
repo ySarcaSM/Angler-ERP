@@ -12,7 +12,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import {
-  doc, setDoc, getDoc, serverTimestamp,
+  doc, setDoc, getDoc, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
@@ -195,6 +195,45 @@ export async function getUserData(uid) {
   } catch (error) {
     if (isFirestoreUnavailable(error)) throw firestoreUnavailableError();
     throw error;
+  }
+}
+
+export async function joinCompany({ invitation, name, lastName, password }) {
+  sessionStorage.setItem(REGISTRATION_SESSION_KEY, 'true');
+  try {
+    const email = invitation.email.trim().toLowerCase();
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const newUser = credential.user;
+
+    await updateProfile(newUser, { displayName: `${name} ${lastName || ''}`.trim() });
+    if (!newUser.emailVerified) await sendEmailVerification(newUser);
+
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'users', newUser.uid), {
+      uid: newUser.uid,
+      email,
+      name,
+      lastName: lastName || '',
+      role: invitation.role,
+      companyId: invitation.companyId,
+      invitationId: invitation.id,
+      active: true,
+      requiresEmailVerification: true,
+      createdAt: serverTimestamp(),
+    });
+    batch.update(doc(db, 'companyInvitations', invitation.id), {
+      status: 'accepted',
+      acceptedBy: newUser.uid,
+      acceptedAt: serverTimestamp(),
+    });
+    await batch.commit();
+    await signOut(auth);
+    return { email };
+  } catch (error) {
+    if (auth.currentUser) await signOut(auth);
+    throw error;
+  } finally {
+    sessionStorage.removeItem(REGISTRATION_SESSION_KEY);
   }
 }
 

@@ -6,6 +6,7 @@ import Layout from './components/layout/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import JoinCompany from './pages/auth/JoinCompany';
 import Dashboard from './pages/dashboard/Dashboard';
 import ClientList from './pages/clients/ClientList';
 import ProductList from './pages/products/ProductList';
@@ -44,6 +45,11 @@ function PrivateRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
+function OwnerRoute({ children }) {
+  const { userData } = useAuth();
+  return userData?.role === 'owner' ? children : <Navigate to="/app" replace />;
+}
+
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
 
@@ -61,6 +67,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
+      <Route path="/join/:invitationId" element={isAuthenticated ? <Navigate to="/app" replace /> : <JoinCompany />} />
 
       {/* Admin — com contexto próprio, isolado da autenticação normal */}
       <Route
@@ -106,7 +113,8 @@ export default function App() {
               <Route path="/budgets/formulas" element={<FormulasPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/modules" element={<ModulesPage />} />
-              <Route path="/settings/users" element={<UserManagement />} />
+              <Route path="/users" element={<OwnerRoute><UserManagement /></OwnerRoute>} />
+              <Route path="/settings/users" element={<Navigate to="/app/users" replace />} />
               <Route path="*" element={<Navigate to="/app" replace />} />
             </Routes>
           </Layout>

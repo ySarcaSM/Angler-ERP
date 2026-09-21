@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../../context/useAuth';
 import { logAudit, updateCompany } from '../../services/firebase/settings';
 import PageHeader from '../../components/ui/PageHeader';
+import { addSystemNotification } from '../../utils/notifications';
 import toast from 'react-hot-toast';
 
 const MODULES = [
@@ -60,6 +61,19 @@ export default function ModulesPage() {
       });
       await refreshCompany();
       setLocked(lockedValue);
+      if (lockedValue && !locked) {
+        addSystemNotification(company.id, {
+          title: 'Módulos carimbados',
+          message: 'A configuração de módulos foi carimbada e não pode ser alterada até a remoção do carimbo.',
+          path: '/app/modules',
+        });
+      } else if (!lockedValue && locked) {
+        addSystemNotification(company.id, {
+          title: 'Carimbo removido',
+          message: 'A configuração de módulos foi desbloqueada e já pode ser alterada.',
+          path: '/app/modules',
+        });
+      }
       toast.success('Módulos atualizados.');
     } catch (error) {
       toast.error(error.message || 'Não foi possível atualizar os módulos.');

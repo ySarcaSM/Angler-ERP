@@ -39,6 +39,16 @@ export async function deactivateUser(uid) {
   return updateDoc_('users', uid, { active: false });
 }
 
+export async function createCompanyInvitation({ companyId, email, role, createdBy }) {
+  return createDoc('companyInvitations', {
+    companyId,
+    email: email.trim().toLowerCase(),
+    role,
+    status: 'active',
+    createdBy: createdBy || null,
+  });
+}
+
 // ─── Audit Log ───
 export async function logAudit(companyId, { user, userName, action, entity, entityId, changes, description, details }) {
   const actionLabels = { create: 'criou', update: 'alterou', delete: 'excluiu', approve: 'aprovou', cancel: 'cancelou', receive: 'recebeu', pay: 'marcou como pago', adjust: 'ajustou', export: 'exportou' };

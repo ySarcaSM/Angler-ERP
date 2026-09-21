@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
-  FileText, MapPin, ClipboardList, Bell, Bot, UserRound, Calculator, FileSignature, Blocks, ChevronLeft, ChevronRight,
+  FileText, MapPin, ClipboardList, Bell, Bot, Ruler, Calculator, FileSignature, Blocks, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -38,7 +38,7 @@ const NAV_SECTIONS = [
   {
     label: 'Orçamentos',
     items: [
-      { to: '/app/budgets/profiles', icon: UserRound, label: 'Medição', moduleKey: 'measurement' },
+      { to: '/app/budgets/profiles', icon: Ruler, label: 'Medição', moduleKey: 'measurement' },
       { to: '/app/budgets/formulas', icon: Calculator, label: 'Fórmulas', moduleKey: 'formulas' },
       { to: '/app/budgets', icon: FileSignature, label: 'Orçamentos', end: true, moduleKey: 'budgets' },
     ],
@@ -48,6 +48,7 @@ const NAV_SECTIONS = [
     items: [
       { to: '/app/settings', icon: Settings, label: 'Configurações' },
       { to: '/app/modules', icon: Blocks, label: 'Módulos' },
+      { to: '/app/users', icon: Users, label: 'Usuários', ownerOnly: true },
       { to: '/app/logs', icon: ClipboardList, label: 'Logs' },
       { to: '/app/notifications', icon: Bell, label: 'Notificações' },
     ],
@@ -55,7 +56,7 @@ const NAV_SECTIONS = [
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { user, company, logout } = useAuth();
+  const { user, userData, company, logout } = useAuth();
   const location = useLocation();
 
   return (
@@ -83,7 +84,10 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {NAV_SECTIONS.map((section) => {
-          const visibleItems = section.items.filter((item) => !item.moduleKey || !Array.isArray(company?.modules?.enabled) || company.modules.enabled.includes(item.moduleKey));
+          const visibleItems = section.items.filter((item) => (
+            (!item.moduleKey || !Array.isArray(company?.modules?.enabled) || company.modules.enabled.includes(item.moduleKey))
+            && (!item.ownerOnly || userData?.role === 'owner')
+          ));
           if (visibleItems.length === 0) return null;
           return (
           <div key={section.label}>
