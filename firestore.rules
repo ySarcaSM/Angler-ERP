@@ -13,26 +13,34 @@ service cloud.firestore {
 
     function isMember(companyId) {
       let user = currentUser();
-      return isAuth() && user != null && (\n        user.companyId == companyId ||\n        ('memberships' in user && companyId in user.memberships && user.memberships[companyId].active == true)\n      );
+      return isAuth() && user != null && (
+        user.companyId == companyId ||
+        ('memberships' in user &&
+          companyId in user.memberships &&
+          user.memberships[companyId].active == true)
+      );
     }
 
     function isAdmin(companyId) {
       let user = currentUser();
-      return isAuth() && user != null && user.role in ['owner', 'admin'] && isMember(companyId);
+      return isAuth() && user != null &&
+        user.role in ['owner', 'admin'] &&
+        isMember(companyId);
     }
 
     function isOwner(companyId) {
       let user = currentUser();
-      return isAuth() && user != null && user.role == 'owner' && isMember(companyId);
+      return isAuth() && user != null &&
+        user.role == 'owner' &&
+        isMember(companyId);
     }
 
-    // Superadmin — verificação por e-mail do Firebase Auth
-    // O e-mail é sempre admin@angler-erp.local (não muda como o UID)
     function isSuperAdmin() {
-      return isAuth() && request.auth.token.email == 'admin@angler-erp.local';
+      return isAuth() &&
+        request.auth.token.email == 'admin@angler-erp.local';
     }
 
-    function hasValidInvitation(userId) {
+    function hasValidInvitation() {
       return request.resource.data.invitationId is string &&
         exists(/databases/$(database)/documents/companyInvitations/$(request.resource.data.invitationId)) &&
         get(/databases/$(database)/documents/companyInvitations/$(request.resource.data.invitationId)).data.status == 'active' &&
@@ -42,39 +50,85 @@ service cloud.firestore {
         request.resource.data.role in ['admin', 'manager', 'operator', 'viewer'];
     }
 
+    function isCompanySwitch() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['companyId', 'role']) &&
+        request.resource.data.companyId is string &&
+        (
+          ('memberships' in resource.data &&
+            request.resource.data.companyId in resource.data.memberships &&
+            resource.data.memberships[request.resource.data.companyId].active == true &&
+            request.resource.data.role == resource.data.memberships[request.resource.data.companyId].role) ||
+          request.resource.data.companyId == resource.data.companyId
+        );
+    }
+
+    function isJoiningCompany() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'name', 'lastName', 'companyId', 'role', 'invitationId', 'memberships', 'active'
+      ]) &&
+        hasValidInvitation() &&
+        request.resource.data.companyId != resource.data.companyId &&
+        (!('memberships' in resource.data) ||
+          !(request.resource.data.companyId in resource.data.memberships)) &&
+        request.resource.data.memberships[request.resource.data.companyId].active == true &&
+        request.resource.data.memberships[request.resource.data.companyId].role == request.resource.data.role &&
+        request.resource.data.memberships.diff(resource.data.memberships).affectedKeys().hasOnly([
+          request.resource.data.companyId
+        ]);
+    }
+
     // ─── Users ───
     match /users/{userId} {
-      // O usuário precisa conseguir recuperar o próprio perfil mesmo quando
-      // ele foi removido e está sendo recriado no fluxo de cadastro.
-      allow get: if isSuperAdmin() || (isAuth() && request.auth.uid == userId) || isOwner(resource.data.companyId);
-      allow list: if isSuperAdmin() || isOwner(resource.data.companyId);
-      allow create: if isSuperAdmin() || (isAuth() && request.auth.uid == userId && (
-        (request.resource.data.companyId == userId && request.resource.data.role == 'owner') ||
-        hasValidInvitation(userId)
-      ));
-      allow update: if isSuperAdmin() || (isAuth() && (
-        request.auth.uid == userId || isOwner(resource.data.companyId)
-      ));
-      allow delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
+      allow get: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == userId) ||
+        isOwner(resource.data.companyId);
+
+      allow list: if isSuperAdmin() ||
+        isOwner(resource.data.companyId);
+
+      allow create: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == userId && (
+          (request.resource.data.companyId == userId &&
+            request.resource.data.role == 'owner') ||
+          hasValidInvitation()
+        ));
+
+      // Self-update is intentionally restricted so a user cannot promote
+      // themselves or manufacture memberships. Company owners/admins keep
+      // their existing management permissions.
+      allow update: if isSuperAdmin() ||
+        isOwner(resource.data.companyId) ||
+        (isAuth() && request.auth.uid == userId &&
+          (isCompanySwitch() || isJoiningCompany()));
+
+      allow delete: if isSuperAdmin() ||
+        isAdmin(resource.data.companyId);
     }
 
     // ─── Audit Logs ───
     match /auditLogs/{logId} {
-      allow read: if isSuperAdmin() || isAdmin(resource.data.companyId);
+      allow read: if isSuperAdmin() ||
+        isAdmin(resource.data.companyId);
       allow create: if true;
     }
 
     // ─── Companies ───
     match /companies/{companyId} {
       allow read: if isSuperAdmin() || isMember(companyId);
-      allow write: if isSuperAdmin() || (isAuth() && request.auth.uid == companyId);
+      allow write: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == companyId);
     }
 
     match /assistantChats/{chatId} {
       allow read, update, delete: if isSuperAdmin() ||
-        (isAuth() && resource.data.userId == request.auth.uid && isMember(resource.data.companyId));
+        (isAuth() &&
+          resource.data.userId == request.auth.uid &&
+          isMember(resource.data.companyId));
+
       allow create: if isSuperAdmin() ||
-        (isAuth() && request.resource.data.userId == request.auth.uid && isMember(request.resource.data.companyId));
+        (isAuth() &&
+          request.resource.data.userId == request.auth.uid &&
+          isMember(request.resource.data.companyId));
 
       match /messages/{messageId} {
         allow read, create, delete: if isSuperAdmin() ||
@@ -84,35 +138,53 @@ service cloud.firestore {
       }
     }
 
+    // ─── Company invitations ───
     match /companyInvitations/{inviteId} {
       allow get: if true;
-      allow list: if isSuperAdmin() || isOwner(resource.data.companyId);
-      allow create: if isSuperAdmin() || (isOwner(request.resource.data.companyId) &&
-        request.resource.data.status == 'active' &&
-        request.resource.data.role in ['admin', 'manager', 'operator', 'viewer']);
-      allow update: if isSuperAdmin() || isOwner(resource.data.companyId) || (
-        isAuth() && resource.data.status == 'active' &&
-        request.resource.data.status == 'accepted' &&
-        request.resource.data.acceptedBy == request.auth.uid &&
-        getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == resource.data.companyId &&
-        getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.invitationId == inviteId &&
-        getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == resource.data.email &&
-        getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == resource.data.role
-      );
-      allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
+
+      allow list: if isSuperAdmin() ||
+        isOwner(resource.data.companyId);
+
+      allow create: if isSuperAdmin() ||
+        (isOwner(request.resource.data.companyId) &&
+          request.resource.data.status == 'active' &&
+          request.resource.data.role in ['admin', 'manager', 'operator', 'viewer']);
+
+      allow update: if isSuperAdmin() ||
+        isOwner(resource.data.companyId) ||
+        (isAuth() &&
+          resource.data.status == 'active' &&
+          request.resource.data.status == 'accepted' &&
+          request.resource.data.acceptedBy == request.auth.uid &&
+          getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == resource.data.companyId &&
+          getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.invitationId == inviteId &&
+          getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.email == resource.data.email &&
+          getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == resource.data.role
+        );
+
+      allow delete: if isSuperAdmin() ||
+        isOwner(resource.data.companyId);
     }
 
     // ─── Generic company-scoped collections ───
     match /{collection}/{docId} {
       allow read, write: if isSuperAdmin() ||
-        (collection != 'assistantChats' && collection != 'companyInvitations' && collection != 'users' && isMember(resource.data.companyId));
+        (collection != 'assistantChats' &&
+          collection != 'companyInvitations' &&
+          collection != 'users' &&
+          isMember(resource.data.companyId));
+
       allow create: if isSuperAdmin() ||
-        (collection != 'assistantChats' && collection != 'companyInvitations' && collection != 'users' && isMember(request.resource.data.companyId));
+        (collection != 'assistantChats' &&
+          collection != 'companyInvitations' &&
+          collection != 'users' &&
+          isMember(request.resource.data.companyId));
     }
 
     // ─── Counters ───
     match /counters/{companyId} {
-      allow read, write: if isSuperAdmin() || isMember(companyId);
+      allow read, write: if isSuperAdmin() ||
+        isMember(companyId);
     }
   }
 }
