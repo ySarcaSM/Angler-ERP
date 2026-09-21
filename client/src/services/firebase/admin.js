@@ -10,6 +10,7 @@ import {
   setDoc, deleteDoc, updateDoc, serverTimestamp, orderBy,
 } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -326,13 +327,13 @@ export async function deleteUserDocument(userId) {
  * a conta associada ao próprio token, encerrando a sessão do administrador.
  */
 export async function deleteUserFull(userId) {
-  await deleteUserDocument(userId);
+  if (!userId) throw new Error('UID da conta não informado.');
 
-  return {
-    firestore: true,
-    auth: false,
-    authDetail: 'backend_required',
-  };
+  const functions = getFunctions();
+  const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
+  const result = await deleteUserAccount({ userId });
+
+  return result.data;
 }
 
 /**
