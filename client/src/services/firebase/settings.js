@@ -31,6 +31,17 @@ export async function getUser(uid) {
   return getDoc_('users', uid);
 }
 
+export async function getCompanyMember(companyId, uid) {
+  const snapshot = await getDocs(query(
+    collection(db, 'companyMembers'),
+    where('companyId', '==', companyId),
+    where('userId', '==', uid),
+  ));
+  if (snapshot.empty) return null;
+  const item = snapshot.docs[0];
+  return { id: item.id, uid, ...item.data() };
+}
+
 export async function updateUser(uid, data) {
   return updateDoc_('users', uid, data);
 }
