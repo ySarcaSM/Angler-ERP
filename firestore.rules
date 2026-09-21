@@ -77,21 +77,7 @@ service cloud.firestore {
           collectionName in ['financialTransactions', 'sales', 'purchases', 'products', 'stockMovements', 'counters'])
         ||
         (group == 'budgets' &&
-          collectionName in ['budgets', 'formulas']);
-    }
-
-    function operatorCanWriteCollection(companyId, collectionName) {
-      let group = operatorGroupForCompany(companyId);
-
-      return
-        (group == 'management' &&
-          collectionName in ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'stockMovements', 'counters'])
-        ||
-        (group == 'financial' &&
-          collectionName in ['financialTransactions', 'products', 'stockMovements', 'counters'])
-        ||
-        (group == 'budgets' &&
-          collectionName in ['budgets', 'formulas']);
+          collectionName in ['budgets', 'formulas', 'clients']);
     }
 
     function canReadCollection(companyId, collectionName) {
@@ -104,14 +90,11 @@ service cloud.firestore {
     }
 
     function canWriteCollection(companyId, collectionName) {
-      return isSuperAdmin() || isAdmin(companyId) ||
-        (isMember(companyId) &&
-          roleForCompany(companyId) == 'operator' &&
-          operatorCanWriteCollection(companyId, collectionName));
+      return isSuperAdmin() || isAdmin(companyId);
     }
 
     function canWriteData(companyId) {
-      return isAdmin(companyId) || isOperator(companyId);
+      return isAdmin(companyId);
     }
 
     function canDeleteData(companyId) {
@@ -249,11 +232,7 @@ service cloud.firestore {
     }
 
     match /deletionRequests/{requestId} {
-      allow create: if isSuperAdmin() ||
-        (isOperator(request.resource.data.companyId) &&
-          request.resource.data.requesterUid == request.auth.uid &&
-          request.resource.data.status == 'pending' &&
-          canWriteCollection(request.resource.data.companyId, request.resource.data.collection));
+      allow create: if isSuperAdmin();
 
       allow get, list: if isSuperAdmin() || isAdmin(resource.data.companyId) || isOwner(resource.data.companyId);
 
