@@ -52,6 +52,17 @@ export async function approveCompanyAccessRequest(requestItem, role) {
     },
     updatedAt: serverTimestamp(),
   });
+  batch.set(doc(db, 'companyMembers', `${requestItem.companyId}_${requestItem.requesterUid}`), {
+    companyId: requestItem.companyId,
+    userId: requestItem.requesterUid,
+    email: requestItem.email,
+    name: requestItem.name || '',
+    role,
+    active: true,
+    accessRequestId: requestItem.id,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
   batch.update(requestRef, {
     status: 'approved',
     role,
