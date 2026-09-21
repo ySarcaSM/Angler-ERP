@@ -61,64 +61,6 @@ export async function listApprovedCompanyAccessRequests(requesterUid) {
     .filter((item) => item.status === 'approved');
 }
 
-export async function getCompanyAccessDiagnostics(userData) {
-  const result = {
-    uid: userData?.uid || null,
-    personalCompanyId: userData?.personalCompanyId || null,
-    companyId: userData?.companyId || null,
-    role: userData?.role || null,
-    accessRequestId: userData?.accessRequestId || null,
-    accessRequestCompanyId: userData?.accessRequestCompanyId || null,
-    memberships: userData?.memberships || {},
-    approvedRequests: [],
-    approvedRequestsError: null,
-    companies: [],
-  };
-
-  if (!userData?.uid) return result;
-
-  try {
-    result.approvedRequests = await listApprovedCompanyAccessRequests(userData.uid);
-  } catch (error) {
-    result.approvedRequestsError = {
-      code: error?.code || null,
-      message: error?.message || 'Erro ao consultar solicitações aprovadas.',
-    };
-  }
-
-  const ids = new Set([
-    ...Object.keys(userData.memberships || {}),
-    userData.personalCompanyId,
-    userData.companyId,
-    userData.accessRequestCompanyId,
-    ...result.approvedRequests.map((item) => item.companyId),
-  ].filter(Boolean));
-
-  for (const companyId of ids) {
-    try {
-      const snapshot = await getDoc(doc(db, 'companies', companyId));
-      result.companies.push({
-        companyId,
-        exists: snapshot.exists(),
-        name: snapshot.exists() ? (snapshot.data()?.name || '') : '',
-        membership: userData.memberships?.[companyId] || null,
-        approvedRequest: result.approvedRequests.find((item) => item.companyId === companyId) || null,
-      });
-    } catch (error) {
-      result.companies.push({
-        companyId,
-        exists: null,
-        name: '',
-        membership: userData.memberships?.[companyId] || null,
-        approvedRequest: result.approvedRequests.find((item) => item.companyId === companyId) || null,
-        error: error?.message || 'Erro ao consultar empresa.',
-      });
-    }
-  }
-
-  return result;
-}
-
 export async function listPendingCompanyAccessRequests(companyId) {
   const q = query(
     collection(db, 'companyAccessRequests'),
