@@ -112,8 +112,9 @@ service cloud.firestore {
       // their existing management permissions.
       allow update: if isSuperAdmin() ||
         isOwner(resource.data.companyId) ||
+        isAccessRequestOwnerApproval(userId) ||
         (isAuth() && request.auth.uid == userId &&
-          (isCompanySwitch() || isJoiningCompany() || isAccessRequestOwnerApproval(userId)));
+          (isCompanySwitch() || isJoiningCompany()));
 
       allow delete: if isSuperAdmin() ||
         isAdmin(resource.data.companyId);
