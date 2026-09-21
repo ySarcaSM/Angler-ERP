@@ -31,12 +31,16 @@ async function resolvePersonalCompanyId(userData) {
 
   if (membershipOwnerId) return membershipOwnerId;
 
-  const ownerMembershipId = userData.memberships
-    && Object.keys(userData.memberships).find((id) => userData.memberships[id]?.role === 'owner' && userData.memberships[id]?.active !== false);
+  // Nunca trate um membership externo com role=owner como empresa pessoal.
+  // A empresa pessoal é determinada pela relação companies.ownerUid === uid.
+  const ownedCompanyId = await getOwnedPersonalCompanyId(userData.uid);
+  if (ownedCompanyId) return ownedCompanyId;
 
-  if (ownerMembershipId) return ownerMembershipId;
+  // Compatibilidade com contas antigas em que a empresa pessoal tinha o
+  // mesmo ID do usuário, sem transformar um owner externo em empresa própria.
+  if (userData.companyId === userData.uid) return userData.uid;
 
-  return getOwnedPersonalCompanyId(userData.uid);
+  return null;
 }
 
 async function loadCompanies(userData, personalCompanyId) {
