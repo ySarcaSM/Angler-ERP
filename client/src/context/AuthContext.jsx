@@ -159,7 +159,7 @@ export function AuthProvider({ children }) {
       role: loadedUserData.memberships?.[personalCompanyId]?.role || loadedUserData.role,
     });
     setCompany(await getCompanyData(personalCompanyId));
-    return fbUser;
+    return { user: fbUser, hasOtherCompanies: companies.some((item) => item.id !== personalCompanyId) };
   }, []);
 
   const register = useCallback(async (data) => {
