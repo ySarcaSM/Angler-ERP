@@ -87,6 +87,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           const effectiveModules = getEffectiveModules();
           const visibleItems = section.items.filter((item) => (
             !(userData?.role === 'operator' && !item.moduleKey)
+            &&
             !(userData?.role === 'viewer' && item.viewerHidden)
             &&
             !(userData?.role === 'viewer' && item.moduleKey === 'measurement')
