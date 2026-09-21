@@ -68,7 +68,7 @@ export default function SaleList() {
         <button onClick={(e) => { e.stopPropagation(); navigate(`/app/sales/${row.id}`); }} className="btn-ghost btn-sm"><Eye size={14} /></button>
         {!isViewer && (row.status === 'draft' || row.status === 'pending') && <button onClick={(e) => { e.stopPropagation(); handleApprove(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button>}
         {!isViewer && row.status !== 'approved' && row.status !== 'cancelled' && <button onClick={(e) => { e.stopPropagation(); handleCancel(row.id); }} className="btn-ghost btn-sm text-red-400" title="Cancelar venda"><XCircle size={14} /></button>}
-        {!isViewer && <button onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }} className="btn-ghost btn-sm text-red-400" title="Deletar venda"><Trash2 size={14} /></button>
+        {!isViewer && <button onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }} className="btn-ghost btn-sm text-red-400" title="Deletar venda"><Trash2 size={14} /></button>}
       </div>
     )},
   ];
