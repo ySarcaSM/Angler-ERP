@@ -12,6 +12,7 @@ import { logAudit } from '../../services/firebase/settings';
 export default function SaleList() {
   const navigate = useNavigate();
   const { company, user, userData } = useAuth();
+  const isViewer = userData?.role === 'viewer';
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -65,9 +66,9 @@ export default function SaleList() {
     { key: '_actions', label: '', width: '100px', render: (_, row) => (
       <div className="flex gap-1">
         <button onClick={(e) => { e.stopPropagation(); navigate(`/app/sales/${row.id}`); }} className="btn-ghost btn-sm"><Eye size={14} /></button>
-        {(row.status === 'draft' || row.status === 'pending') && <button onClick={(e) => { e.stopPropagation(); handleApprove(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button>}
-        {row.status !== 'approved' && row.status !== 'cancelled' && <button onClick={(e) => { e.stopPropagation(); handleCancel(row.id); }} className="btn-ghost btn-sm text-red-400" title="Cancelar venda"><XCircle size={14} /></button>}
-        <button onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }} className="btn-ghost btn-sm text-red-400" title="Deletar venda"><Trash2 size={14} /></button>
+        {!isViewer && (row.status === 'draft' || row.status === 'pending') && <button onClick={(e) => { e.stopPropagation(); handleApprove(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button>}
+        {!isViewer && row.status !== 'approved' && row.status !== 'cancelled' && <button onClick={(e) => { e.stopPropagation(); handleCancel(row.id); }} className="btn-ghost btn-sm text-red-400" title="Cancelar venda"><XCircle size={14} /></button>}
+        {!isViewer && <button onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }} className="btn-ghost btn-sm text-red-400" title="Deletar venda"><Trash2 size={14} /></button>
       </div>
     )},
   ];
