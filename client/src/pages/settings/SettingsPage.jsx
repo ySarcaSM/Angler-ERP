@@ -59,7 +59,18 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-        <div className="flex justify-end mt-4">{isOwner && <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : <><Save size={18} /> Salvar</>}</button></div>
+        <div className="flex justify-end mt-4">
+          {isOwner && (
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Salvando...' : (
+                <>
+                  <Save size={18} />
+                  Salvar
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </form>
       <AccessibilitySettingsPanel />
     </div>
