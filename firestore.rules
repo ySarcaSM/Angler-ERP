@@ -162,12 +162,15 @@ service cloud.firestore {
       allow read, write: if isSuperAdmin() ||
         (collection != 'assistantChats' &&
           collection != 'users' &&
+          collection != 'companyAccessRequests' &&
+          collection != 'companyMembers' &&
           isMember(resource.data.companyId));
 
       allow create: if isSuperAdmin() ||
         (collection != 'assistantChats' &&
-          collection != 'companyInvitations' &&
           collection != 'users' &&
+          collection != 'companyAccessRequests' &&
+          collection != 'companyMembers' &&
           isMember(request.resource.data.companyId));
     }
 
