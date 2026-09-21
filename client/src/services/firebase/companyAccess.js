@@ -130,6 +130,9 @@ export async function listPendingCompanyAccessRequests(companyId) {
 }
 
 export async function approveCompanyAccessRequest(requestItem, role) {
+  const allowedRoles = ['owner', 'admin', 'manager', 'operator', 'viewer'];
+  if (!allowedRoles.includes(role)) throw new Error('Cargo inválido.');
+
   const normalizedCompanyId = requestItem.companyId?.trim();
   if (!normalizedCompanyId) throw new Error('Solicitação sem empresa definida.');
 
