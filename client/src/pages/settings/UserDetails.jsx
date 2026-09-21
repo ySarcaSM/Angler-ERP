@@ -82,7 +82,7 @@ export default function UserDetails() {
           ? availableModules
           : (data.modules || membership?.modules || availableModules);
 
-        setProfile({ ...data, isExternal });
+        setProfile({ ...data, isExternal, companyRole: currentRole });
         setRole(currentRole);
         setModules(Array.isArray(configuredModules)
           ? configuredModules.filter((key) => availableModules.includes(key))
@@ -156,7 +156,7 @@ export default function UserDetails() {
 
   const fullName = [profile.name, profile.lastName].filter(Boolean).join(' ') || 'Usuário Angler';
   const initials = [profile.name?.[0], profile.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U';
-  const isViewer = role === 'viewer' || profile.role === 'viewer';
+  const isViewer = [role, profile.role, profile.companyRole].some((value) => String(value || '').toLowerCase() === 'viewer');
 
   return (
     <div className="space-y-6 max-w-4xl">
