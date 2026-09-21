@@ -1,13 +1,12 @@
 import React from 'react';
 import { Building2, UserRound } from 'lucide-react';
-import { useAuth } from '../../context/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 
 export default function AccountChooser() {
   const { userData, availableCompanies, selectCompanyContext } = useAuth();
   const navigate = useNavigate();
-  const personalCompanyId = userData?.personalCompanyId || userData?.uid || userData?.companyId;
+  const personalCompanyId = userData?.personalCompanyId || userData?.uid;
   const personal = availableCompanies.find((item) => item.id === personalCompanyId);
   const external = availableCompanies.filter((item) => item.id !== personalCompanyId);
   const enter = async (companyId) => {
