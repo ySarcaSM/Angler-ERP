@@ -41,6 +41,16 @@ export async function listCompanyMembers(companyId) {
   return snapshot.docs.map((item) => ({ id: item.id, uid: item.data().userId, ...item.data() }));
 }
 
+export async function listApprovedCompanyAccessRequests(requesterUid) {
+  const q = query(
+    collection(db, 'companyAccessRequests'),
+    where('requesterUid', '==', requesterUid),
+    where('status', '==', 'approved'),
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+}
+
 export async function listPendingCompanyAccessRequests(companyId) {
   const q = query(
     collection(db, 'companyAccessRequests'),
