@@ -111,10 +111,10 @@ service cloud.firestore {
       allow get: if isSuperAdmin() ||
         (isAuth() && (
           request.auth.uid == resource.data.requesterUid ||
-          isOwner(resource.data.companyId)
+          isAdmin(resource.data.companyId)
         ));
 
-      allow list: if isSuperAdmin() || isOwner(resource.data.companyId) ||
+      allow list: if isSuperAdmin() || isAdmin(resource.data.companyId) ||
         (isAuth() && request.auth.uid == resource.data.requesterUid);
 
       allow update: if isSuperAdmin() || isAdmin(resource.data.companyId);
