@@ -6,7 +6,8 @@ import Layout from './components/layout/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import CompanyLogin from './pages/auth/CompanyLogin';
+import CompanyAccessRequest from './pages/auth/CompanyAccessRequest';
+import AccountChooser from './pages/auth/AccountChooser';
 import Dashboard from './pages/dashboard/Dashboard';
 import ClientList from './pages/clients/ClientList';
 import ProductList from './pages/products/ProductList';
@@ -67,8 +68,8 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
-      <Route path="/join/:invitationId" element={<CompanyLogin />} />
-      <Route path="/empresa/:invitationId/login" element={<CompanyLogin />} />
+      <Route path="/empresa/:companyId" element={<CompanyAccessRequest />} />
+      <Route path="/escolher-conta" element={<PrivateRoute><AccountChooser /></PrivateRoute>} />
 
       {/* Admin — com contexto próprio, isolado da autenticação normal */}
       <Route
