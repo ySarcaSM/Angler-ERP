@@ -50,7 +50,11 @@ export default function CompanyAccessRequest() {
     );
   }
 
-  const alreadyMember = userData?.companyId === companyId || userData?.memberships?.[companyId]?.active;
+  const personalCompanyId = userData?.personalCompanyId || userData?.uid;
+  const normalizedCompanyId = companyId?.trim();
+  const alreadyMember = userData?.companyId === normalizedCompanyId || userData?.memberships?.[normalizedCompanyId]?.active;
+  const isOwnCompany = normalizedCompanyId === user.uid || normalizedCompanyId === personalCompanyId;
+
   return (
     <main className="min-h-screen bg-dark-950 flex items-center justify-center px-4 py-10">
       <section className="w-full max-w-md card p-8">
@@ -60,10 +64,15 @@ export default function CompanyAccessRequest() {
         <div className="text-center mb-6">
           <Building2 size={40} className="mx-auto text-primary-400" />
           <h1 className="text-2xl font-bold text-dark-100 mt-3">Solicitar acesso</h1>
-          <p className="text-sm text-dark-500 mt-1">Empresa: {companyId}</p>
+          <p className="text-sm text-dark-500 mt-1">Empresa: {normalizedCompanyId}</p>
         </div>
 
-        {alreadyMember ? (
+        {isOwnCompany ? (
+          <div className="space-y-4 text-center">
+            <CheckCircle2 size={32} className="mx-auto text-green-400" />
+            <p className="text-sm text-dark-300">Esta é sua empresa pessoal. Entre por "Minha conta".</p>
+          </div>
+        ) : alreadyMember ? (
           <div className="space-y-4 text-center">
             <CheckCircle2 size={32} className="mx-auto text-green-400" />
             <p className="text-sm text-dark-300">Sua conta já possui acesso a esta empresa.</p>
