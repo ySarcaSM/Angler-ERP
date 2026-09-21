@@ -50,6 +50,21 @@ service cloud.firestore {
         request.resource.data.role in ['admin', 'manager', 'operator', 'viewer'];
     }
 
+
+    function isAccessRequestOwnerApproval(userId) {
+      let target = get(/databases/$(database)/documents/users/$(userId));
+      let requestDoc = getAfter(/databases/$(database)/documents/companyAccessRequests/$(request.resource.data.accessRequestId));
+      return isAuth() &&
+        requestDoc.data.status == 'approved' &&
+        requestDoc.data.requesterUid == userId &&
+        requestDoc.data.companyId == request.resource.data.accessRequestCompanyId &&
+        requestDoc.data.role == request.resource.data.memberships[request.resource.data.accessRequestCompanyId].role &&
+        isOwner(requestDoc.data.companyId) &&
+        request.resource.data.memberships[requestDoc.data.companyId].active == true &&
+        request.resource.data.memberships[requestDoc.data.companyId].accessRequestId == request.resource.data.accessRequestId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessRequestId', 'accessRequestCompanyId', 'updatedAt']);
+    }
+
     function isCompanySwitch() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['companyId', 'role']) &&
         request.resource.data.companyId is string &&
@@ -99,10 +114,32 @@ service cloud.firestore {
       allow update: if isSuperAdmin() ||
         isOwner(resource.data.companyId) ||
         (isAuth() && request.auth.uid == userId &&
-          (isCompanySwitch() || isJoiningCompany()));
+          (isCompanySwitch() || isJoiningCompany() || isAccessRequestOwnerApproval(userId)));
 
       allow delete: if isSuperAdmin() ||
         isAdmin(resource.data.companyId);
+    }
+
+    // ─── Company access requests ───
+    match /companyAccessRequests/{requestId} {
+      allow create: if isAuth() &&
+        request.resource.data.requesterUid == request.auth.uid &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.status == 'pending' &&
+        exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId));
+
+      allow get: if isSuperAdmin() ||
+        (isAuth() && (
+          request.auth.uid == resource.data.requesterUid ||
+          isOwner(resource.data.companyId)
+        ));
+
+      allow list: if isSuperAdmin() || isOwner(resource.data.companyId);
+
+      allow update: if isSuperAdmin() ||
+        isOwner(resource.data.companyId);
+
+      allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
     }
 
     // ─── Audit Logs ───
