@@ -226,7 +226,8 @@ service cloud.firestore {
       allow create: if isSuperAdmin() ||
         (isOperator(request.resource.data.companyId) &&
           request.resource.data.requesterUid == request.auth.uid &&
-          request.resource.data.status == 'pending');
+          request.resource.data.status == 'pending' &&
+          canWriteCollection(request.resource.data.companyId, request.resource.data.collection));
 
       allow get, list: if isSuperAdmin() || isAdmin(resource.data.companyId) || isOwner(resource.data.companyId);
 
