@@ -14,6 +14,7 @@ const ROLE_LABELS = {
 };
 
 const ROLE_OPTIONS = [
+  { value: 'owner', label: 'Proprietário' },
   { value: 'admin', label: 'Administrador' },
   { value: 'manager', label: 'Gerente' },
   { value: 'operator', label: 'Operador' },
