@@ -32,13 +32,12 @@ export default function JoinCompany() {
     if (form.password !== form.confirmPassword) return toast.error('As senhas não conferem.');
     setSaving(true);
     try {
-      await joinCompany({ invitation, ...form });
-      toast.success('Conta criada. Verifique seu e-mail e entre para acessar a empresa.');
+      const result = await joinCompany({ invitation, ...form });
+      toast.success(result.existingAccount ? 'Empresa vinculada à sua conta. Entre com seu email e a senha que você já usa no Angler.' : 'Conta criada. Verifique seu e-mail e entre para acessar a empresa.');
       setForm({ name: '', lastName: '', password: '', confirmPassword: '' });
     } catch (error) {
-      toast.error(error.code === 'auth/email-already-in-use'
-        ? 'Este e-mail já possui uma conta. Solicite um novo convite ao owner.'
-        : error.message || 'Não foi possível criar sua conta.');
+      const message = error.code === 'auth/invalid-credential' ? 'A senha da sua conta existente está incorreta.' : error.code === 'auth/already-company-member' ? 'Sua conta já está vinculada a esta empresa.' : error.message || 'Não foi possível concluir o vínculo.';
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -53,13 +52,13 @@ export default function JoinCompany() {
           <div className="text-center space-y-4"><Building2 size={34} className="mx-auto text-primary-400" /><h1 className="text-xl font-bold text-dark-100">Convite indisponível</h1><p className="text-sm text-dark-400">Este convite é inválido ou já foi utilizado.</p><Link className="btn-primary inline-flex" to="/login">Ir para login</Link></div>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-6"><div className="rounded-xl bg-primary-400/10 p-3 text-primary-300"><UserPlus size={22} /></div><div><h1 className="text-xl font-bold text-dark-100">Entrar na empresa</h1><p className="text-sm text-dark-500">Crie sua conta para acessar o Angler ERP.</p></div></div>
-            <div className="rounded-xl bg-dark-800 p-4 text-sm mb-5"><div className="text-dark-300">Convite para <strong>{invitation.email}</strong></div><div className="mt-1 text-dark-500">Perfil: {ROLE_LABELS[invitation.role] || invitation.role}</div></div>
+            <div className="flex items-center gap-3 mb-6"><div className="rounded-xl bg-primary-400/10 p-3 text-primary-300"><UserPlus size={22} /></div><div><h1 className="text-xl font-bold text-dark-100">Entrar na empresa</h1><p className="text-sm text-dark-500">Use sua conta existente ou crie uma nova.</p></div></div>
+            <div className="rounded-xl bg-dark-800 p-4 text-sm mb-5"><div className="text-dark-300">Convite para <strong>{invitation.email}</strong></div><div className="mt-1 text-dark-500">Perfil: {ROLE_LABELS[invitation.role] || invitation.role}</div><div className="mt-2 text-xs text-dark-500">Se este email já possui uma conta Angler, informe a senha atual dessa conta. Uma nova conta não será criada.</div></div>
             <form onSubmit={submit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3"><label className="label">Nome<input required className="input mt-1" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label className="label">Sobrenome<input className="input mt-1" value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} /></label></div>
               <label className="label">Senha<input required type="password" minLength="6" className="input mt-1" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
               <label className="label">Confirmar senha<input required type="password" minLength="6" className="input mt-1" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} /></label>
-              <button disabled={saving} className="btn-primary w-full disabled:opacity-50" type="submit">{saving ? 'Criando conta...' : 'Criar conta e entrar'}</button>
+              <button disabled={saving} className="btn-primary w-full disabled:opacity-50" type="submit">{saving ? 'Vinculando...' : 'Vincular empresa à minha conta'}</button>
             </form>
           </>
         )}
