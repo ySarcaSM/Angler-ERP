@@ -1,11 +1,17 @@
-import { collection, doc, getDocs, query, updateDoc, where, writeBatch, serverTimestamp, addDoc, FieldPath } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, updateDoc, where, writeBatch, serverTimestamp, addDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
 export async function createCompanyAccessRequest({ companyId, requesterUid, email, name }) {
+  const normalizedCompanyId = companyId.trim();
+  const companySnapshot = await getDoc(doc(db, 'companies', normalizedCompanyId));
+  if (!companySnapshot.exists()) {
+    throw new Error('Esta empresa não existe. Confira o ID da empresa e tente novamente.');
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
   const existingQuery = query(
     collection(db, 'companyAccessRequests'),
-    where('companyId', '==', companyId),
+    where('companyId', '==', normalizedCompanyId),
     where('requesterUid', '==', requesterUid),
     where('status', '==', 'pending'),
   );
@@ -15,7 +21,7 @@ export async function createCompanyAccessRequest({ companyId, requesterUid, emai
   }
 
   const ref = await addDoc(collection(db, 'companyAccessRequests'), {
-    companyId,
+    companyId: normalizedCompanyId,
     requesterUid,
     email: normalizedEmail,
     name: name || '',
@@ -53,7 +59,7 @@ export async function approveCompanyAccessRequest(requestItem, role) {
   batch.update(userRef, {
     accessRequestId: requestItem.id,
     accessRequestCompanyId: requestItem.companyId,
-    [new FieldPath('memberships', requestItem.companyId)]: {
+    ['memberships.' + requestItem.companyId]: {
       role,
       active: true,
       accessRequestId: requestItem.id,
@@ -61,7 +67,7 @@ export async function approveCompanyAccessRequest(requestItem, role) {
     },
     updatedAt: serverTimestamp(),
   });
-  batch.set(doc(db, 'companyMembers', `${requestItem.companyId}_${requestItem.requesterUid}`), {
+  batch.set(doc(db, 'companyMembers', requestItem.companyId + '_' + requestItem.requesterUid), {
     companyId: requestItem.companyId,
     userId: requestItem.requesterUid,
     email: requestItem.email,
