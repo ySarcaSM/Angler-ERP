@@ -22,6 +22,12 @@ import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, promptAccessibili
 
 const activeCompanyStorageKey = (uid) => `angler-active-company-${uid}`;
 
+const OPERATOR_GROUP_MODULES = {
+  management: ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations'],
+  financial: ['financial', 'stock', 'reports'],
+  budgets: ['measurement', 'formulas', 'budgets'],
+};
+
 async function resolvePersonalCompanyId(userData) {
   if (!userData?.uid) return userData?.personalCompanyId || null;
   if (userData.personalCompanyId) return userData.personalCompanyId;
@@ -91,6 +97,7 @@ async function loadCompanies(userData, personalCompanyId) {
       membershipRole,
       membershipActive: membership?.active !== false,
       membershipModules: Array.isArray(membership?.modules) ? membership.modules : [],
+      operatorGroup: membership?.operatorGroup || null,
       accessRequestId: membership?.accessRequestId || approvedRequest?.id || null,
     };
   }));
@@ -143,6 +150,9 @@ export function AuthProvider({ children }) {
               personalCompanyId,
               companyId: activeCompany?.id || personalCompanyId,
               role: activeCompany?.id === personalCompanyId ? (uData.memberships?.[personalCompanyId]?.role || 'owner') : (activeMembership.role || uData.role),
+      operatorGroup: activeCompany?.id === personalCompanyId
+        ? (uData.memberships?.[personalCompanyId]?.operatorGroup || null)
+        : (activeMembership.operatorGroup || null),
             };
             if (activeCompany) localStorage.setItem(activeCompanyStorageKey(firebaseUser.uid), activeCompany.id);
             setAvailableCompanies(companies);
@@ -283,6 +293,10 @@ export function AuthProvider({ children }) {
     const membership = userData?.memberships?.[company.id];
     const configuredModules = Array.isArray(membership?.modules) ? membership.modules : null;
     if (['owner', 'admin'].includes(userData?.role)) return companyModules;
+    if (userData?.role === 'operator') {
+      return OPERATOR_GROUP_MODULES[userData?.operatorGroup]
+        || OPERATOR_GROUP_MODULES.management;
+    }
     return configuredModules || companyModules;
   }, [company, userData]);
 
