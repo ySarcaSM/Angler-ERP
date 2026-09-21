@@ -26,7 +26,22 @@ export default function Topbar({ onMenuToggle }) {
   const [dismissedNotifications, setDismissedNotifications] = useState([]);
   const [readNotifications, setReadNotifications] = useState([]);
 
-  const handleCompanyChange = async (companyId) => {\n    if (companyId === company?.id) { setCompanyMenuOpen(false); return; }\n    try { await switchCompany(companyId); setCompanyMenuOpen(false); toast.success('Empresa alterada.'); }\n    catch (error) { toast.error(error.message || 'Não foi possível trocar de empresa.'); }\n  };\n\n  const moduleTargets = [
+  const handleCompanyChange = async (companyId) => {
+    if (companyId === company?.id) {
+      setCompanyMenuOpen(false);
+      return;
+    }
+
+    try {
+      await switchCompany(companyId);
+      setCompanyMenuOpen(false);
+      toast.success('Empresa alterada.');
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível trocar de empresa.');
+    }
+  };
+
+  const moduleTargets = [
     { words: ['produto', 'produtos'], path: '/app/products' },
     { words: ['cliente', 'clientes'], path: '/app/clients' },
     { words: ['venda', 'vendas'], path: '/app/sales' },
