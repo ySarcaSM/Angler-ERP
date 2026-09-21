@@ -43,23 +43,23 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div><h1 className="text-2xl font-bold text-dark-100">Configurações</h1><p className="text-dark-500 text-sm mt-1">Gerencie sua empresa</p></div>
-      {isOwner && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {(isOwner || userData?.role === 'admin') && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <button onClick={() => navigate('/app/users')} className="card p-5 text-left hover:border-primary-500/30 transition-colors"><Users size={24} className="text-primary-400 mb-3" /><div className="text-sm font-semibold text-dark-200">Usuários</div><div className="text-xs text-dark-500">Gerenciar equipe</div></button>
       </div>}
       <form onSubmit={handleSave}>
         <div className="card">
-          <div className="card-header flex items-center gap-2"><Building2 size={18} className="text-primary-400" /><h3 className="text-sm font-semibold text-dark-200">Dados da Empresa</h3></div>
+          <div className="card-header flex items-center gap-2"><Building2 size={18} className="text-primary-400" /><h3 className="text-sm font-semibold text-dark-200">Dados da Empresa</h3></div>{!isOwner && <div className="px-5 pt-4 text-sm text-dark-500">Somente o proprietário pode alterar os dados da empresa.</div>}
           <div className="card-body space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className="label">Razão Social *</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
-              <div><label className="label">Nome Fantasia</label><input className="input" value={form.tradeName} onChange={(e) => setForm({ ...form, tradeName: e.target.value })} /></div>
-              <div><label className="label">CNPJ/CPF</label><input className="input" value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} /></div>
-              <div><label className="label">Email</label><input type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-              <div><label className="label">Telefone</label><input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+              <div><label className="label">Razão Social *</label><input className="input" disabled={!isOwner} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
+              <div><label className="label">Nome Fantasia</label><input className="input" disabled={!isOwner} value={form.tradeName} onChange={(e) => setForm({ ...form, tradeName: e.target.value })} /></div>
+              <div><label className="label">CNPJ/CPF</label><input className="input" disabled={!isOwner} value={form.document} onChange={(e) => setForm({ ...form, document: e.target.value })} /></div>
+              <div><label className="label">Email</label><input type="email" className="input" disabled={!isOwner} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+              <div><label className="label">Telefone</label><input className="input" disabled={!isOwner} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
             </div>
           </div>
         </div>
-        <div className="flex justify-end mt-4"><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : <><Save size={18} /> Salvar</>}</button></div>
+        <div className="flex justify-end mt-4">{isOwner && <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : <><Save size={18} /> Salvar</>}</button></div>
       </form>
       <AccessibilitySettingsPanel />
     </div>
