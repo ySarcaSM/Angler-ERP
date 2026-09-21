@@ -56,7 +56,7 @@ const NAV_SECTIONS = [
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { user, userData, company, logout } = useAuth();
+  const { user, userData, company, logout, getEffectiveModules } = useAuth();
   const location = useLocation();
 
   return (
@@ -84,8 +84,9 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {NAV_SECTIONS.map((section) => {
+          const effectiveModules = getEffectiveModules();
           const visibleItems = section.items.filter((item) => (
-            (!item.moduleKey || !Array.isArray(company?.modules?.enabled) || company.modules.enabled.includes(item.moduleKey))
+            (!item.moduleKey || effectiveModules.includes(item.moduleKey))
             && (!item.ownerOnly || userData?.role === 'owner')
           ));
           if (visibleItems.length === 0) return null;
