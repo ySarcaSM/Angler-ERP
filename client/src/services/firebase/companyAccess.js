@@ -42,12 +42,10 @@ export async function createCompanyAccessRequest({ companyId, requesterUid, emai
 }
 
 export async function listCompanyMembers(companyId) {
-  const snapshot = await getDocs(query(
-    collection(db, 'companyMembers'),
-    where('companyId', '==', companyId),
-    where('active', '==', true),
-  ));
-  return snapshot.docs.map((item) => ({ id: item.id, uid: item.data().userId, ...item.data() }));
+  const snapshot = await getDocs(collection(db, 'companies', companyId, 'members'));
+  return snapshot.docs
+    .map((item) => ({ id: item.id, uid: item.data().userId || item.id, ...item.data() }))
+    .filter((item) => item.active !== false);
 }
 
 export async function listApprovedCompanyAccessRequests(requesterUid) {
@@ -117,6 +115,19 @@ export async function approveCompanyAccessRequest(requestItem, role) {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
+  batch.set(doc(db, 'companies', normalizedCompanyId, 'members', requestItem.requesterUid), {
+    companyId: normalizedCompanyId,
+    userId: requestItem.requesterUid,
+    email: requestItem.email,
+    name: requestItem.name || '',
+    role,
+    active: true,
+    accessRequestId: requestItem.id,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
   batch.update(requestRef, {
     status: 'approved',
     role,
