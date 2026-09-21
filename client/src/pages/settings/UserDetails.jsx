@@ -208,7 +208,7 @@ export default function UserDetails() {
           <h2 className="text-lg font-semibold text-dark-100">Cargo</h2>
           <p className="text-sm text-dark-500 mt-1">
             {isViewer
-              ? 'O Visualizador não possui configuração individual de módulos.'
+              ? 'O Visualizador possui acesso somente para consulta e cálculo.'
               : 'O cargo define o que o usuário pode fazer nos módulos liberados.'}
           </p>
         </div>
