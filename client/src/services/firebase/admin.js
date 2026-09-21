@@ -6,7 +6,7 @@
 // Painel vê TODAS as contas de TODAS as empresas.
 
 import {
-  collection, doc, getDoc, getDocs, query,
+  collection, doc, getDoc, getDocs, query, where,
   setDoc, deleteDoc, updateDoc, serverTimestamp, orderBy, writeBatch, deleteField,
 } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
