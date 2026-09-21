@@ -67,7 +67,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
-      <Route path="/join/:invitationId" element={isAuthenticated ? <Navigate to="/app" replace /> : <JoinCompany />} />
+      <Route path="/join/:invitationId" element={<JoinCompany />} />
 
       {/* Admin — com contexto próprio, isolado da autenticação normal */}
       <Route
