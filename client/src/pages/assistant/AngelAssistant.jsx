@@ -7,10 +7,8 @@ import {
   addAssistantMessage, createAssistantChat, subscribeAssistantChats,
   subscribeAssistantMessages, updateAssistantChat, deleteAssistantChat, deleteEmptyAssistantChats,
 } from '../../services/firebase/assistant';
-import { askAngel } from '../../services/gemini';
+import { askAngel, getGeminiApiKeyStatus, saveGeminiApiKey } from '../../services/gemini';
 import { getReadOnlyListAnswer, loadAngelReadContext } from '../../services/angelContext';
-
-const apiKeyStorageKey = (companyId, userId) => `angler-gemini-key-${companyId}-${userId}`;
 
 function renderMessageText(text) {
   return String(text || '').split(/(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g).map((part, index) => {
@@ -31,6 +29,7 @@ export default function AngelAssistant() {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [keyVisible, setKeyVisible] = useState(false);
   const [sending, setSending] = useState(false);
   const [editingChatId, setEditingChatId] = useState(null);
@@ -40,7 +39,10 @@ export default function AngelAssistant() {
 
   useEffect(() => {
     if (!company?.id || !user?.uid) return undefined;
-    setApiKey(localStorage.getItem(apiKeyStorageKey(company.id, user.uid)) || '');
+    setApiKey('');
+    getGeminiApiKeyStatus(company.id)
+      .then(setApiKeyConfigured)
+      .catch(() => toast.error('Não foi possível verificar a chave da Gemini.'));
     return subscribeAssistantChats(company.id, user.uid, setChats, () => toast.error('Não foi possível carregar suas conversas.'));
   }, [company?.id, user?.uid]);
 
@@ -55,9 +57,22 @@ export default function AngelAssistant() {
   const activeChat = useMemo(() => chats.find((chat) => chat.id === activeChatId), [chats, activeChatId]);
   const isFreePlan = ['free', 'trial'].includes(String(company?.plan || 'free').toLowerCase());
 
-  const saveApiKey = (value) => {
-    setApiKey(value);
-    if (company?.id && user?.uid) localStorage.setItem(apiKeyStorageKey(company.id, user.uid), value.trim());
+  const saveApiKey = async () => {
+    if (!apiKey.trim()) {
+      toast.error('Informe a chave da API Gemini.');
+      return;
+    }
+    try {
+      await saveGeminiApiKey(company.id, apiKey.trim());
+      const isSaved = await getGeminiApiKeyStatus();
+      if (!isSaved) throw new Error('A chave não pôde ser mantida nesta sessão do navegador.');
+      setApiKey('');
+      setApiKeyConfigured(true);
+      setKeyVisible(true);
+      toast.success('Chave da Gemini salva com segurança.');
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível salvar a chave da Gemini.');
+    }
   };
 
   const createChat = async () => {
@@ -136,7 +151,7 @@ export default function AngelAssistant() {
     event.preventDefault();
     const content = message.trim();
     if (!content || sending) return;
-    if (!apiKey.trim()) {
+    if (!apiKeyConfigured) {
       toast.error('Informe sua chave da API Gemini antes de conversar com a Angel.');
       setKeyVisible(true);
       return;
@@ -160,7 +175,7 @@ export default function AngelAssistant() {
 
       const readContext = await loadAngelReadContext(company);
       const answer = getReadOnlyListAnswer(content, readContext) || await askAngel({
-        apiKey: apiKey.trim(),
+        companyId: company.id,
         history: messages,
         message: content,
         plan: company.plan,
@@ -192,10 +207,10 @@ export default function AngelAssistant() {
           <div className="p-4 border-b border-dark-700/50 bg-dark-900/40">
             <label className="text-sm font-medium text-dark-200" htmlFor="gemini-key">Chave da API Gemini</label>
             <div className="flex gap-2 mt-2">
-              <input id="gemini-key" type="password" value={apiKey} onChange={(event) => saveApiKey(event.target.value)} placeholder="AIza..." className="input flex-1" autoComplete="off" />
-              <button type="button" className="btn-secondary" onClick={() => setKeyVisible(false)}>Concluir</button>
+              <input id="gemini-key" type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={apiKeyConfigured ? 'Chave configurada — informe outra para substituí-la' : 'AIza...'} className="input flex-1" autoComplete="off" />
+              <button type="button" className="btn-secondary" onClick={saveApiKey}>Salvar</button>
             </div>
-            <p className="text-xs text-dark-500 mt-2">A chave fica somente neste navegador e é usada apenas para chamadas à API Gemini.</p>
+            <p className="text-xs text-dark-500 mt-2">A chave fica somente neste navegador durante a sessão e é removida ao sair da conta.</p>
           </div>
         )}
 

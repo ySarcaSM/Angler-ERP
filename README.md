@@ -19,7 +19,7 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 - Logs de auditoria para ações relevantes e gestão de usuários da empresa.
 - Recursos de acessibilidade: escala de texto, espaçamento, fonte para dislexia, contraste, escala de cinza, inversão, guia de leitura e redução de movimento.
 - Painel de superadmin para consultar, ativar, desativar e remover documentos de contas.
-- Angel Personal Assistant: conversas por usuário/empresa, contexto de leitura do ERP e integração com Gemini por Cloud Functions.
+- Angel Personal Assistant: conversas por usuário/empresa, contexto de leitura do ERP e integração direta com Gemini pelo navegador.
 
 ## Tecnologias
 
@@ -28,9 +28,9 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 | Front-end | React 18, React Router, Vite e Tailwind CSS |
 | Componentes | Lucide React e React Hot Toast |
 | Dados | Firebase Authentication, Cloud Firestore e Firebase Storage |
-| Backend | Firebase Cloud Functions v2, Node.js 20 e Firebase Admin |
+| Backend | Firebase Authentication, Cloud Firestore e Firebase Storage |
 | Visualização e documentos | Recharts e jsPDF |
-| IA | Gemini, chamada somente pelas Cloud Functions |
+| IA | Gemini, chamada diretamente pelo navegador durante a sessão |
 
 ## Estrutura
 
@@ -42,7 +42,6 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 │   ├── src/context/        # Contextos de autenticação
 │   ├── src/utils/          # Formatação, alertas e acessibilidade
 │   └── .env.example        # Modelo das variáveis públicas do front-end
-├── functions/              # Cloud Functions da Angel
 ├── firestore.rules         # Regras de acesso do Firestore
 ├── firestore.indexes.json  # Índices compostos do Firestore
 └── firebase.json           # Configuração de deploy Firebase
@@ -50,9 +49,9 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 
 ## Pré-requisitos
 
-- Node.js 20 ou superior (as Functions usam Node.js 20).
+- Node.js compatível com Vite 5.
 - Uma conta e um projeto no [Firebase Console](https://console.firebase.google.com/).
-- Firebase CLI para publicar regras, índices e Functions: `npm install -g firebase-tools`.
+- Firebase CLI para publicar regras e índices: `npm install -g firebase-tools`.
 
 ## Execução local
 
@@ -61,7 +60,6 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
    ```bash
    npm install
    npm --prefix client install
-   npm --prefix functions install
    ```
 
 2. Copie `client/.env.example` para `client/.env` e preencha os dados do app Web registrados no Firebase:
@@ -93,28 +91,16 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 
 ## Configuração da Angel
 
-A Angel usa três Functions callable na região `southamerica-east1`:
-
-- `saveGeminiApiKey`: salva a chave Gemini cifrada por empresa e usuário;
-- `getGeminiApiKeyStatus`: informa se há uma chave configurada;
-- `askAngel`: monta um contexto de leitura do ERP e pede uma resposta à Gemini.
-
-Antes de publicar as Functions, configure o segredo `ASSISTANT_KEY_ENCRYPTION_KEY` como uma chave aleatória de **32 bytes codificada em Base64**. Por exemplo, gere o valor com uma ferramenta segura e informe-o no comando abaixo:
-
-```bash
-firebase functions:secrets:set ASSISTANT_KEY_ENCRYPTION_KEY
-```
-
-A chave da API Gemini é fornecida pelo usuário na própria tela da Angel. Ela não é exposta ao cliente: é criptografada com AES-256-GCM e gravada na coleção privada `assistantApiKeys`, acessível apenas pelo SDK Admin das Functions.
+A chave da API Gemini é informada pelo usuário na tela da Angel. Ela é mantida apenas no `sessionStorage` do navegador durante a sessão autenticada e é removida ao sair da conta; portanto, deve ser informada novamente a cada login. A aplicação chama a API Gemini diretamente do navegador.
 
 ## Publicação no Firebase
 
-Autentique-se, selecione o projeto Firebase desejado e publique regras, índices e Functions:
+Autentique-se, selecione o projeto Firebase desejado e publique regras e índices:
 
 ```bash
 firebase login
 firebase use <seu-project-id>
-firebase deploy --only firestore:rules,firestore:indexes,functions
+firebase deploy --only firestore:rules,firestore:indexes
 ```
 
 Para gerar o pacote de produção do front-end:
@@ -147,9 +133,7 @@ O resultado é criado em `client/dist/`. Este repositório não possui uma confi
 | `/assistant` | Angel Personal Assistant |
 | `/admin/login` | Entrada do painel de superadmin |
 
-## Testes e verificações
-
-Há um teste unitário em `client/tests/budgetApproval.test.js` para a geração do lançamento financeiro a partir de um orçamento aprovado. No estado atual, ele não pode ser executado diretamente com `node --test`: a cadeia de imports do serviço usa resoluções sem a extensão `.js`, que o Node ESM não resolve. Execute-o depois de configurar um executor compatível com Vite ou ajustar esses imports.
+## Verificação de produção
 
 Antes de publicar, valide o build:
 
@@ -164,7 +148,7 @@ npm run build
 | `npm run dev` | Inicia o Vite dentro de `client/` |
 | `npm run build` | Gera a build de produção em `client/dist/` |
 | `npm run preview` | Serve localmente a build gerada |
-| `npm run install:all` | Instala dependências da raiz e de `client/` (as Functions são instaladas separadamente) |
+| `npm run install:all` | Instala dependências da raiz e de `client/` |
 
 ## Licença
 

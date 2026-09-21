@@ -131,6 +131,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     await fbLogout();
     sessionStorage.removeItem('angler-accessibility-confirmed');
+    sessionStorage.removeItem('angler-gemini-api-key');
     setUser(null);
     setUserData(null);
     setCompany(null);
