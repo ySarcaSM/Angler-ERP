@@ -6,7 +6,6 @@ import Layout from './components/layout/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import JoinCompany from './pages/auth/JoinCompany';
 import CompanyLogin from './pages/auth/CompanyLogin';
 import Dashboard from './pages/dashboard/Dashboard';
 import ClientList from './pages/clients/ClientList';
@@ -68,7 +67,7 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
-      <Route path="/join/:invitationId" element={<JoinCompany />} />
+      <Route path="/join/:invitationId" element={<CompanyLogin />} />
       <Route path="/empresa/:invitationId/login" element={<CompanyLogin />} />
 
       {/* Admin — com contexto próprio, isolado da autenticação normal */}
