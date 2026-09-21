@@ -20,6 +20,10 @@ import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, getAccessibilityP
 
 const activeCompanyStorageKey = (uid) => `angler-active-company-${uid}`;
 
+function getPersonalCompanyId(userData) {
+  return userData?.personalCompanyId || (userData?.memberships && Object.keys(userData.memberships).find((id) => userData.memberships[id]?.role === 'owner')) || userData?.companyId;
+}
+
 async function loadCompanies(userData) {
   const memberships = userData?.memberships || {};
   const ids = Object.keys(memberships).filter((id) => memberships[id]?.active !== false);
@@ -64,17 +68,19 @@ export function AuthProvider({ children }) {
             }
 
             const companies = await loadCompanies(uData);
+            const personalCompanyId = getPersonalCompanyId(uData);
             const storedCompanyId = localStorage.getItem(activeCompanyStorageKey(firebaseUser.uid));
             const activeCompanyId = companies.some((item) => item.id === storedCompanyId)
               ? storedCompanyId
-              : (companies.some((item) => item.id === uData.companyId) ? uData.companyId : companies[0]?.id);
+              : personalCompanyId;
             const activeCompany = companies.find((item) => item.id === activeCompanyId) || null;
-            let activeUserData = uData;
-            if (activeCompany && activeCompany.id !== uData.companyId) {
-              const role = activeCompany.membershipRole || uData.role;
-              await switchActiveCompany(firebaseUser.uid, activeCompany.id, role);
-              activeUserData = { ...uData, companyId: activeCompany.id, role };
-            }
+            const activeMembership = activeCompany ? (uData.memberships?.[activeCompany.id] || {}) : {};
+            const activeUserData = {
+              ...uData,
+              personalCompanyId,
+              companyId: activeCompany?.id || personalCompanyId,
+              role: activeCompany?.id === personalCompanyId ? (uData.memberships?.[personalCompanyId]?.role || 'owner') : (activeMembership.role || uData.role),
+            };
             if (activeCompany) localStorage.setItem(activeCompanyStorageKey(firebaseUser.uid), activeCompany.id);
             setAvailableCompanies(companies);
             setUserData(activeUserData);
@@ -141,9 +147,18 @@ export function AuthProvider({ children }) {
       throw error;
     }
 
+    const companies = await loadCompanies(loadedUserData);
+    const personalCompanyId = getPersonalCompanyId(loadedUserData);
+    localStorage.setItem(activeCompanyStorageKey(fbUser.uid), personalCompanyId);
+    setAvailableCompanies(companies);
     setUser(fbUser);
-    setUserData(loadedUserData);
-    setCompany(loadedUserData.companyId ? await getCompanyData(loadedUserData.companyId) : null);
+    setUserData({
+      ...loadedUserData,
+      personalCompanyId,
+      companyId: personalCompanyId,
+      role: loadedUserData.memberships?.[personalCompanyId]?.role || loadedUserData.role,
+    });
+    setCompany(await getCompanyData(personalCompanyId));
     return fbUser;
   }, []);
 
@@ -155,16 +170,20 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
 
 
-  const switchCompany = useCallback(async (companyId) => {
+  const selectCompanyContext = useCallback(async (companyId) => {
     if (!user?.uid || !userData) return;
     const target = availableCompanies.find((item) => item.id === companyId);
     if (!target) throw new Error('Você não possui acesso a esta empresa.');
-    const role = target.membershipRole || userData.role;
+    const role = target.id === getPersonalCompanyId(userData)
+      ? (userData.memberships?.[target.id]?.role || 'owner')
+      : (target.membershipRole || userData.memberships?.[target.id]?.role || userData.role);
     await switchActiveCompany(user.uid, companyId, role);
     localStorage.setItem(activeCompanyStorageKey(user.uid), companyId);
     setUserData({ ...userData, companyId, role });
     setCompany(target);
   }, [user, userData, availableCompanies]);
+
+  const switchCompany = selectCompanyContext;
 
   const logout = useCallback(async () => {
     await fbLogout();
@@ -208,6 +227,7 @@ export function AuthProvider({ children }) {
     hasPermission,
     availableCompanies,
     switchCompany,
+    selectCompanyContext,
     isAuthenticated: !!user && !!userData,
   };
 
