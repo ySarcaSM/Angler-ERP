@@ -71,6 +71,34 @@ async function deleteCompanyData(companyId, deletedUid) {
   await db.recursiveDelete(db.collection('companies').doc(companyId));
 }
 
+exports.cleanupOrphanCompanies = functions
+  .runWith({ timeoutSeconds: 540, memory: '1GB' })
+  .https.onCall(async (data, context) => {
+    if (!context.auth?.uid) {
+      throw new functions.https.HttpsError('unauthenticated', 'Administrador não autenticado.');
+    }
+
+    const adminSnapshot = await db.collection('users').doc(context.auth.uid).get();
+    if (!isSuperadmin(context, adminSnapshot)) {
+      throw new functions.https.HttpsError('permission-denied', 'Somente o superadmin pode executar a limpeza.');
+    }
+
+    const companiesSnapshot = await db.collection('companies').get();
+    const orphaned = [];
+
+    for (const company of companiesSnapshot.docs) {
+      const ownerUid = company.data()?.ownerUid;
+      if (!ownerUid) continue;
+      const ownerSnapshot = await db.collection('users').doc(ownerUid).get();
+      if (!ownerSnapshot.exists) {
+        orphaned.push(company.id);
+        await deleteCompanyData(company.id, ownerUid);
+      }
+    }
+
+    return { deletedCompanies: orphaned };
+  });
+
 exports.deleteUserAccount = functions
   .runWith({ timeoutSeconds: 540, memory: '1GB' })
   .https.onCall(async (data, context) => {
