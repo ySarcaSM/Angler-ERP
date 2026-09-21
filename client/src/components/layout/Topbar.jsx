@@ -17,14 +17,11 @@ function normalize(value) {
 
 export default function Topbar({ onMenuToggle }) {
   const navigate = useNavigate();
-  const { company, availableCompanies, switchCompany } = useAuth();
+  const { company, availableCompanies, switchCompany, userData } = useAuth();
   const [search, setSearch] = useState('');
   const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [dismissedNotifications, setDismissedNotifications] = useState([]);
-  const [readNotifications, setReadNotifications] = useState([]);
+  const isOperator = userData?.role === 'operator';
 
   const handleCompanyChange = async (companyId) => {
     if (companyId === company?.id) {
@@ -61,52 +58,6 @@ export default function Topbar({ onMenuToggle }) {
     navigate(`${path}${query}`);
   };
 
-  useEffect(() => {
-    if (!company?.id) return;
-    const storageKey = `angler-dismissed-notifications-${company.id}`;
-    const readStorageKey = `angler-read-notifications-${company.id}`;
-    try {
-      setDismissedNotifications(JSON.parse(localStorage.getItem(storageKey) || '[]'));
-      setReadNotifications(JSON.parse(localStorage.getItem(readStorageKey) || '[]'));
-    } catch {
-      setDismissedNotifications([]);
-      setReadNotifications([]);
-    }
-
-    const loadTopbarNotifications = async () => {
-      try {
-        setNotifications(await loadNotifications(company.id));
-      } catch (error) {
-        console.error('Erro ao carregar notificações:', error);
-      }
-    };
-
-    loadTopbarNotifications();
-    const handleNotificationsUpdate = (event) => {
-      if (event.detail?.companyId === company.id) loadTopbarNotifications();
-    };
-    window.addEventListener('angler:notifications-updated', handleNotificationsUpdate);
-    return () => window.removeEventListener('angler:notifications-updated', handleNotificationsUpdate);
-  }, [company]);
-
-  const unreadNotifications = notifications.filter((notification) => (
-    !dismissedNotifications.includes(notification.id) && !readNotifications.includes(notification.id)
-  ));
-  const displayedNotifications = unreadNotifications;
-
-  const dismissNotification = (notificationId) => {
-    if (!company?.id) return;
-    const nextDismissed = [...new Set([...dismissedNotifications, notificationId])];
-    setDismissedNotifications(nextDismissed);
-    localStorage.setItem(`angler-dismissed-notifications-${company.id}`, JSON.stringify(nextDismissed));
-  };
-
-  const showAllAndMarkAsRead = () => {
-    if (!company?.id) return;
-    const nextRead = [...new Set([...readNotifications, ...notifications.map((notification) => notification.id)])];
-    setReadNotifications(nextRead);
-    localStorage.setItem(`angler-read-notifications-${company.id}`, JSON.stringify(nextRead));
-  };
 
   const handleSearch = async (event) => {
     event.preventDefault();
@@ -158,75 +109,7 @@ export default function Topbar({ onMenuToggle }) {
         </button>
 
         {availableCompanies.length > 1 && (
-          <div className="relative">
-            <button type="button" onClick={() => setCompanyMenuOpen((open) => !open)} className="flex items-center gap-2 max-w-[260px] bg-dark-800 border border-dark-700/50 rounded-xl px-3 py-2 text-sm text-dark-200 hover:bg-dark-700">
-              <span className="truncate">{company?.name || 'Empresa'}</span><ChevronDown size={16} className="flex-shrink-0" />
-            </button>
-            {companyMenuOpen && (
-              <div className="absolute left-0 top-12 w-72 bg-dark-900 border border-dark-700 rounded-xl shadow-2xl overflow-hidden z-50">
-                {availableCompanies.map((item) => (
-                  <button key={item.id} type="button" onClick={() => handleCompanyChange(item.id)} className={`w-full text-left px-4 py-3 hover:bg-dark-800 ${item.id === company?.id ? 'bg-primary-400/10 text-primary-300' : 'text-dark-200'}`}>
-                    <div className="font-medium truncate">{item.name}</div>
-                    <div className="text-xs text-dark-500 mt-1">{item.membershipRole || 'Membro'}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        <form onSubmit={handleSearch} className="hidden sm:flex items-center gap-2 bg-dark-800 border border-dark-700/50 rounded-xl px-4 py-2 w-72">
-          <Search size={16} className="text-dark-500" />
-          <input
-            type="text"
-            placeholder="Buscar produtos, clientes..."
-            className="bg-transparent text-sm text-dark-100 placeholder:text-dark-500 outline-none w-full"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            disabled={searching}
-          />
-        </form>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <button
-            onClick={() => setNotificationsOpen((open) => !open)}
-            className="relative p-2 rounded-xl text-dark-400 hover:text-primary-300 hover:bg-dark-800 transition-all"
-            title="Notificações"
-          >
-          <Bell size={20} />
-            {unreadNotifications.length > 0 && <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-red-500 text-white text-[10px] leading-4 rounded-full">{unreadNotifications.length}</span>}
-          </button>
-          {notificationsOpen && (
-            <div className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-dark-900 border border-dark-700 rounded-xl shadow-2xl overflow-hidden z-50">
-              <div className="px-4 py-3 border-b border-dark-700 flex items-center justify-between">
-                <span className="text-sm font-semibold text-dark-100">Notificações</span>
-                <span className="text-xs text-dark-500">{unreadNotifications.length} não lido(s)</span>
-              </div>
-              {displayedNotifications.length > 0 ? displayedNotifications.map((notification) => (
-                <button
-                  key={notification.id}
-                  onClick={() => { dismissNotification(notification.id); setNotificationsOpen(false); navigate(notification.path); }}
-                  className="w-full text-left px-4 py-3 border-b border-dark-800 hover:bg-dark-800 transition-colors"
-                >
-                  <div className="text-sm text-dark-200">{notification.title}</div>
-                  <div className="text-xs text-dark-500 mt-1">{notification.message}</div>
-                </button>
-              )) : (
-                <div className="px-4 py-8 text-center text-sm text-dark-500">Nenhuma notificação</div>
-              )}
-              {notifications.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => { showAllAndMarkAsRead(); setNotificationsOpen(false); navigate('/app/notifications'); }}
-                  className="w-full px-4 py-3 text-xs text-primary-300 hover:bg-dark-800 transition-colors"
-                >
-                  Ver todas as notificações
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+  
 
       </div>
     </header>
