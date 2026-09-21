@@ -1,14 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { Building2, CheckCircle2, LogIn, Send } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { ArrowLeft, Building2, CheckCircle2, Send } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { createCompanyAccessRequest } from '../../services/firebase/companyAccess';
 import toast from 'react-hot-toast';
 
 export default function CompanyAccessRequest() {
   const { companyId } = useParams();
+  const navigate = useNavigate();
   const { user, userData } = useAuth();
   const [loading, setLoading] = useState(false);
+
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate(user ? '/app' : '/login');
+  };
 
   const submit = async () => {
     if (!user) return;
@@ -32,6 +38,9 @@ export default function CompanyAccessRequest() {
     return (
       <main className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
         <section className="w-full max-w-md card p-8 text-center space-y-4">
+          <button type="button" onClick={goBack} className="inline-flex items-center gap-2 text-sm text-dark-400 hover:text-dark-200">
+            <ArrowLeft size={16} /> Voltar
+          </button>
           <Building2 size={40} className="mx-auto text-primary-400" />
           <h1 className="text-2xl font-bold text-dark-100">Solicitar acesso à empresa</h1>
           <p className="text-sm text-dark-400">Entre na sua conta pessoal do Angler para solicitar acesso a esta empresa.</p>
@@ -45,6 +54,9 @@ export default function CompanyAccessRequest() {
   return (
     <main className="min-h-screen bg-dark-950 flex items-center justify-center px-4 py-10">
       <section className="w-full max-w-md card p-8">
+        <button type="button" onClick={goBack} className="inline-flex items-center gap-2 text-sm text-dark-400 hover:text-dark-200 mb-6">
+          <ArrowLeft size={16} /> Voltar
+        </button>
         <div className="text-center mb-6">
           <Building2 size={40} className="mx-auto text-primary-400" />
           <h1 className="text-2xl font-bold text-dark-100 mt-3">Solicitar acesso</h1>
