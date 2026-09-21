@@ -45,6 +45,7 @@ export default function UserDetails() {
   const [role, setRole] = useState('viewer');
   const [modules, setModules] = useState([]);
   const [adminConfirmation, setAdminConfirmation] = useState('');
+  const [ownerConfirmation, setOwnerConfirmation] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -76,7 +77,7 @@ export default function UserDetails() {
         if (!data) throw new Error('Usuário não encontrado nesta empresa.');
 
         const membership = data.memberships?.[company.id];
-        const currentRole = data.role || membership?.role || 'viewer';
+        const currentRole = membership?.role || data.role || 'viewer';
         const configuredModules = data.modules || membership?.modules || availableModules;
 
         setProfile({ ...data, isExternal });
@@ -106,6 +107,11 @@ export default function UserDetails() {
       return;
     }
 
+    if (role === 'owner' && ownerConfirmation.trim().toUpperCase() !== 'PROPRIETÁRIO') {
+      toast.error('Digite PROPRIETÁRIO para confirmar a mudança para proprietário.');
+      return;
+    }
+
     setSaving(true);
     try {
       await updateCompanyUserAccess({
@@ -116,6 +122,7 @@ export default function UserDetails() {
       });
       setProfile((current) => ({ ...current, role, modules }));
       setAdminConfirmation('');
+      setOwnerConfirmation('');
       toast.success('Permissões do usuário atualizadas.');
     } catch (err) {
       toast.error(err.message || 'Não foi possível atualizar as permissões.');
@@ -145,8 +152,6 @@ export default function UserDetails() {
 
   const fullName = [profile.name, profile.lastName].filter(Boolean).join(' ') || 'Usuário Angler';
   const initials = [profile.name?.[0], profile.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U';
-  const isOwner = role === 'owner';
-
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-4">
@@ -188,8 +193,7 @@ export default function UserDetails() {
         </div>
       </section>
 
-      {!isOwner && (
-        <>
+      <>
           <section className="card p-6 space-y-5">
             <div>
               <h2 className="text-lg font-semibold text-dark-100">Cargo</h2>
@@ -199,6 +203,20 @@ export default function UserDetails() {
             <select className="input max-w-md" value={role} onChange={(event) => setRole(event.target.value)}>
               {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
+
+            {role === 'owner' && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+                <label className="label">Confirmação obrigatória</label>
+                <p className="text-sm text-dark-400">Para promover este usuário a Proprietário, digite <strong className="text-dark-100">PROPRIETÁRIO</strong>.</p>
+                <input
+                  className="input max-w-md"
+                  value={ownerConfirmation}
+                  onChange={(event) => setOwnerConfirmation(event.target.value)}
+                  placeholder="PROPRIETÁRIO"
+                  autoComplete="off"
+                />
+              </div>
+            )}
 
             {role === 'admin' && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
@@ -246,8 +264,7 @@ export default function UserDetails() {
               <Save size={18} /> {saving ? 'Salvando...' : 'Salvar permissões'}
             </button>
           </div>
-        </>
-      )}
+      </>
     </div>
   );
 }
