@@ -45,10 +45,11 @@ export async function listApprovedCompanyAccessRequests(requesterUid) {
   const q = query(
     collection(db, 'companyAccessRequests'),
     where('requesterUid', '==', requesterUid),
-    where('status', '==', 'approved'),
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+  return snapshot.docs
+    .map((item) => ({ id: item.id, ...item.data() }))
+    .filter((item) => item.status === 'approved');
 }
 
 export async function listPendingCompanyAccessRequests(companyId) {
