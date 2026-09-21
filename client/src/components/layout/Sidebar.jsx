@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
-  FileText, MapPin, ClipboardList, Bell, Bot, UserRound, Calculator, FileSignature, ChevronLeft, ChevronRight,
+  FileText, MapPin, ClipboardList, Bell, Bot, UserRound, Calculator, FileSignature, Blocks, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -13,40 +13,41 @@ const NAV_SECTIONS = [
     items: [
       { to: '/', icon: Home, label: 'Home', end: true },
       { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/assistant', icon: Bot, label: 'Assistente de IA' },
+      { to: '/assistant', icon: Bot, label: 'Assistente de IA', moduleKey: 'assistant' },
     ],
   },
   {
     label: 'Gestão',
     items: [
-      { to: '/app/clients', icon: Users, label: 'Clientes' },
-      { to: '/app/products', icon: Package, label: 'Produtos' },
-      { to: '/app/sales', icon: ShoppingCart, label: 'Vendas' },
-      { to: '/app/purchases', icon: Truck, label: 'Compras' },
-      { to: '/app/suppliers', icon: FileText, label: 'Fornecedores' },
-      { to: '/app/locations', icon: MapPin, label: 'Localizações' },
+      { to: '/app/clients', icon: Users, label: 'Clientes', moduleKey: 'clients' },
+      { to: '/app/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
+      { to: '/app/sales', icon: ShoppingCart, label: 'Vendas', moduleKey: 'sales' },
+      { to: '/app/purchases', icon: Truck, label: 'Compras', moduleKey: 'purchases' },
+      { to: '/app/suppliers', icon: FileText, label: 'Fornecedores', moduleKey: 'suppliers' },
+      { to: '/app/locations', icon: MapPin, label: 'Localizações', moduleKey: 'locations' },
     ],
   },
   {
     label: 'Financeiro',
     items: [
-      { to: '/app/financial', icon: DollarSign, label: 'Financeiro' },
-      { to: '/app/stock', icon: Warehouse, label: 'Estoque' },
-      { to: '/app/reports', icon: BarChart3, label: 'Relatórios' },
+      { to: '/app/financial', icon: DollarSign, label: 'Financeiro', moduleKey: 'financial' },
+      { to: '/app/stock', icon: Warehouse, label: 'Estoque', moduleKey: 'stock' },
+      { to: '/app/reports', icon: BarChart3, label: 'Relatórios', moduleKey: 'reports' },
     ],
   },
   {
     label: 'Orçamentos',
     items: [
-      { to: '/app/budgets/profiles', icon: UserRound, label: 'Medição' },
-      { to: '/app/budgets/formulas', icon: Calculator, label: 'Fórmulas' },
-      { to: '/app/budgets', icon: FileSignature, label: 'Orçamentos', end: true },
+      { to: '/app/budgets/profiles', icon: UserRound, label: 'Medição', moduleKey: 'measurement' },
+      { to: '/app/budgets/formulas', icon: Calculator, label: 'Fórmulas', moduleKey: 'formulas' },
+      { to: '/app/budgets', icon: FileSignature, label: 'Orçamentos', end: true, moduleKey: 'budgets' },
     ],
   },
   {
     label: 'Sistema',
     items: [
       { to: '/app/settings', icon: Settings, label: 'Configurações' },
+      { to: '/app/modules', icon: Blocks, label: 'Módulos' },
       { to: '/app/logs', icon: ClipboardList, label: 'Logs' },
       { to: '/app/notifications', icon: Bell, label: 'Notificações' },
     ],
@@ -81,7 +82,10 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {NAV_SECTIONS.map((section) => (
+        {NAV_SECTIONS.map((section) => {
+          const visibleItems = section.items.filter((item) => !item.moduleKey || !Array.isArray(company?.modules?.enabled) || company.modules.enabled.includes(item.moduleKey));
+          if (visibleItems.length === 0) return null;
+          return (
           <div key={section.label}>
             {!collapsed && (
               <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-primary-600">
@@ -89,7 +93,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               </div>
             )}
             <div className="space-y-1">
-              {section.items.map((item) => (
+              {visibleItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -108,7 +112,8 @@ export default function Sidebar({ collapsed, onToggle }) {
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Footer */}

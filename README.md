@@ -15,8 +15,10 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 - Financeiro com receitas, despesas, pendências e baixa de pagamentos; aprovar um orçamento cria uma receita pendente.
 - Relatórios de desempenho com gráficos e exportação em PDF.
 - Orçamentos, fórmulas e calculadora de medição/aproveitamento de material para perfis de embalagens.
-- Notificações de estoque baixo, vendas pendentes e lançamentos financeiros pendentes.
+- Notificações de estoque baixo, vendas pendentes, lançamentos financeiros pendentes e indisponibilidade temporária da Angel.
 - Logs de auditoria para ações relevantes e gestão de usuários da empresa.
+- Módulo de sistema para o proprietário ativar ou desativar os recursos disponíveis da empresa.
+- O módulo **Módulos** permite carimbar a configuração; para carimbar ou remover o carimbo, o proprietário deve digitar `CARIMBAR`. Enquanto carimbada, a seleção de módulos fica bloqueada.
 - Recursos de acessibilidade: escala de texto, espaçamento, fonte para dislexia, contraste, escala de cinza, inversão, guia de leitura e redução de movimento.
 - Painel de superadmin para consultar, ativar, desativar e remover documentos de contas.
 - Angel Personal Assistant: conversas por usuário/empresa, contexto de leitura do ERP e integração direta com Gemini pelo navegador.
@@ -92,6 +94,8 @@ Aplicação web de gestão empresarial multiempresa, em português do Brasil. O 
 ## Configuração da Angel
 
 A chave da API Gemini é informada pelo usuário na tela da Angel. Ela é mantida apenas no `sessionStorage` do navegador durante a sessão autenticada e é removida ao sair da conta; portanto, deve ser informada novamente a cada login. A aplicação chama a API Gemini diretamente do navegador.
+
+Quando a API Gemini retorna `503` (serviço temporariamente indisponível), a Angel mostra um aviso imediato e adiciona um alerta ao centro de notificações, atualizando o contador do sino. Esses alertas ficam armazenados localmente por empresa neste navegador, com os 20 mais recentes mantidos.
 
 ## Publicação no Firebase
 

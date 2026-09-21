@@ -2,6 +2,33 @@ import { listProducts } from '../services/firebase/products.js';
 import { listSales } from '../services/firebase/sales.js';
 import { listTransactions } from '../services/firebase/financial.js';
 
+const SYSTEM_NOTIFICATIONS_KEY_PREFIX = 'angler-system-notifications-';
+
+function getSystemNotifications(companyId) {
+  try {
+    const stored = JSON.parse(localStorage.getItem(`${SYSTEM_NOTIFICATIONS_KEY_PREFIX}${companyId}`) || '[]');
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addSystemNotification(companyId, notification) {
+  if (!companyId) return;
+  const entry = {
+    id: `system-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    path: '/assistant',
+    ...notification,
+  };
+  try {
+    const notifications = [entry, ...getSystemNotifications(companyId)].slice(0, 20);
+    localStorage.setItem(`${SYSTEM_NOTIFICATIONS_KEY_PREFIX}${companyId}`, JSON.stringify(notifications));
+    window.dispatchEvent(new CustomEvent('angler:notifications-updated', { detail: { companyId } }));
+  } catch {
+    // A falha ao registrar o alerta não deve impedir a exibição do toast.
+  }
+}
+
 export async function loadNotifications(companyId) {
   const [productsResult, salesResult, transactionsResult] = await Promise.all([
     listProducts(companyId, { pageSize: 200 }),
@@ -39,5 +66,5 @@ export async function loadNotifications(companyId) {
     });
   }
 
-  return notifications;
+  return [...getSystemNotifications(companyId), ...notifications];
 }

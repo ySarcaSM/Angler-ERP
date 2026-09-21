@@ -25,6 +25,7 @@ import BudgetsPage from './pages/budgets/BudgetsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import UserManagement from './pages/settings/UserManagement';
 import LocationList from './pages/locations/LocationList';
+import ModulesPage from './pages/modules/ModulesPage';
 import AccessibilityFloatingButton from './components/ui/AccessibilityFloatingButton';
 
 // ─── Admin ───
@@ -104,6 +105,7 @@ export default function App() {
               <Route path="/budgets/profiles/:groupSlug" element={<Navigate to="/app/budgets/profiles" replace />} />
               <Route path="/budgets/formulas" element={<FormulasPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/modules" element={<ModulesPage />} />
               <Route path="/settings/users" element={<UserManagement />} />
               <Route path="*" element={<Navigate to="/app" replace />} />
             </Routes>

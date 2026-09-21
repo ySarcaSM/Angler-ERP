@@ -142,6 +142,13 @@ export function AuthProvider({ children }) {
     await fbResetPassword(email);
   }, []);
 
+  const refreshCompany = useCallback(async () => {
+    if (!userData?.companyId) return null;
+    const updatedCompany = await getCompanyData(userData.companyId);
+    setCompany(updatedCompany);
+    return updatedCompany;
+  }, [userData?.companyId]);
+
   const hasPermission = useCallback((perm) => {
     if (!userData) return false;
     if (userData.role === 'owner') return true;
@@ -158,6 +165,7 @@ export function AuthProvider({ children }) {
     register,
     logout,
     resetPassword,
+    refreshCompany,
     hasPermission,
     isAuthenticated: !!user && !!userData,
   };

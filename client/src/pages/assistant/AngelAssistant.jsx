@@ -9,6 +9,7 @@ import {
 } from '../../services/firebase/assistant';
 import { askAngel, getGeminiApiKeyStatus, saveGeminiApiKey } from '../../services/gemini';
 import { getReadOnlyListAnswer, loadAngelReadContext } from '../../services/angelContext';
+import { addSystemNotification } from '../../utils/notifications';
 
 function renderMessageText(text) {
   return String(text || '').split(/(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g).map((part, index) => {
@@ -184,6 +185,12 @@ export default function AngelAssistant() {
       await addAssistantMessage(chatId, { role: 'assistant', content: answer });
       await updateAssistantChat(chatId, {});
     } catch (error) {
+      if (error?.status === 503) {
+        addSystemNotification(company.id, {
+          title: 'Angel temporariamente indisponível',
+          message: 'Não foi possível concluir sua última solicitação. Tente novamente em alguns instantes.',
+        });
+      }
       toast.error(error.message || 'Não foi possível enviar a mensagem.');
     } finally {
       setSending(false);

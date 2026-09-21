@@ -62,6 +62,11 @@ export default function Topbar({ onMenuToggle }) {
     };
 
     loadTopbarNotifications();
+    const handleNotificationsUpdate = (event) => {
+      if (event.detail?.companyId === company.id) loadTopbarNotifications();
+    };
+    window.addEventListener('angler:notifications-updated', handleNotificationsUpdate);
+    return () => window.removeEventListener('angler:notifications-updated', handleNotificationsUpdate);
   }, [company]);
 
   const unreadNotifications = notifications.filter((notification) => !dismissedNotifications.includes(notification.id));
