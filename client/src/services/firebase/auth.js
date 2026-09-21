@@ -194,6 +194,32 @@ export async function register(data) {
 // ─── Login ───
 export async function login(email, password) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
+
+  // Garante o índice da empresa pessoal para contas criadas antes da
+  // introdução da subcoleção companies/{companyId}/members.
+  try {
+    const userSnapshot = await getDoc(doc(db, 'users', cred.user.uid));
+    if (userSnapshot.exists()) {
+      const data = userSnapshot.data();
+      const personalCompanyId = data.personalCompanyId || cred.user.uid;
+      if (personalCompanyId === cred.user.uid) {
+        await setDoc(doc(db, 'companies', personalCompanyId, 'members', cred.user.uid), {
+          companyId: personalCompanyId,
+          userId: cred.user.uid,
+          email: data.email || cred.user.email || '',
+          name: data.name || '',
+          lastName: data.lastName || '',
+          role: 'owner',
+          active: true,
+          personal: true,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+  } catch (error) {
+    console.warn('[Auth] Não foi possível atualizar o índice de membros da empresa pessoal:', error);
+  }
+
   return cred.user;
 }
 
