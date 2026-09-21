@@ -123,6 +123,21 @@ service cloud.firestore {
         request.auth.token.email == 'admin@angler-erp.local';
     }
 
+    function isAdminManagingUser(userId) {
+      let user = currentUser();
+      return isAuth() &&
+        user != null &&
+        user.companyId is string &&
+        (
+          (user.companyId == request.auth.uid && user.role in ['owner', 'admin']) ||
+          ('memberships' in user &&
+            user.companyId in user.memberships &&
+            user.memberships[user.companyId].active == true &&
+            user.memberships[user.companyId].role in ['owner', 'admin'])
+        ) &&
+        exists(/databases/$(database)/documents/companyMembers/$(user.companyId)_$(userId));
+    }
+
     function isAccessRequestOwnerApproval(userId) {
       let grant = request.resource.data.accessControl;
       let requestDoc = get(/databases/$(database)/documents/companyAccessRequests/$(grant.lastGrantedRequestId));
@@ -177,7 +192,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSuperAdmin() ||
         (isAuth() && request.auth.uid == userId) ||
-        isAdmin(resource.data.companyId);
+        isAdmin(resource.data.companyId) ||
+        isAdminManagingUser(userId);
 
       allow list: if isSuperAdmin() ||
         isAdmin(resource.data.companyId);
