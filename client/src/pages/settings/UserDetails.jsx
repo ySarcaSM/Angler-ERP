@@ -248,32 +248,35 @@ export default function UserDetails() {
         )}
       </section>
 
-      {
-        <section className="card p-6 space-y-5">
-          <div>
-            <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
-            <p className="text-sm text-dark-500 mt-1">{isViewer ? 'Defina quais módulos o Visualizador poderá visualizar. Ele continuará sem permissão para alterar dados, exceto o cálculo de fórmulas.' : 'Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.'}</p>
-          </div>
+      <section className="card p-6 space-y-5">
+        <div>
+          <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
+          <p className="text-sm text-dark-500 mt-1">
+            {isViewer
+              ? 'Defina quais módulos o Visualizador poderá visualizar. Ele continuará sem permissão para alterar dados, exceto o cálculo de fórmulas.'
+              : 'Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.'}
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {MODULES.filter(([key]) => availableModules.includes(key)).map(([key, label]) => {
-              const active = modules.includes(key);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleModule(key)}
-                  className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-400/50 bg-primary-400/10' : 'border-dark-700 bg-dark-900/40'}`}
-                >
-                  <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500' : 'border-dark-600'}`}>
-                    {active && <Check size={14} className="text-dark-950" />}
-                  </span>
-                  <span className="text-sm text-dark-200">{label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {MODULES.filter(([key]) => availableModules.includes(key)).map(([key, label]) => {
+            const active = modules.includes(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleModule(key)}
+                className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-400/50 bg-primary-400/10' : 'border-dark-700 bg-dark-900/40'}`}
+              >
+                <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500' : 'border-dark-600'}`}>
+                  {active && <Check size={14} className="text-dark-950" />}
+                </span>
+                <span className="text-sm text-dark-200">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <div className="flex justify-end">
         <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
