@@ -1,13 +1,21 @@
 import React from 'react';
+import { useAuth } from '../../context/useAuth';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 export default function DataTable({ columns, data, pagination, onPageChange, loading, onRowClick }) {
+  const { userData } = useAuth();
+  const isViewer = userData?.role === 'viewer';
+  const visibleColumns = isViewer
+    ? columns.filter((col) => !['_actions', 'actions'].includes(col.key) && col.label !== '')
+    : columns;
+  const rowClick = isViewer ? undefined : onRowClick;
+
   return (
     <div className="table-container">
       <table className="table">
         <thead>
           <tr>
-            {columns.map((col) => (
+            {visibleColumns.map((col) => (
               <th key={col.key} style={col.width ? { width: col.width } : {}}>
                 {col.label}
               </th>
@@ -17,7 +25,7 @@ export default function DataTable({ columns, data, pagination, onPageChange, loa
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={columns.length} className="text-center py-12">
+              <td colSpan={visibleColumns.length} className="text-center py-12">
                 <div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full mx-auto" />
               </td>
             </tr>
@@ -31,10 +39,10 @@ export default function DataTable({ columns, data, pagination, onPageChange, loa
             data.map((row, i) => (
               <tr
                 key={row._id || i}
-                onClick={() => onRowClick?.(row)}
-                className={onRowClick ? 'cursor-pointer' : ''}
+                onClick={() => rowClick?.(row)}
+                className={rowClick ? 'cursor-pointer' : ''}
               >
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <td key={col.key}>
                     {col.render ? col.render(row[col.key], row) : row[col.key]}
                   </td>
