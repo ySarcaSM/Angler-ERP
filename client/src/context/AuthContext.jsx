@@ -27,11 +27,36 @@ function getPersonalCompanyId(userData) {
 async function loadCompanies(userData) {
   const memberships = userData?.memberships || {};
   const ids = Object.keys(memberships).filter((id) => memberships[id]?.active !== false);
-  if (userData?.companyId && !ids.includes(userData.companyId)) ids.push(userData.companyId);
+
+  // Mantém acessos antigos/legados que podem estar registrados no contexto
+  // da solicitação aprovada, mesmo que ainda não tenham sido refletidos
+  // corretamente no mapa de memberships.
+  const legacyCompanyIds = [
+    userData?.personalCompanyId,
+    userData?.companyId,
+    userData?.accessRequestCompanyId,
+  ].filter(Boolean);
+
+  legacyCompanyIds.forEach((id) => {
+    if (!ids.includes(id)) ids.push(id);
+  });
+
   const companies = await Promise.all(ids.map(async (id) => {
     const data = await getCompanyData(id);
-    return data ? { ...data, membershipRole: memberships[id]?.role || (id === userData.companyId ? userData.role : null) } : null;
+    if (!data) return null;
+
+    const membership = memberships[id];
+    const membershipRole = membership?.role
+      || (id === userData?.companyId ? userData?.role : null);
+
+    return {
+      ...data,
+      membershipRole,
+      membershipActive: membership?.active !== false,
+      membershipModules: Array.isArray(membership?.modules) ? membership.modules : [],
+    };
   }));
+
   return companies.filter(Boolean);
 }
 
