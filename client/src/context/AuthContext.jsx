@@ -259,7 +259,13 @@ export function AuthProvider({ children }) {
       : (target.membershipRole || userData.memberships?.[target.id]?.role || userData.role);
     await switchActiveCompany(user.uid, companyId, role);
     localStorage.setItem(activeCompanyStorageKey(user.uid), companyId);
-    setUserData({ ...userData, companyId, role });
+    const nextMembership = userData.memberships?.[companyId] || {};
+    setUserData({
+      ...userData,
+      companyId,
+      role,
+      operatorGroup: nextMembership.operatorGroup || null,
+    });
     setCompany(target);
   }, [user, userData, availableCompanies]);
 
@@ -294,8 +300,9 @@ export function AuthProvider({ children }) {
     const configuredModules = Array.isArray(membership?.modules) ? membership.modules : null;
     if (['owner', 'admin'].includes(userData?.role)) return companyModules;
     if (userData?.role === 'operator') {
-      return OPERATOR_GROUP_MODULES[userData?.operatorGroup]
+      const operatorModules = OPERATOR_GROUP_MODULES[userData?.operatorGroup]
         || OPERATOR_GROUP_MODULES.management;
+      return operatorModules.filter((moduleKey) => companyModules.includes(moduleKey));
     }
     return configuredModules || companyModules;
   }, [company, userData]);
