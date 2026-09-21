@@ -267,7 +267,7 @@ export default function UserDetails() {
             </section>
           )}
 
-
+          <div className="flex justify-end">
             <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
               <Save size={18} /> {saving ? 'Salvando...' : 'Salvar permissões'}
             </button>
