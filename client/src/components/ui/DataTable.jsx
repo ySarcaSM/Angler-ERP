@@ -4,11 +4,11 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-r
 
 export default function DataTable({ columns, data, pagination, onPageChange, loading, onRowClick }) {
   const { userData } = useAuth();
-  const isViewer = userData?.role === 'viewer';
-  const visibleColumns = isViewer
+  const isReadOnly = ['viewer', 'operator'].includes(userData?.role);
+  const visibleColumns = isReadOnly
     ? columns.filter((col) => !['_actions', 'actions'].includes(col.key) && col.label !== '')
     : columns;
-  const rowClick = isViewer ? undefined : onRowClick;
+  const rowClick = isReadOnly ? undefined : onRowClick;
 
   return (
     <div className="table-container">
