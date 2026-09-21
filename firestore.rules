@@ -40,7 +40,6 @@ service cloud.firestore {
         request.auth.token.email == 'admin@angler-erp.local';
     }
 
-
     function isAccessRequestOwnerApproval(userId) {
       let requestDoc = getAfter(/databases/$(database)/documents/companyAccessRequests/$(request.resource.data.accessRequestId));
       return isAuth() &&
@@ -49,8 +48,8 @@ service cloud.firestore {
         requestDoc.data.companyId == request.resource.data.accessRequestCompanyId &&
         requestDoc.data.role == request.resource.data.memberships[request.resource.data.accessRequestCompanyId].role &&
         isOwner(requestDoc.data.companyId) &&
-        request.resource.data.memberships[requestDoc.data.companyId].active == true &&
-        request.resource.data.memberships[requestDoc.data.companyId].accessRequestId == request.resource.data.accessRequestId &&
+        request.resource.data.memberships[request.resource.data.companyId].active == true &&
+        request.resource.data.memberships[request.resource.data.companyId].accessRequestId == request.resource.data.accessRequestId &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessRequestId', 'accessRequestCompanyId', 'updatedAt']);
     }
 
@@ -66,7 +65,6 @@ service cloud.firestore {
         );
     }
 
-    // ─── Users ───
     match /users/{userId} {
       allow get: if isSuperAdmin() ||
         (isAuth() && request.auth.uid == userId) ||
@@ -81,20 +79,14 @@ service cloud.firestore {
           request.resource.data.role == 'owner'
         ));
 
-      // Self-update is intentionally restricted so a user cannot promote
-      // themselves or manufacture memberships. Company owners/admins keep
-      // their existing management permissions.
       allow update: if isSuperAdmin() ||
         isOwner(resource.data.companyId) ||
         isAccessRequestOwnerApproval(userId) ||
-        (isAuth() && request.auth.uid == userId &&
-          isCompanySwitch());
+        (isAuth() && request.auth.uid == userId && isCompanySwitch());
 
-      allow delete: if isSuperAdmin() ||
-        isAdmin(resource.data.companyId);
+      allow delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
     }
 
-    // ─── Company access requests ───
     match /companyAccessRequests/{requestId} {
       allow create: if isAuth() &&
         request.resource.data.requesterUid == request.auth.uid &&
@@ -110,29 +102,23 @@ service cloud.firestore {
       allow list: if isSuperAdmin() || isOwner(resource.data.companyId) ||
         (isAuth() && request.auth.uid == resource.data.requesterUid);
 
-      allow update: if isSuperAdmin() ||
-        isOwner(resource.data.companyId);
-
+      allow update: if isSuperAdmin() || isOwner(resource.data.companyId);
       allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
     }
 
-    // ─── Company members index ───
     match /companyMembers/{memberId} {
       allow read, list: if isSuperAdmin() || isOwner(resource.data.companyId);
       allow create: if isSuperAdmin() || isOwner(request.resource.data.companyId);
       allow update, delete: if isSuperAdmin() || isOwner(resource.data.companyId);
     }
 
-    // ─── Audit Logs ───
     match /auditLogs/{logId} {
-      allow read: if isSuperAdmin() ||
-        isAdmin(resource.data.companyId);
+      allow read: if isSuperAdmin() || isAdmin(resource.data.companyId);
       allow create: if true;
     }
 
-    // ─── Companies ───
     match /companies/{companyId} {
-      allow read: if isSuperAdmin() || isMember(companyId);
+      allow read: if isSuperAdmin() || isAuth();
       allow write: if isSuperAdmin() ||
         (isAuth() && request.auth.uid == companyId);
     }
@@ -156,7 +142,6 @@ service cloud.firestore {
       }
     }
 
-    // ─── Generic company-scoped collections ───
     match /{collection}/{docId} {
       allow read, write: if isSuperAdmin() ||
         (collection != 'assistantChats' &&
@@ -173,10 +158,8 @@ service cloud.firestore {
           isMember(request.resource.data.companyId));
     }
 
-    // ─── Counters ───
     match /counters/{companyId} {
-      allow read, write: if isSuperAdmin() ||
-        isMember(companyId);
+      allow read, write: if isSuperAdmin() || isMember(companyId);
     }
   }
 }
