@@ -5,6 +5,7 @@ import { useAuth } from '../../context/useAuth';
 import { listUsers, deactivateUser, logAudit } from '../../services/firebase/settings';
 import {
   listPendingCompanyAccessRequests,
+  listCompanyMembers,
   approveCompanyAccessRequest,
   rejectCompanyAccessRequest,
 } from '../../services/firebase/companyAccess';
@@ -33,11 +34,25 @@ export default function UserManagement() {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [companyUsers, pendingRequests] = await Promise.all([
+      const [companyUsers, companyMembers, pendingRequests] = await Promise.all([
         listUsers(company.id),
+        listCompanyMembers(company.id),
         listPendingCompanyAccessRequests(company.id),
       ]);
-      setUsers(companyUsers);
+      const mergedUsers = [...companyUsers];
+      companyMembers.forEach((member) => {
+        if (!mergedUsers.some((item) => (item.uid || item.id) === member.uid)) {
+          mergedUsers.push({
+            id: member.uid,
+            uid: member.uid,
+            name: member.name,
+            email: member.email,
+            role: member.role,
+            active: member.active,
+          });
+        }
+      });
+      setUsers(mergedUsers);
       setRequests(pendingRequests);
     } catch (err) {
       toast.error(err.message || 'Não foi possível carregar os usuários.');
