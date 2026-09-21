@@ -52,6 +52,11 @@ function OwnerRoute({ children }) {
   return userData?.role === 'owner' ? children : <Navigate to="/app" replace />;
 }
 
+function ModuleRoute({ moduleKey, children }) {
+  const { getEffectiveModules } = useAuth();
+  return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
+}
+
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
 
@@ -87,7 +92,7 @@ export default function App() {
 
       <Route path="/assistant" element={
         <PrivateRoute>
-          <Layout><AngelAssistant /></Layout>
+          <ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute>
         </PrivateRoute>
       } />
 
@@ -96,23 +101,23 @@ export default function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/clients" element={<ClientList />} />
-              <Route path="/products" element={<ProductList />} />
-              <Route path="/sales" element={<SaleList />} />
-              <Route path="/sales/new" element={<SaleForm />} />
-              <Route path="/sales/:id" element={<SaleForm />} />
-              <Route path="/purchases" element={<PurchaseList />} />
-              <Route path="/suppliers" element={<SupplierList />} />
-              <Route path="/locations" element={<LocationList />} />
-              <Route path="/financial" element={<FinancialDashboard />} />
-              <Route path="/stock" element={<StockDashboard />} />
-              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
+              <Route path="/products" element={<ModuleRoute moduleKey="products"><ProductList /></ModuleRoute>} />
+              <Route path="/sales" element={<ModuleRoute moduleKey="sales"><SaleList /></ModuleRoute>} />
+              <Route path="/sales/new" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
+              <Route path="/sales/:id" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
+              <Route path="/purchases" element={<ModuleRoute moduleKey="purchases"><PurchaseList /></ModuleRoute>} />
+              <Route path="/suppliers" element={<ModuleRoute moduleKey="suppliers"><SupplierList /></ModuleRoute>} />
+              <Route path="/locations" element={<ModuleRoute moduleKey="locations"><LocationList /></ModuleRoute>} />
+              <Route path="/financial" element={<ModuleRoute moduleKey="financial"><FinancialDashboard /></ModuleRoute>} />
+              <Route path="/stock" element={<ModuleRoute moduleKey="stock"><StockDashboard /></ModuleRoute>} />
+              <Route path="/reports" element={<ModuleRoute moduleKey="reports"><ReportsPage /></ModuleRoute>} />
               <Route path="/logs" element={<LogsPage />} />
               <Route path="/notifications" element={<NotificationsPage />} />
-              <Route path="/budgets" element={<BudgetsPage />} />
-              <Route path="/budgets/profiles" element={<ProfileGroupPage />} />
+              <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />
+              <Route path="/budgets/profiles" element={<ModuleRoute moduleKey="measurement"><ProfileGroupPage /></ModuleRoute>} />
               <Route path="/budgets/profiles/:groupSlug" element={<Navigate to="/app/budgets/profiles" replace />} />
-              <Route path="/budgets/formulas" element={<FormulasPage />} />
+              <Route path="/budgets/formulas" element={<ModuleRoute moduleKey="formulas"><FormulasPage /></ModuleRoute>} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/modules" element={<ModulesPage />} />
               <Route path="/users/:userId" element={<OwnerRoute><UserDetails /></OwnerRoute>} />
