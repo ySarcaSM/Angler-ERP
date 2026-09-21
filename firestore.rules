@@ -98,7 +98,6 @@ service cloud.firestore {
     match /companyAccessRequests/{requestId} {
       allow create: if isAuth() &&
         request.resource.data.requesterUid == request.auth.uid &&
-        request.resource.data.email == request.auth.token.email &&
         request.resource.data.status == 'pending' &&
         exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId));
 
