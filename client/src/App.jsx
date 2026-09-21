@@ -57,6 +57,11 @@ function ModuleRoute({ moduleKey, children }) {
   return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
 }
 
+function AdminOrOwnerRoute({ children }) {
+  const { userData } = useAuth();
+  return ['owner', 'admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />;
+}
+
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
 
@@ -121,7 +126,7 @@ export default function App() {
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/modules" element={<ModulesPage />} />
               <Route path="/users/:userId" element={<OwnerRoute><UserDetails /></OwnerRoute>} />
-              <Route path="/users" element={<OwnerRoute><UserManagement /></OwnerRoute>} />
+              <Route path="/users" element={<AdminOrOwnerRoute><UserManagement /></AdminOrOwnerRoute>} />
               <Route path="/settings/users" element={<Navigate to="/app/users" replace />} />
               <Route path="*" element={<Navigate to="/app" replace />} />
             </Routes>
