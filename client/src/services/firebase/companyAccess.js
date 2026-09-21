@@ -43,13 +43,16 @@ export async function approveCompanyAccessRequest(requestItem, role) {
   const batch = writeBatch(db);
   batch.update(userRef, {
     memberships: {
-      [requestItem.companyId]: {
+      accessRequestId: requestItem.id,
+      accessRequestCompanyId: requestItem.companyId,
+      memberships: {
+        [requestItem.companyId]: {
         role,
         active: true,
         accessRequestId: requestItem.id,
         joinedAt: serverTimestamp(),
+        },
       },
-    },
     updatedAt: serverTimestamp(),
   });
   batch.update(requestRef, {
