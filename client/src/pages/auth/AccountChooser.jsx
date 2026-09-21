@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Building2, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
@@ -9,6 +9,12 @@ export default function AccountChooser() {
   const personalCompanyId = userData?.personalCompanyId || userData?.uid;
   const personal = availableCompanies.find((item) => item.id === personalCompanyId);
   const external = availableCompanies.filter((item) => item.id !== personalCompanyId);
+
+  useEffect(() => {
+    if (!availableCompanies.length || availableCompanies.length === 1) {
+      navigate('/app', { replace: true });
+    }
+  }, [availableCompanies.length, navigate]);
   const enter = async (companyId) => {
     await selectCompanyContext(companyId);
     navigate('/app', { replace: true });
