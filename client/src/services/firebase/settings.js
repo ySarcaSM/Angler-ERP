@@ -83,6 +83,11 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
       ...(userData.memberships || {}),
       [companyId]: nextMembership,
     },
+    accessControl: {
+      ...(userData.accessControl || {}),
+      lastGrantedCompanyId: companyId,
+      lastGrantedRequestId: currentMembership.accessRequestId || null,
+    },
     updatedAt: serverTimestamp(),
   });
 
