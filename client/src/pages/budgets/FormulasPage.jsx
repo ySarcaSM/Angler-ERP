@@ -48,6 +48,7 @@ export default function FormulasPage() {
 
 function FormulaManager() {
   const { company, user, userData } = useAuth();
+  const isViewer = userData?.role === 'viewer';
   const [searchParams] = useSearchParams();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,7 +122,7 @@ function FormulaManager() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fórmulas" subtitle={`${data.length} fórmula(s) reutilizável(is)`} action={<button type="button" className="btn-primary" onClick={openNew}><Plus size={17} /> Nova fórmula</button>} />
+      <PageHeader title="Fórmulas" subtitle={`${data.length} fórmula(s) reutilizável(is)`} action={!isViewer && <button type="button" className="btn-primary" onClick={openNew}><Plus size={17} /> Nova fórmula</button>} />
       <div className="card">
         <div className="card-header flex flex-wrap items-center gap-3">
           <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-dark-800 px-4 py-2">
@@ -135,7 +136,7 @@ function FormulaManager() {
             {data.map((formula) => <div key={formula.id} className="flex flex-wrap items-center gap-4 p-5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-400/10"><FlaskConical size={19} className="text-primary-400" /></div>
               <div className="min-w-[220px] flex-1"><div className="flex flex-wrap items-center gap-2"><span className="font-semibold text-dark-100">{formula.name}</span><span className={formula.active ? 'badge-success' : 'badge-neutral'}>{formula.active ? 'Ativa' : 'Inativa'}</span><span className="badge-info">{formula.category}</span></div><div className="mt-1 font-mono text-sm text-primary-300">{formula.expression}{formula.unit ? ` (${formula.unit})` : ''}</div><div className="mt-1 text-xs text-dark-500">Variáveis: {formula.variables || 'Nenhuma'}{formula.constants ? ` · Constantes: ${formula.constants}` : ''}{formula.description ? ` · ${formula.description}` : ''}</div></div>
-              <div className="flex gap-1"><button type="button" className="btn-ghost btn-sm text-primary-300" title="Calcular" onClick={() => openCalculator(formula)}><Calculator size={15} /></button><button type="button" className="btn-ghost btn-sm" title="Duplicar" onClick={() => duplicate(formula)}><Copy size={15} /></button><button type="button" className="btn-ghost btn-sm" title="Editar" onClick={() => openEdit(formula)}><Edit2 size={15} /></button><button type="button" className="btn-ghost btn-sm text-red-400" title="Excluir" onClick={() => remove(formula)}><Trash2 size={15} /></button></div>
+              <div className="flex gap-1"><button type="button" className="btn-ghost btn-sm text-primary-300" title="Calcular" onClick={() => openCalculator(formula)}><Calculator size={15} /></button>{!isViewer && <><button type="button" className="btn-ghost btn-sm" title="Duplicar" onClick={() => duplicate(formula)}><Copy size={15} /></button><button type="button" className="btn-ghost btn-sm" title="Editar" onClick={() => openEdit(formula)}><Edit2 size={15} /></button><button type="button" className="btn-ghost btn-sm text-red-400" title="Excluir" onClick={() => remove(formula)}><Trash2 size={15} /></button></>}</div>
             </div>)}
           </div>
         )}
