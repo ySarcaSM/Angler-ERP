@@ -52,7 +52,6 @@ service cloud.firestore {
 
 
     function isAccessRequestOwnerApproval(userId) {
-      let target = get(/databases/$(database)/documents/users/$(userId));
       let requestDoc = getAfter(/databases/$(database)/documents/companyAccessRequests/$(request.resource.data.accessRequestId));
       return isAuth() &&
         requestDoc.data.status == 'approved' &&
@@ -134,7 +133,8 @@ service cloud.firestore {
           isOwner(resource.data.companyId)
         ));
 
-      allow list: if isSuperAdmin() || isOwner(resource.data.companyId);
+      allow list: if isSuperAdmin() || isOwner(resource.data.companyId) ||
+        (isAuth() && request.auth.uid == resource.data.requesterUid);
 
       allow update: if isSuperAdmin() ||
         isOwner(resource.data.companyId);
