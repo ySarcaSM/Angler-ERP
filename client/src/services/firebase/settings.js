@@ -83,7 +83,6 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
       ...(userData.memberships || {}),
       [companyId]: nextMembership,
     },
-    ...(userData.companyId === companyId ? { role } : {}),
     updatedAt: serverTimestamp(),
   });
 
