@@ -81,33 +81,12 @@ service cloud.firestore {
     }
 
     function canReadCollection(companyId, collectionName) {
-      return isSuperAdmin() || isAdmin(companyId) ||
-        (isMember(companyId) &&
-          roleForCompany(companyId) != 'operator') ||
-        (isMember(companyId) &&
-          roleForCompany(companyId) == 'operator' &&
-          operatorCanReadCollection(companyId, collectionName));
-    }
-
-    function operatorCanWriteCollection(companyId, collectionName) {
-      let group = operatorGroupForCompany(companyId);
-
-      return
-        (group == 'management' &&
-          collectionName in ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'stockMovements', 'counters'])
-        ||
-        (group == 'financial' &&
-          collectionName in ['financialTransactions', 'products', 'stockMovements', 'counters'])
-        ||
-        (group == 'budgets' &&
-          collectionName in ['budgets', 'formulas']);
+      return isSuperAdmin() || isMember(companyId);
     }
 
     function canWriteCollection(companyId, collectionName) {
       return isSuperAdmin() || isAdmin(companyId) ||
-        (isMember(companyId) &&
-          roleForCompany(companyId) == 'operator' &&
-          operatorCanWriteCollection(companyId, collectionName));
+        (isMember(companyId) && roleForCompany(companyId) == 'operator');
     }
 
     function canWriteData(companyId) {
