@@ -3,9 +3,18 @@ import { db } from '../../config/firebase';
 
 export async function createCompanyAccessRequest({ companyId, requesterUid, email, name }) {
   const normalizedCompanyId = companyId.trim();
+  if (!normalizedCompanyId) {
+    throw new Error('Informe o ID da empresa.');
+  }
+
   const companySnapshot = await getDoc(doc(db, 'companies', normalizedCompanyId));
   if (!companySnapshot.exists()) {
     throw new Error('Esta empresa não existe. Confira o ID da empresa e tente novamente.');
+  }
+
+  const companyData = companySnapshot.data();
+  if (companyData.ownerUid === requesterUid || normalizedCompanyId === requesterUid) {
+    throw new Error('Você não pode solicitar acesso à sua própria empresa. Use a opção "Minha conta".');
   }
 
   const normalizedEmail = email.trim().toLowerCase();
@@ -51,7 +60,6 @@ export async function listApprovedCompanyAccessRequests(requesterUid) {
     .map((item) => ({ id: item.id, ...item.data() }))
     .filter((item) => item.status === 'approved');
 }
-
 
 export async function getCompanyAccessDiagnostics(userData) {
   const result = {
@@ -122,14 +130,26 @@ export async function listPendingCompanyAccessRequests(companyId) {
 }
 
 export async function approveCompanyAccessRequest(requestItem, role) {
+  const normalizedCompanyId = requestItem.companyId?.trim();
+  if (!normalizedCompanyId) throw new Error('Solicitação sem empresa definida.');
+
+  const companySnapshot = await getDoc(doc(db, 'companies', normalizedCompanyId));
+  if (!companySnapshot.exists()) {
+    throw new Error('A empresa desta solicitação não existe mais.');
+  }
+
+  const companyData = companySnapshot.data();
+  if (companyData.ownerUid === requestItem.requesterUid || normalizedCompanyId === requestItem.requesterUid) {
+    throw new Error('A solicitação aponta para a própria empresa do usuário e não pode ser aprovada.');
+  }
+
   const userRef = doc(db, 'users', requestItem.requesterUid);
   const requestRef = doc(db, 'companyAccessRequests', requestItem.id);
+  const membershipField = `memberships.${normalizedCompanyId}`;
 
   const batch = writeBatch(db);
   batch.update(userRef, {
-    accessRequestId: requestItem.id,
-    accessRequestCompanyId: requestItem.companyId,
-    ['memberships.' + requestItem.companyId]: {
+    [membershipField]: {
       role,
       active: true,
       accessRequestId: requestItem.id,
@@ -137,8 +157,8 @@ export async function approveCompanyAccessRequest(requestItem, role) {
     },
     updatedAt: serverTimestamp(),
   });
-  batch.set(doc(db, 'companyMembers', requestItem.companyId + '_' + requestItem.requesterUid), {
-    companyId: requestItem.companyId,
+  batch.set(doc(db, 'companyMembers', normalizedCompanyId + '_' + requestItem.requesterUid), {
+    companyId: normalizedCompanyId,
     userId: requestItem.requesterUid,
     email: requestItem.email,
     name: requestItem.name || '',
