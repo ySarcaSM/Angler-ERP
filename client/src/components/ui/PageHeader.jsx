@@ -3,8 +3,8 @@ import { useAuth } from '../../context/useAuth';
 
 export default function PageHeader({ title, subtitle, action, viewerAction = null }) {
   const { userData } = useAuth();
-  const isViewer = userData?.role === 'viewer';
-  const visibleAction = isViewer ? viewerAction : action;
+  const isReadOnly = ['viewer', 'operator'].includes(userData?.role);
+  const visibleAction = isReadOnly ? viewerAction : action;
 
   return (
     <div className="flex items-center justify-between">
