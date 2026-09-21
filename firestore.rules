@@ -55,6 +55,47 @@ service cloud.firestore {
         roleForCompany(companyId) == 'operator';
     }
 
+    function operatorGroupForCompany(companyId) {
+      let user = currentUser();
+      return user != null &&
+        'memberships' in user &&
+        companyId in user.memberships &&
+        user.memberships[companyId].active == true &&
+        user.memberships[companyId].role == 'operator'
+        ? user.memberships[companyId].operatorGroup
+        : null;
+    }
+
+    function operatorCanAccessCollection(companyId, collectionName) {
+      let group = operatorGroupForCompany(companyId);
+
+      return
+        (group == 'management' &&
+          collectionName in ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'stockMovements', 'counters'])
+        ||
+        (group == 'financial' &&
+          collectionName in ['financialTransactions', 'products', 'stockMovements', 'counters'])
+        ||
+        (group == 'budgets' &&
+          collectionName in ['budgets', 'formulas']);
+    }
+
+    function canReadCollection(companyId, collectionName) {
+      return isSuperAdmin() || isAdmin(companyId) ||
+        (isMember(companyId) &&
+          roleForCompany(companyId) != 'operator') ||
+        (isMember(companyId) &&
+          roleForCompany(companyId) == 'operator' &&
+          operatorCanAccessCollection(companyId, collectionName));
+    }
+
+    function canWriteCollection(companyId, collectionName) {
+      return isSuperAdmin() || isAdmin(companyId) ||
+        (isMember(companyId) &&
+          roleForCompany(companyId) == 'operator' &&
+          operatorCanAccessCollection(companyId, collectionName));
+    }
+
     function canWriteData(companyId) {
       return isAdmin(companyId) || isOperator(companyId);
     }
@@ -200,62 +241,56 @@ service cloud.firestore {
     }
 
     match /assistantChats/{chatId} {
-      allow read: if isSuperAdmin() || (isAuth() && isMember(resource.data.companyId));
-      allow update: if isSuperAdmin() || canWriteData(resource.data.companyId);
-      allow delete: if isSuperAdmin() || canDeleteData(resource.data.companyId);
+      allow read: if canReadCollection(resource.data.companyId, 'assistantChats');
+      allow update: if canWriteCollection(resource.data.companyId, 'assistantChats');
+      allow delete: if isSuperAdmin() || (isAdmin(resource.data.companyId));
 
       allow create: if isSuperAdmin() ||
         (isAuth() &&
           request.resource.data.userId == request.auth.uid &&
-          canWriteData(request.resource.data.companyId));
+          canWriteCollection(request.resource.data.companyId, 'assistantChats'));
 
       match /messages/{messageId} {
-        allow read: if isSuperAdmin() ||
-          (isAuth() && isMember(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId));
-        allow create, update: if isSuperAdmin() ||
-          (isAuth() && canWriteData(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId));
+        allow read: if canReadCollection(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId, 'assistantChats');
+        allow create, update: if canWriteCollection(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId, 'assistantChats');
         allow delete: if isSuperAdmin() ||
-          (isAuth() && canDeleteData(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId));
+          isAdmin(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId);
       }
     }
 
     match /{collection}/{docId} {
-      allow read: if isSuperAdmin() ||
-        (collection != 'assistantChats' &&
-          collection != 'users' &&
-          collection != 'companyAccessRequests' &&
-          collection != 'companyMembers' &&
-          collection != 'deletionRequests' &&
-          isMember(resource.data.companyId));
+      allow read: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        canReadCollection(resource.data.companyId, collection);
 
-      allow create: if isSuperAdmin() ||
-        (collection != 'assistantChats' &&
-          collection != 'users' &&
-          collection != 'companyAccessRequests' &&
-          collection != 'companyMembers' &&
-          collection != 'deletionRequests' &&
-          canWriteData(request.resource.data.companyId));
+      allow create: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        canWriteCollection(request.resource.data.companyId, collection);
 
-      allow update: if isSuperAdmin() ||
-        (collection != 'assistantChats' &&
-          collection != 'users' &&
-          collection != 'companyAccessRequests' &&
-          collection != 'companyMembers' &&
-          collection != 'deletionRequests' &&
-          canWriteData(resource.data.companyId));
+      allow update: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        canWriteCollection(resource.data.companyId, collection);
 
-      allow delete: if isSuperAdmin() ||
-        (collection != 'assistantChats' &&
-          collection != 'users' &&
-          collection != 'companyAccessRequests' &&
-          collection != 'companyMembers' &&
-          collection != 'deletionRequests' &&
-          canDeleteData(resource.data.companyId));
+      allow delete: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        (isSuperAdmin() || isAdmin(resource.data.companyId));
     }
 
     match /counters/{companyId} {
-      allow read: if isSuperAdmin() || isMember(companyId);
-      allow write: if isSuperAdmin() || canWriteData(companyId);
+      allow read: if canReadCollection(companyId, 'counters');
+      allow write: if canWriteCollection(companyId, 'counters');
     }
   }
 }
