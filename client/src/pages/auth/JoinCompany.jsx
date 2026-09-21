@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Building2, UserPlus } from 'lucide-react';
 import { getCompanyInvitation } from '../../services/firebase/invitations';
 import { joinCompany } from '../../services/firebase/auth';
+import { auth } from '../../config/firebase';
 import toast from 'react-hot-toast';
 
 const ROLE_LABELS = {
@@ -18,6 +19,7 @@ export default function JoinCompany() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', lastName: '', password: '', confirmPassword: '' });
+  const currentEmail = auth.currentUser?.email || '';
 
   useEffect(() => {
     getCompanyInvitation(invitationId)
@@ -53,12 +55,12 @@ export default function JoinCompany() {
         ) : (
           <>
             <div className="flex items-center gap-3 mb-6"><div className="rounded-xl bg-primary-400/10 p-3 text-primary-300"><UserPlus size={22} /></div><div><h1 className="text-xl font-bold text-dark-100">Entrar na empresa</h1><p className="text-sm text-dark-500">Use sua conta existente ou crie uma nova.</p></div></div>
-            <div className="rounded-xl bg-dark-800 p-4 text-sm mb-5"><div className="text-dark-300">Convite para <strong>{invitation.email}</strong></div><div className="mt-1 text-dark-500">Perfil: {ROLE_LABELS[invitation.role] || invitation.role}</div><div className="mt-2 text-xs text-dark-500">Se este email já possui uma conta Angler, informe a senha atual dessa conta. Uma nova conta não será criada.</div></div>
+            <div className="rounded-xl bg-dark-800 p-4 text-sm mb-5"><div className="text-dark-300">Convite para <strong>{invitation.email}</strong></div><div className="mt-1 text-dark-500">Perfil: {ROLE_LABELS[invitation.role] || invitation.role}</div><div className="mt-2 text-xs text-dark-500">O convite é independente da conta que gerou o link. Se este email já possui uma conta Angler, informe a senha atual dessa conta. Uma nova conta não será criada.</div>{currentEmail && <div className="mt-3 rounded-lg border border-dark-700 bg-dark-900/60 p-3 text-xs text-dark-400">Você está conectado como <strong className="text-dark-200">{currentEmail}</strong>. Ao aceitar este convite, o acesso será feito pela conta do email convidado <strong className="text-dark-200">{invitation.email}</strong>.</div>}</div>
             <form onSubmit={submit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3"><label className="label">Nome<input required className="input mt-1" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label className="label">Sobrenome<input className="input mt-1" value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} /></label></div>
               <label className="label">Senha<input required type="password" minLength="6" className="input mt-1" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label>
               <label className="label">Confirmar senha<input required type="password" minLength="6" className="input mt-1" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} /></label>
-              <button disabled={saving} className="btn-primary w-full disabled:opacity-50" type="submit">{saving ? 'Vinculando...' : 'Vincular empresa à minha conta'}</button>
+              <button disabled={saving} className="btn-primary w-full disabled:opacity-50" type="submit">{saving ? 'Aceitando convite...' : 'Aceitar convite e entrar'}</button>
             </form>
           </>
         )}
