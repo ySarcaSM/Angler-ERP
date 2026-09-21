@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bot, KeyRound, MessageCircle, Plus, Send, Sparkles } from 'lucide-react';
+import { Bot, Edit2, KeyRound, MessageCircle, Plus, Send, Sparkles, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import PageHeader from '../../components/ui/PageHeader';
 import {
   addAssistantMessage, createAssistantChat, subscribeAssistantChats,
-  subscribeAssistantMessages, updateAssistantChat,
+  subscribeAssistantMessages, updateAssistantChat, deleteAssistantChat, deleteEmptyAssistantChats,
 } from '../../services/firebase/assistant';
 import { askAngel } from '../../services/gemini';
 import { getReadOnlyListAnswer, loadAngelReadContext } from '../../services/angelContext';
@@ -33,6 +33,10 @@ export default function AngelAssistant() {
   const [apiKey, setApiKey] = useState('');
   const [keyVisible, setKeyVisible] = useState(false);
   const [sending, setSending] = useState(false);
+  const [editingChatId, setEditingChatId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [changingChatId, setChangingChatId] = useState(null);
+  const [clearingEmptyChats, setClearingEmptyChats] = useState(false);
 
   useEffect(() => {
     if (!company?.id || !user?.uid) return undefined;
@@ -63,6 +67,68 @@ export default function AngelAssistant() {
       setActiveChatId(id);
     } catch (error) {
       toast.error('Não foi possível criar a conversa.');
+    }
+  };
+
+  const startEditingChat = (chat) => {
+    setEditingChatId(chat.id);
+    setEditingTitle(chat.title || 'Nova conversa');
+  };
+
+  const saveChatTitle = async (chatId) => {
+    const title = editingTitle.trim();
+    if (!title) {
+      toast.error('Informe um título para a conversa.');
+      return;
+    }
+    const currentTitle = chats.find((chat) => chat.id === chatId)?.title || '';
+    if (title === currentTitle) {
+      setEditingChatId(null);
+      return;
+    }
+    setChangingChatId(chatId);
+    try {
+      await updateAssistantChat(chatId, { title: title.slice(0, 80) });
+      setEditingChatId(null);
+      toast.success('Conversa renomeada.');
+    } catch (error) {
+      toast.error('Não foi possível editar a conversa.');
+    } finally {
+      setChangingChatId(null);
+    }
+  };
+
+  const removeChat = async (chat) => {
+    if (!confirm(`Excluir a conversa "${chat.title}"? Esta ação não pode ser desfeita.`)) return;
+    setChangingChatId(chat.id);
+    try {
+      await deleteAssistantChat(chat.id);
+      if (activeChatId === chat.id) setActiveChatId(null);
+      if (editingChatId === chat.id) setEditingChatId(null);
+      toast.success('Conversa excluída.');
+    } catch (error) {
+      toast.error('Não foi possível excluir a conversa.');
+    } finally {
+      setChangingChatId(null);
+    }
+  };
+
+  const removeEmptyChats = async () => {
+    if (!chats.length) {
+      toast.error('Não há conversas para excluir.');
+      return;
+    }
+    if (!confirm('Excluir todas as conversas vazias? Esta ação não pode ser desfeita.')) return;
+    setClearingEmptyChats(true);
+    try {
+      const deletedChatIds = await deleteEmptyAssistantChats(chats);
+      if (deletedChatIds.includes(activeChatId)) setActiveChatId(null);
+      if (deletedChatIds.includes(editingChatId)) setEditingChatId(null);
+      toast.success(deletedChatIds.length ? `${deletedChatIds.length} conversa(s) vazia(s) excluída(s).` : 'Não há conversas vazias.');
+    } catch (error) {
+      toast.error('Não foi possível excluir as conversas vazias.');
+    } finally {
+      setClearingEmptyChats(false);
     }
   };
 
@@ -134,15 +200,33 @@ export default function AngelAssistant() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] min-h-[560px]">
-          <aside className="border-b lg:border-b-0 lg:border-r border-dark-700/50 p-3">
+          <aside className="border-b lg:border-b-0 lg:border-r border-dark-700/50 p-3 flex flex-col">
             <button type="button" onClick={createChat} className="btn-primary w-full justify-center"><Plus size={17} /> Nova conversa</button>
-            <div className="mt-4 space-y-1 max-h-[465px] overflow-y-auto">
+            <div className="mt-4 space-y-1 max-h-[412px] overflow-y-auto flex-1">
               {chats.map((chat) => (
-                <button key={chat.id} type="button" onClick={() => setActiveChatId(chat.id)} className={`w-full text-left flex items-center gap-2 p-3 rounded-xl text-sm transition-colors ${chat.id === activeChatId ? 'bg-primary-400/10 text-primary-200' : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'}`}>
-                  <MessageCircle size={16} className="flex-shrink-0" /><span className="truncate">{chat.title}</span>
-                </button>
+                <div key={chat.id} className={`group flex items-center gap-1 rounded-xl text-sm transition-colors ${chat.id === activeChatId ? 'bg-primary-400/10 text-primary-200' : 'text-dark-400 hover:bg-dark-800 hover:text-dark-200'}`}>
+                  {editingChatId === chat.id ? (
+                    <form className="flex flex-1 gap-1 p-1" onSubmit={(event) => { event.preventDefault(); saveChatTitle(chat.id); }}>
+                      <input autoFocus value={editingTitle} onChange={(event) => setEditingTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') setEditingChatId(null); }} className="input min-w-0 flex-1 !px-2 !py-1 text-sm" maxLength={80} aria-label="Título da conversa" disabled={changingChatId === chat.id} />
+                      <button type="submit" className="btn-ghost btn-sm text-primary-300" disabled={changingChatId === chat.id}>Salvar</button>
+                    </form>
+                  ) : <>
+                    <button type="button" onClick={() => setActiveChatId(chat.id)} className="min-w-0 flex-1 text-left flex items-center gap-2 p-3">
+                      <MessageCircle size={16} className="flex-shrink-0" /><span className="truncate">{chat.title}</span>
+                    </button>
+                    <div className="flex pr-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <button type="button" className="btn-ghost btn-sm" title="Editar conversa" aria-label="Editar conversa" onClick={() => startEditingChat(chat)} disabled={changingChatId === chat.id}><Edit2 size={14} /></button>
+                      <button type="button" className="btn-ghost btn-sm text-red-400" title="Excluir conversa" aria-label="Excluir conversa" onClick={() => removeChat(chat)} disabled={changingChatId === chat.id}><Trash2 size={14} /></button>
+                    </div>
+                  </>}
+                </div>
               ))}
               {chats.length === 0 && <p className="text-xs text-dark-500 text-center py-8">Suas conversas aparecerão aqui.</p>}
+            </div>
+            <div className="pt-3 mt-3 border-t border-dark-700/50">
+              <button type="button" onClick={removeEmptyChats} className="btn-ghost btn-sm w-full justify-center text-red-400" disabled={clearingEmptyChats}>
+                <Trash2 size={14} /> {clearingEmptyChats ? 'Excluindo...' : 'Excluir conversas vazias'}
+              </button>
             </div>
           </aside>
 

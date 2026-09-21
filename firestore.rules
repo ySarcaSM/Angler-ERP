@@ -62,7 +62,7 @@ service cloud.firestore {
         (isAuth() && request.resource.data.userId == request.auth.uid && isMember(request.resource.data.companyId));
 
       match /messages/{messageId} {
-        allow read, create: if isSuperAdmin() ||
+        allow read, create, delete: if isSuperAdmin() ||
           (isAuth() &&
             get(/databases/$(database)/documents/assistantChats/$(chatId)).data.userId == request.auth.uid &&
             isMember(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId));

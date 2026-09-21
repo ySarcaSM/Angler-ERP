@@ -1,5 +1,5 @@
 import {
-  addDoc, collection, doc, onSnapshot, query, serverTimestamp, updateDoc, where,
+  addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, query, serverTimestamp, updateDoc, where, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
@@ -49,4 +49,31 @@ export async function addAssistantMessage(chatId, { role, content }) {
 
 export async function updateAssistantChat(chatId, data) {
   await updateDoc(doc(db, CHATS, chatId), { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteAssistantChat(chatId) {
+  const messagesReference = collection(db, CHATS, chatId, 'messages');
+  const snapshot = await getDocs(messagesReference);
+  const messages = snapshot.docs;
+
+  // Firestore batches accept at most 500 operations. Delete messages first so
+  // the ownership rule on the parent chat remains available throughout.
+  for (let index = 0; index < messages.length; index += 500) {
+    const batch = writeBatch(db);
+    messages.slice(index, index + 500).forEach((message) => batch.delete(message.ref));
+    await batch.commit();
+  }
+
+  await deleteDoc(doc(db, CHATS, chatId));
+}
+
+export async function deleteEmptyAssistantChats(chats) {
+  const results = await Promise.all(chats.map(async (chat) => {
+    const messages = await getDocs(collection(db, CHATS, chat.id, 'messages'));
+    if (!messages.empty) return null;
+    await deleteDoc(doc(db, CHATS, chat.id));
+    return chat.id;
+  }));
+
+  return results.filter(Boolean);
 }

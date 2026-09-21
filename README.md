@@ -1,202 +1,104 @@
-# 🚀 Angler ERP
+# Angler ERP
 
-Sistema de gestão empresarial completo, construído com **React + Firebase**.
+O **Angler ERP** é uma plataforma de gestão empresarial na nuvem. Nós operamos o software para que empresas possam centralizar sua rotina comercial, financeira e operacional em um único ambiente seguro, sem instalar programas ou manter infraestrutura própria.
 
-## Stack
+Em vez de entregar um sistema para cada cliente configurar, o Angler ERP é o serviço: cuidamos da evolução da plataforma, disponibilidade, segurança e atualizações. O cliente acessa pelo navegador e trabalha com uma conta vinculada à sua empresa.
 
-| Camada | Tecnologias |
-|--------|-------------|
-| **Frontend** | React 18, Vite, Tailwind CSS, Recharts, Lucide Icons |
-| **Backend** | Firebase (Firestore, Firebase Auth, Storage) |
-| **Deploy** | Firebase Hosting / Vercel / Netlify |
+## Para quem é
 
-## Módulos
+O Angler ERP foi criado para empresas que precisam acompanhar a operação em um só lugar: cadastros, vendas, compras, estoque, financeiro, orçamentos e gestão de usuários.
 
-- 📊 **Dashboard** — KPIs, gráficos de vendas, top produtos
-- 👥 **Clientes** — CRM com busca, endereço, status
-- 📦 **Produtos** — Cadastro, preços, estoque, categorias
-- 🛒 **Vendas** — Pedidos/orçamentos com aprovação automática de estoque
-- 🚚 **Compras** — Pedidos com recebimento automático
-- 🏭 **Fornecedores** — Cadastro completo
-- 💰 **Financeiro** — Contas a pagar/receber, fluxo de caixa
-- 📦 **Estoque** — Movimentações, alertas, ajustes manuais
-- 📈 **Relatórios** — Vendas, lucro, margem
-- ⚙️ **Configurações** — Empresa, usuários, log de auditoria
-- 🔐 **Painel Admin** — Gerenciamento master de todas as contas (acesso exclusivo)
+Cada empresa possui seu próprio ambiente lógico e seus dados são separados dos dados das demais organizações.
 
-## Painel Administrativo
+## O que a plataforma oferece
 
-O Angler ERP possui um painel administrativo com acesso exclusivo via credenciais master.
+### Gestão da operação
 
-### Configuração
+- **Dashboard:** visão geral da empresa com indicadores e gráficos.
+- **Clientes:** cadastro, consulta, busca e manutenção da base de clientes.
+- **Produtos:** catálogo, preços, categorias e acompanhamento de estoque.
+- **Vendas:** registro e acompanhamento de vendas, com itens e reflexos no estoque.
+- **Compras:** controle de compras e recebimentos.
+- **Fornecedores:** cadastro e organização dos parceiros de compra.
+- **Locais:** gerenciamento dos locais usados pela operação.
+- **Estoque:** movimentações, alertas e visão consolidada do inventário.
+- **Financeiro:** acompanhamento de receitas, despesas e informações financeiras.
+- **Relatórios:** dados consolidados para análise da operação.
+- **Orçamentos:** criação de orçamentos com perfis, grupos e fórmulas de cálculo.
 
-1. Copie `.env.example` para `.env` dentro de `client/`
-2. As variáveis `VITE_ADMIN_USER` e `VITE_ADMIN_PASSWORD` já vêm pré-configuradas
-3. A conta Firebase Auth (`admin@angler-erp.local`) é criada automaticamente no primeiro login
-4. As regras do Firestore (`firestore.rules`) concedem acesso total ao superadmin
+### Gestão e controle
 
-### Acesso
+- Configurações da empresa em um ambiente centralizado.
+- Gestão de usuários e permissões por função.
+- Notificações para eventos relevantes da operação.
+- Registro de atividades auditáveis.
+- Painel administrativo interno para gestão global da plataforma.
 
-- URL: `/admin/login`
-- Usuário: `admin`
-- Senha: definida em `VITE_ADMIN_PASSWORD` (20 caracteres)
+### Angel Personal Assistant
 
-### Funcionalidades
+A **Angel** é a assistente de IA do Angler ERP. Ela ajuda os usuários a entender e utilizar os recursos da plataforma, considerando o contexto disponível para consulta.
 
-- Visualiza **todas as contas** de **todas as empresas**
-- Busca por nome, e-mail ou empresa
-- Filtros por cargo, status e empresa
-- Desativar/reativar contas
-- Excluir contas permanentemente (Firestore + Auth)
-- Visualizar detalhes de cada conta
+- Conversas organizadas por usuário e empresa.
+- Criação, renomeação e exclusão de conversas.
+- Limpeza de conversas sem mensagens.
+- Respostas voltadas ao uso do Angler ERP e à consulta de dados permitidos.
+- Chave de IA armazenada somente no navegador do usuário quando necessária.
 
-## Início Rápido
+## Como acessar
 
-### 1. Criar projeto no Firebase
+O Angler ERP é acessado diretamente pelo navegador. Não há instalação local.
 
-1. Acesse [Firebase Console](https://console.firebase.google.com/)
-2. Crie um novo projeto
-3. Ative o **Firestore Database** (modo teste)
-4. Ative o **Authentication** (Email/Senha)
-5. Nas configurações do projeto, copie as credenciais web
+| Caminho | Finalidade |
+| --- | --- |
+| `/` | Apresentação da plataforma. |
+| `/login` | Entrada de usuários cadastrados. |
+| `/register` | Criação de conta e empresa. |
+| `/app` | Área principal autenticada. |
+| `/assistant` | Angel Personal Assistant. |
 
-### 2. Configurar o projeto
+Após o login, o menu da aplicação disponibiliza os módulos que fazem parte do plano e das permissões do usuário.
 
-```bash
-# Clonar e instalar
-cd angler-erp
-npm run install:all
+## Segurança e privacidade
 
-# Configurar Firebase
-cp client/.env.example client/.env
-# Edite client/.env com suas credenciais do Firebase
+- A autenticação é feita com contas de usuário.
+- Os dados são segmentados por empresa.
+- As permissões são definidas conforme o papel de cada usuário, como proprietário, administrador, gestor, operador ou visualizador.
+- As ações relevantes podem ser registradas em logs de auditoria.
+- A plataforma usa regras de acesso no banco de dados para complementar o controle feito pela interface.
+
+## Tecnologias
+
+O Angler ERP é desenvolvido como uma aplicação web moderna, com foco em rapidez e acessibilidade.
+
+| Área | Tecnologias |
+| --- | --- |
+| Aplicação web | React, React Router e Vite. |
+| Interface | Tailwind CSS, Lucide React e React Hot Toast. |
+| Dados e acesso | Firebase Authentication, Cloud Firestore e Firebase Storage. |
+| Visualização e documentos | Recharts e jsPDF. |
+| Assistente | Integração com Gemini. |
+
+## Arquitetura em alto nível
+
+```text
+Usuário no navegador
+        │
+        ▼
+Angler ERP (aplicação web)
+        │
+        ├── Autenticação e permissões
+        ├── Módulos de gestão empresarial
+        ├── Angel Personal Assistant
+        └── Relatórios e documentos
+        │
+        ▼
+Infraestrutura gerenciada do Angler ERP
 ```
 
-### 3. Configurar Firestore
+## Sobre este repositório
 
-No Firebase Console, vá em **Firestore Database → Regras** e cole:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Helper: user is authenticated
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    // Helper: get user data
-    function getUser() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Helper: user belongs to company
-    function isMember(companyId) {
-      return isAuth() && getUser().companyId == companyId;
-    }
-
-    // Companies
-    match /companies/{companyId} {
-      allow read: if isMember(companyId);
-      allow write: if isAuth() && request.auth.uid == companyId;
-    }
-
-    // Users
-    match /users/{userId} {
-      allow read: if isAuth() && getUser().companyId == get(/databases/$(database)/documents/users/$(userId)).data.companyId;
-      allow create: if isAuth() && request.auth.uid == userId;
-      allow update: if isAuth() && (request.auth.uid == userId || getUser().role in ['owner', 'admin']);
-    }
-
-    // Generic company-scoped collections
-    match /{collection}/{docId} {
-      allow read, write: if isAuth() && isMember(resource.data.companyId);
-      allow create: if isAuth() && isMember(request.resource.data.companyId);
-    }
-
-    // Counters
-    match /counters/{companyId} {
-      allow read, write: if isMember(companyId);
-    }
-  }
-}
-```
-
-### 4. Rodar
-
-```bash
-npm run dev
-# http://localhost:3000
-```
-
-### 5. Build
-
-```bash
-npm run build
-```
-
-O deploy deve ser feito pelo provedor de hospedagem escolhido. As regras em
-`firestore.rules` podem ser copiadas manualmente em **Firestore Database → Rules**.
-
-## Estrutura
-
-```
-angler-erp/
-├── client/
-│   ├── src/
-│   │   ├── config/
-│   │   │   └── firebase.js          # Firebase SDK init
-│   │   ├── services/firebase/
-│   │   │   ├── auth.js              # Firebase Auth (login, register, reset)
-│   │   │   ├── firestore.js         # CRUD genérico Firestore
-│   │   │   ├── clients.js           # Clientes
-│   │   │   ├── products.js          # Produtos
-│   │   │   ├── sales.js             # Vendas (com batch writes)
-│   │   │   ├── purchases.js         # Compras
-│   │   │   ├── suppliers.js         # Fornecedores
-│   │   │   ├── financial.js         # Financeiro
-│   │   │   ├── stock.js             # Estoque
-│   │   │   ├── admin.js             # Superadmin (login master, CRUD contas)
-│   │   │   ├── settings.js          # Config, usuários, audit log
-│   │   │   └── index.js             # Export central
-│   │   ├── context/
-│   │   │   ├── AuthContext.jsx       # Auth state com Firebase
-│   │   │   └── AdminAuthContext.jsx  # Auth state do superadmin
-│   │   ├── components/              # UI components
-│   │   ├── pages/
-│   │   │   ├── admin/               # Painel administrativo master
-│   │   │   └── ...                  # Páginas por módulo
-│   │   └── utils/                   # Formatação
-│   └── .env.example
-├── package.json
-└── README.md
-```
-
-## Firestore Collections
-
-| Collection | Descrição |
-|------------|-----------|
-| `companies` | Dados da empresa (ID = owner UID) |
-| `users` | Usuários com role e companyId |
-| `clients` | Clientes da empresa |
-| `products` | Produtos com estoque |
-| `sales` | Vendas com itens |
-| `purchases` | Compras com itens |
-| `suppliers` | Fornecedores |
-| `financialTransactions` | Receitas e despesas |
-| `stockMovements` | Movimentações de estoque |
-| `auditLogs` | Log de atividades |
-| `counters` | Contadores (nº venda, compra) |
-
-## Segurança
-
-- ✅ Autenticação Firebase Auth (email/senha)
-- ✅ Regras Firestore por companyId
-- ✅ RBAC no cliente (owner, admin, manager, operator, viewer)
-- ✅ Audit log de todas as ações
-- ✅ Validação client-side + server-side rules
-- ✅ Painel superadmin com acesso total (credenciais master)
+Este repositório contém o código-fonte e os recursos internos da plataforma Angler ERP. A operação, a infraestrutura e as atualizações são gerenciadas pela equipe do produto; o software não é distribuído para instalação ou hospedagem independente por clientes.
 
 ## Licença
 
-MIT
+Todos os direitos sobre o Angler ERP são reservados. O código não está licenciado para redistribuição, cópia, hospedagem independente ou uso comercial por terceiros sem autorização expressa.
