@@ -17,7 +17,7 @@ import { listApprovedCompanyAccessRequests } from '../services/firebase/companyA
 import { isCurrentUserAdmin } from '../services/firebase/admin';
 import toast from 'react-hot-toast';
 import { AuthContext } from './AuthContextValue';
-import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, getAccessibilityPreferences, promptAccessibilityPreferences, promptSavedAccessibilityPreferences, storeAccessibilityPreferences } from '../utils/accessibility';
+import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, promptAccessibilityPreferences, storeAccessibilityPreferences } from '../utils/accessibility';
 
 
 const activeCompanyStorageKey = (uid) => `angler-active-company-${uid}`;
