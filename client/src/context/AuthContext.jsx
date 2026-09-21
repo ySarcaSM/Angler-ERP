@@ -273,9 +273,10 @@ export function AuthProvider({ children }) {
   const getEffectiveModules = useCallback(() => {
     if (!company) return [];
     const companyModules = Array.isArray(company.modules?.enabled) ? company.modules.enabled : [];
-    if (['owner', 'viewer'].includes(userData?.role)) return companyModules;
     const membership = userData?.memberships?.[company.id];
-    return Array.isArray(membership?.modules) ? membership.modules : companyModules;
+    const configuredModules = Array.isArray(membership?.modules) ? membership.modules : null;
+    if (['owner', 'admin'].includes(userData?.role)) return companyModules;
+    return configuredModules || companyModules;
   }, [company, userData]);
 
   const hasPermission = useCallback((perm, moduleKey) => {
