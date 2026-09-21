@@ -78,9 +78,7 @@ export default function UserDetails() {
 
         const membership = data.memberships?.[company.id];
         const currentRole = membership?.role || data.role || 'viewer';
-        const configuredModules = currentRole === 'viewer'
-          ? availableModules
-          : (data.modules || membership?.modules || availableModules);
+        const configuredModules = membership?.modules || data.modules || availableModules;
 
         setProfile({ ...data, isExternal, companyRole: currentRole });
         setRole(currentRole);
@@ -250,11 +248,11 @@ export default function UserDetails() {
         )}
       </section>
 
-      {!isViewer && (
+      {
         <section className="card p-6 space-y-5">
           <div>
             <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
-            <p className="text-sm text-dark-500 mt-1">Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.</p>
+            <p className="text-sm text-dark-500 mt-1">{isViewer ? 'Defina quais módulos o Visualizador poderá visualizar. Ele continuará sem permissão para alterar dados, exceto o cálculo de fórmulas.' : 'Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.'}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -276,7 +274,6 @@ export default function UserDetails() {
             })}
           </div>
         </section>
-      )}
 
       <div className="flex justify-end">
         <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
