@@ -226,20 +226,22 @@ export default function UserManagement() {
               <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-dark-100">{u.name} {u.lastName}</span>{roleBadge(u.role)}{!u.active && <span className="badge badge-danger">Inativo</span>}</div>
               <div className="text-xs text-dark-500">{u.email}</div>
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigate(`/app/users/${u.uid || u.id}`)}
-                className="btn-ghost btn-sm"
-                title="Abrir usuário"
-              >
-                <Eye size={14} />
-              </button>
-              {u.role !== 'owner' && u.companyId === company.id && (
-                <button onClick={() => handleDeactivate(u)} className="btn-ghost btn-sm text-red-400" title="Desativar usuário">
-                  <Trash2 size={14} />
+            {isOwner && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => navigate(`/app/users/${u.uid || u.id}`)}
+                  className="btn-ghost btn-sm"
+                  title="Abrir usuário"
+                >
+                  <Eye size={14} />
                 </button>
-              )}
-            </div>
+                {u.role !== 'owner' && u.companyId === company.id && (
+                  <button onClick={() => handleDeactivate(u)} className="btn-ghost btn-sm text-red-400" title="Desativar usuário">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </section>
