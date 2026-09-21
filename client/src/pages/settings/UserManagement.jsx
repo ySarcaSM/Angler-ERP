@@ -43,7 +43,7 @@ export default function UserManagement() {
         createdBy: user?.uid,
       });
       await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Convite de usuário', entityId: invitation.id, description: `${userData?.name || 'Proprietário'} gerou um convite para ${inviteForm.email}.`, details: { email: inviteForm.email, role: inviteForm.role } });
-      setInviteLink(`${window.location.origin}/join/${invitation.id}`);
+      setInviteLink(`${window.location.origin}/empresa/${invitation.id}/login`);
       toast.success('Link de convite gerado.');
     } catch (error) {
       toast.error(error.message || 'Não foi possível gerar o convite.');
@@ -97,11 +97,11 @@ export default function UserManagement() {
       )}
       <Modal open={inviteOpen} onClose={closeInvite} title="Convidar usuário" size="md">
         {!inviteLink ? <form onSubmit={createInvite} className="space-y-4">
-          <p className="text-sm text-dark-400">O link pode ser usado uma única vez pelo e-mail informado.</p>
+          <p className="text-sm text-dark-400">O link é obrigatório para entrar nesta empresa e pode ser usado uma única vez pelo e-mail informado.</p>
           <label className="label">E-mail do usuário<input required type="email" className="input mt-1" value={inviteForm.email} onChange={(event) => setInviteForm({ ...inviteForm, email: event.target.value })} /></label>
           <label className="label">Perfil<select className="input mt-1" value={inviteForm.role} onChange={(event) => setInviteForm({ ...inviteForm, role: event.target.value })}><option value="admin">Administrador</option><option value="manager">Gerente</option><option value="operator">Operador</option><option value="viewer">Visualizador</option></select></label>
           <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={closeInvite} className="btn-secondary">Cancelar</button><button disabled={creatingInvite} className="btn-primary disabled:opacity-50" type="submit">{creatingInvite ? 'Gerando...' : 'Gerar link'}</button></div>
-        </form> : <div className="space-y-4"><p className="text-sm text-dark-400">Envie este link para a pessoa convidada. Ele expira após ser usado.</p><div className="flex gap-2"><input readOnly className="input flex-1" value={inviteLink} /><button type="button" onClick={copyInviteLink} className="btn-secondary" title="Copiar link"><Copy size={18} /></button></div><div className="flex justify-end"><button type="button" onClick={closeInvite} className="btn-primary"><LinkIcon size={16} /> Concluído</button></div></div>}
+        </form> : <div className="space-y-4"><p className="text-sm text-dark-400">Envie este link para a pessoa convidada. Sem este convite, a conta não poderá entrar nesta empresa.</p><div className="flex gap-2"><input readOnly className="input flex-1" value={inviteLink} /><button type="button" onClick={copyInviteLink} className="btn-secondary" title="Copiar link"><Copy size={18} /></button></div><div className="flex justify-end"><button type="button" onClick={closeInvite} className="btn-primary"><LinkIcon size={16} /> Concluído</button></div></div>}
       </Modal>
     </div>
   );
