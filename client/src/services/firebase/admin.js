@@ -7,10 +7,9 @@
 
 import {
   collection, doc, getDoc, getDocs, query,
-  setDoc, deleteDoc, updateDoc, serverTimestamp, orderBy,
+  setDoc, deleteDoc, updateDoc, serverTimestamp, orderBy, writeBatch, deleteField,
 } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -329,11 +328,86 @@ export async function deleteUserDocument(userId) {
 export async function deleteUserFull(userId) {
   if (!userId) throw new Error('UID da conta não informado.');
 
-  const functions = getFunctions();
-  const deleteUserAccount = httpsCallable(functions, 'deleteUserAccount');
-  const result = await deleteUserAccount({ userId });
+  await getValidToken();
 
-  return result.data;
+  const userRef = doc(db, 'users', userId);
+  const userSnapshot = await getDoc(userRef);
+  if (!userSnapshot.exists()) {
+    return { deleted: true, firestore: false, auth: false, authDetail: 'not_found' };
+  }
+
+  const userData = userSnapshot.data();
+  const ownedCompaniesSnapshot = await getDocs(query(
+    collection(db, 'companies'),
+    where('ownerUid', '==', userId),
+  ));
+  const ownedCompanyIds = ownedCompaniesSnapshot.docs.map((item) => item.id);
+
+  // O plano gratuito não permite apagar outro usuário do Firebase Auth pelo
+  // cliente. Em vez disso, removemos o perfil e todos os índices conhecidos
+  // do Firestore. O login fica sem perfil e é rejeitado pelo aplicativo.
+  for (const companyId of ownedCompanyIds) {
+    const memberSnapshot = await getDocs(collection(db, 'companies', companyId, 'members'));
+    const legacyMembers = await getDocs(query(
+      collection(db, 'companyMembers'),
+      where('companyId', '==', companyId),
+    ));
+    const accessRequests = await getDocs(query(
+      collection(db, 'companyAccessRequests'),
+      where('companyId', '==', companyId),
+    ));
+    const deletionRequests = await getDocs(query(
+      collection(db, 'deletionRequests'),
+      where('companyId', '==', companyId),
+    ));
+
+    const batch = writeBatch(db);
+    memberSnapshot.docs.forEach((item) => batch.delete(item.ref));
+    legacyMembers.docs.forEach((item) => batch.delete(item.ref));
+    accessRequests.docs.forEach((item) => batch.delete(item.ref));
+    deletionRequests.docs.forEach((item) => batch.delete(item.ref));
+    batch.delete(doc(db, 'companies', companyId));
+    await batch.commit();
+  }
+
+  // Remover memberships externas e índices do usuário excluído.
+  const usersSnapshot = await getDocs(collection(db, 'users'));
+  const companyMembersByUser = await getDocs(query(
+    collection(db, 'companyMembers'),
+    where('userId', '==', userId),
+  ));
+  const accessRequestsByUser = await getDocs(query(
+    collection(db, 'companyAccessRequests'),
+    where('requesterUid', '==', userId),
+  ));
+
+  const cleanupBatch = writeBatch(db);
+  usersSnapshot.docs.forEach((item) => {
+    if (item.id === userId) return;
+    const memberships = item.data().memberships || {};
+    for (const companyId of ownedCompanyIds) {
+      if (memberships[companyId]) {
+        cleanupBatch.update(item.ref, {
+          [`memberships.${companyId}`]: deleteField(),
+          updatedAt: serverTimestamp(),
+        });
+        break;
+      }
+    }
+  });
+  companyMembersByUser.docs.forEach((item) => cleanupBatch.delete(item.ref));
+  accessRequestsByUser.docs.forEach((item) => cleanupBatch.delete(item.ref));
+  cleanupBatch.delete(userRef);
+  await cleanupBatch.commit();
+
+  return {
+    deleted: true,
+    firestore: true,
+    auth: false,
+    authDetail: 'firebase_auth_requires_paid_backend',
+    ownedCompanies: ownedCompanyIds,
+    email: userData.email || null,
+  };
 }
 
 /**
