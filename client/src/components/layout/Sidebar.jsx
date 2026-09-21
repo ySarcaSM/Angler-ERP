@@ -86,6 +86,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         {NAV_SECTIONS.map((section) => {
           const effectiveModules = getEffectiveModules();
           const visibleItems = section.items.filter((item) => (
+            !(userData?.role === 'operator' && !item.moduleKey)
             !(userData?.role === 'viewer' && item.viewerHidden)
             &&
             !(userData?.role === 'viewer' && item.moduleKey === 'measurement')
