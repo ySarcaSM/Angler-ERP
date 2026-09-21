@@ -64,13 +64,42 @@ function WriteRoute({ children }) {
 }
 
 function OperatorHome() {
-  const { userData } = useAuth();
-  const firstRouteByGroup = {
-    management: '/app/clients',
-    financial: '/app/financial',
-    budgets: '/app/budgets/profiles',
+  const { userData, getEffectiveModules } = useAuth();
+  const routesByGroup = {
+    management: [
+      ['clients', '/app/clients'],
+      ['products', '/app/products'],
+      ['sales', '/app/sales'],
+      ['purchases', '/app/purchases'],
+      ['suppliers', '/app/suppliers'],
+      ['locations', '/app/locations'],
+    ],
+    financial: [
+      ['financial', '/app/financial'],
+      ['stock', '/app/stock'],
+      ['reports', '/app/reports'],
+    ],
+    budgets: [
+      ['measurement', '/app/budgets/profiles'],
+      ['formulas', '/app/budgets/formulas'],
+      ['budgets', '/app/budgets'],
+    ],
   };
-  return <Navigate to={firstRouteByGroup[userData?.operatorGroup] || '/app/clients'} replace />;
+  const firstAvailable = (routesByGroup[userData?.operatorGroup] || routesByGroup.management)
+    .find(([moduleKey]) => getEffectiveModules().includes(moduleKey));
+
+  if (!firstAvailable) {
+    return (
+      <div className="card p-6">
+        <h1 className="text-lg font-semibold text-dark-100">Nenhum módulo disponível</h1>
+        <p className="text-sm text-dark-500 mt-2">
+          O grupo do Operador está configurado, mas todos os módulos desse grupo estão desativados nesta empresa.
+        </p>
+      </div>
+    );
+  }
+
+  return <Navigate to={firstAvailable[1]} replace />;
 }
 
 function OperatorBlockedRoute({ children }) {
