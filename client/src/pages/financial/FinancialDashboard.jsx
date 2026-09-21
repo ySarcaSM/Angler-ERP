@@ -16,6 +16,7 @@ const EMPTY = { type: 'income', category: '', description: '', amount: 0, date: 
 export default function FinancialDashboard() {
   const { company, user, userData } = useAuth();
   const isViewer = userData?.role === 'viewer';
+  const isOperator = userData?.role === 'operator';
   const [summary, setSummary] = useState(null);
   const [data, setData] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -29,14 +30,18 @@ export default function FinancialDashboard() {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [s, txns, budgetResult] = await Promise.all([
+      const [s, txns] = await Promise.all([
         getSummary(company.id),
         listTransactions(company.id, { pageSize: 100, type: typeFilter || undefined }),
-        listBudgets(company.id, { pageSize: 200 }),
       ]);
       setSummary(s);
       setData(txns.data);
-      setBudgets(budgetResult.data);
+      if (!isOperator) {
+        const budgetResult = await listBudgets(company.id, { pageSize: 200 });
+        setBudgets(budgetResult.data);
+      } else {
+        setBudgets([]);
+      }
     } catch (err) { toast.error(err.message); }
     finally { setLoading(false); }
   };
@@ -111,7 +116,7 @@ export default function FinancialDashboard() {
           {budgets.length === 0 && <div className="p-6 text-center text-sm text-dark-500">Nenhum orçamento cadastrado.</div>}
           {budgets.map((budget) => {
             const pending = !budget.status || budget.status === 'draft';
-            return <div key={budget.id} className="flex flex-wrap items-center gap-4 p-4"><div className="min-w-[220px] flex-1"><div className="font-medium text-dark-100">{budget.clientName}</div><div className="text-sm text-dark-400">{budget.description || 'Sem observação'}</div></div><strong className="text-primary-300">{formatBRL(budget.value)}</strong><span className={budget.status === 'approved' ? 'badge-success' : budget.status === 'cancelled' ? 'badge-danger' : 'badge-warning'}>{budget.status === 'approved' ? 'Aprovado' : budget.status === 'cancelled' ? 'Cancelado' : 'Rascunho'}</span>{!isViewer && pending && <div className="flex gap-1"><button type="button" className="btn-ghost btn-sm text-emerald-400" title="Aprovar orçamento" onClick={() => handleBudgetStatus(budget, 'approved')}><CheckCircle size={15} /></button><button type="button" className="btn-ghost btn-sm text-red-400" title="Cancelar orçamento" onClick={() => handleBudgetStatus(budget, 'cancelled')}><XCircle size={15} /></button></div>}</div>;
+            return <div key={budget.id} className="flex flex-wrap items-center gap-4 p-4"><div className="min-w-[220px] flex-1"><div className="font-medium text-dark-100">{budget.clientName}</div><div className="text-sm text-dark-400">{budget.description || 'Sem observação'}</div></div><strong className="text-primary-300">{formatBRL(budget.value)}</strong><span className={budget.status === 'approved' ? 'badge-success' : budget.status === 'cancelled' ? 'badge-danger' : 'badge-warning'}>{budget.status === 'approved' ? 'Aprovado' : budget.status === 'cancelled' ? 'Cancelado' : 'Rascunho'}</span>{!isViewer && !isOperator && pending && <div className="flex gap-1"><button type="button" className="btn-ghost btn-sm text-emerald-400" title="Aprovar orçamento" onClick={() => handleBudgetStatus(budget, 'approved')}><CheckCircle size={15} /></button><button type="button" className="btn-ghost btn-sm text-red-400" title="Cancelar orçamento" onClick={() => handleBudgetStatus(budget, 'cancelled')}><XCircle size={15} /></button></div>}</div>;
           })}
         </div>
       </div>
