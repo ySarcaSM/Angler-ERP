@@ -63,9 +63,29 @@ function WriteRoute({ children }) {
   return userData?.role === 'viewer' ? <Navigate to="/app" replace /> : children;
 }
 
+function OperatorHome() {
+  const { userData } = useAuth();
+  const firstRouteByGroup = {
+    management: '/app/clients',
+    financial: '/app/financial',
+    budgets: '/app/budgets/profiles',
+  };
+  return <Navigate to={firstRouteByGroup[userData?.operatorGroup] || '/app/clients'} replace />;
+}
+
+function OperatorBlockedRoute({ children }) {
+  const { userData } = useAuth();
+  return userData?.role === 'operator' ? <Navigate to="/app" replace /> : children;
+}
+
 function AdminOrOwnerRoute({ children }) {
   const { userData } = useAuth();
   return ['owner', 'admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />;
+}
+
+function OperatorHomeOrDashboard() {
+  const { userData } = useAuth();
+  return userData?.role === 'operator' ? <OperatorHome /> : <Dashboard />;
 }
 
 export default function App() {
@@ -103,7 +123,9 @@ export default function App() {
 
       <Route path="/assistant" element={
         <PrivateRoute>
-          <ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute>
+          <OperatorBlockedRoute>
+            <ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute>
+          </OperatorBlockedRoute>
         </PrivateRoute>
       } />
 
@@ -111,7 +133,7 @@ export default function App() {
         <PrivateRoute>
           <Layout>
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<OperatorHomeOrDashboard />} />
               <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
               <Route path="/products" element={<ModuleRoute moduleKey="products"><ProductList /></ModuleRoute>} />
               <Route path="/sales" element={<ModuleRoute moduleKey="sales"><SaleList /></ModuleRoute>} />
@@ -123,17 +145,17 @@ export default function App() {
               <Route path="/financial" element={<ModuleRoute moduleKey="financial"><FinancialDashboard /></ModuleRoute>} />
               <Route path="/stock" element={<ModuleRoute moduleKey="stock"><StockDashboard /></ModuleRoute>} />
               <Route path="/reports" element={<ModuleRoute moduleKey="reports"><ReportsPage /></ModuleRoute>} />
-              <Route path="/logs" element={<LogsPage />} />
-              <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />
               <Route path="/budgets/profiles" element={<ModuleRoute moduleKey="measurement"><ProfileGroupPage /></ModuleRoute>} />
               <Route path="/budgets/profiles/:groupSlug" element={<Navigate to="/app/budgets/profiles" replace />} />
               <Route path="/budgets/formulas" element={<ModuleRoute moduleKey="formulas"><FormulasPage /></ModuleRoute>} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/modules" element={<ModulesPage />} />
+              <Route path="/settings" element={<OperatorBlockedRoute><SettingsPage /></OperatorBlockedRoute>} />
+              <Route path="/modules" element={<OperatorBlockedRoute><ModulesPage /></OperatorBlockedRoute>} />
               <Route path="/users/:userId" element={<AdminOrOwnerRoute><UserDetails /></AdminOrOwnerRoute>} />
               <Route path="/users" element={<AdminOrOwnerRoute><UserManagement /></AdminOrOwnerRoute>} />
               <Route path="/settings/users" element={<Navigate to="/app/users" replace />} />
+              <Route path="/logs" element={<OperatorBlockedRoute><LogsPage /></OperatorBlockedRoute>} />
+              <Route path="/notifications" element={<OperatorBlockedRoute><NotificationsPage /></OperatorBlockedRoute>} />
               <Route path="*" element={<Navigate to="/app" replace />} />
             </Routes>
           </Layout>
