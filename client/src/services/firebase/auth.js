@@ -108,6 +108,7 @@ async function registerInternal({
       createdAt: serverTimestamp(),
       plan: 'trial',
       ownerUid: user.uid,
+      companyId: user.uid,
       settings: {
         currency: 'BRL',
         timezone: 'America/Sao_Paulo',
