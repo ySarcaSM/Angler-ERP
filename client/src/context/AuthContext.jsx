@@ -148,12 +148,19 @@ export function AuthProvider({ children }) {
             setAvailableCompanies(companies);
             setUserData(activeUserData);
             setUser(firebaseUser);
-            if (activeUserData.accessibilityPreferences) {
-              const shouldApply = promptAccessibilityPreferences(uData.accessibilityPreferences);
-              storeAccessibilityPreferences(shouldApply ? uData.accessibilityPreferences : DEFAULT_ACCESSIBILITY);
+            // Acessibilidade pertence à conta do usuário, nunca à empresa ativa.
+            // Cada usuário possui seu próprio armazenamento local e seu próprio
+            // campo accessibilityPreferences no documento users/{uid}.
+            const savedAccessibility = uData.accessibilityPreferences;
+            if (savedAccessibility) {
+              const shouldApply = promptAccessibilityPreferences(savedAccessibility);
+              storeAccessibilityPreferences(
+                shouldApply ? savedAccessibility : DEFAULT_ACCESSIBILITY,
+                firebaseUser.uid,
+              );
             } else {
-              const shouldApply = promptSavedAccessibilityPreferences();
-              if (shouldApply) applyAccessibilityPreferences(getAccessibilityPreferences());
+              storeAccessibilityPreferences(DEFAULT_ACCESSIBILITY, firebaseUser.uid);
+              applyAccessibilityPreferences(DEFAULT_ACCESSIBILITY);
             }
             setCompany(activeCompany);
           } else {
