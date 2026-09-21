@@ -96,6 +96,12 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessControl', 'updatedAt']);
     }
 
+    function isAccessibilityUpdate(userId) {
+      return isAuth() &&
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accessibilityPreferences']);
+    }
+
     function isCompanySwitch() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['companyId', 'role']) &&
         request.resource.data.companyId is string &&
@@ -131,7 +137,8 @@ service cloud.firestore {
         isAdmin(resource.data.companyId) ||
         (isAuth() && 'accessControl' in request.resource.data && isAccessRequestOwnerApproval(userId)) ||
         (isAuth() && 'accessControl' in request.resource.data && isCompanyMembershipUpdate(userId)) ||
-        (isAuth() && request.auth.uid == userId && isCompanySwitch());
+        (isAuth() && request.auth.uid == userId && isCompanySwitch()) ||
+        (isAuth() && request.auth.uid == userId && isAccessibilityUpdate(userId));
 
       allow delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
     }
