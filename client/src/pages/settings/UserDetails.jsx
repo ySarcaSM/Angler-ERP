@@ -49,10 +49,10 @@ export default function UserDetails() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const availableModules = useMemo(() => {
-    const enabled = company?.modules?.enabled;
-    return Array.isArray(enabled) ? enabled : MODULES.map(([key]) => key);
-  }, [company?.modules?.enabled]);
+  // Owner/Admin precisam conseguir personalizar usuários com qualquer módulo,
+  // inclusive os que estão desativados nas configurações gerais da empresa.
+  // A ativação global continua sendo respeitada na navegação/uso normal.
+  const availableModules = useMemo(() => MODULES.map(([key]) => key), []);
 
   useEffect(() => {
     const load = async () => {
