@@ -158,6 +158,10 @@ export async function approveCompanyAccessRequest(requestItem, role) {
       accessRequestId: requestItem.id,
       joinedAt: serverTimestamp(),
     },
+    accessControl: {
+      lastGrantedCompanyId: normalizedCompanyId,
+      lastGrantedRequestId: requestItem.id,
+    },
     updatedAt: serverTimestamp(),
   });
   batch.set(doc(db, 'companyMembers', normalizedCompanyId + '_' + requestItem.requesterUid), {
