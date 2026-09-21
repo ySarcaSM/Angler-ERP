@@ -21,6 +21,24 @@ const ROLE_OPTIONS = [
   { value: 'viewer', label: 'Visualizador' },
 ];
 
+const OPERATOR_GROUPS = [
+  {
+    value: 'management',
+    label: 'Gestão',
+    modules: ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations'],
+  },
+  {
+    value: 'financial',
+    label: 'Financeiro',
+    modules: ['financial', 'stock', 'reports'],
+  },
+  {
+    value: 'budgets',
+    label: 'Orçamentos',
+    modules: ['measurement', 'formulas', 'budgets'],
+  },
+];
+
 const MODULES = [
   ['clients', 'Clientes'],
   ['products', 'Produtos'],
@@ -44,6 +62,7 @@ export default function UserDetails() {
   const [profile, setProfile] = useState(null);
   const [role, setRole] = useState('viewer');
   const [modules, setModules] = useState([]);
+  const [operatorGroup, setOperatorGroup] = useState('management');
   const [adminConfirmation, setAdminConfirmation] = useState('');
   const [ownerConfirmation, setOwnerConfirmation] = useState('');
   const [saving, setSaving] = useState(false);
@@ -79,6 +98,7 @@ export default function UserDetails() {
         const membership = data.memberships?.[company.id];
         const currentRole = membership?.role || data.role || 'viewer';
         const configuredModules = membership?.modules || data.modules || availableModules;
+        const savedOperatorGroup = membership?.operatorGroup || data.operatorGroup || 'management';
 
         // Todos os módulos continuam disponíveis para personalização,
         // mas o estado inicial segue a configuração global da empresa.
@@ -95,6 +115,7 @@ export default function UserDetails() {
         setProfile({ ...data, isExternal, companyRole: currentRole });
         setRole(currentRole);
         setModules(initialModules);
+        setOperatorGroup(OPERATOR_GROUPS.some((group) => group.value === savedOperatorGroup) ? savedOperatorGroup : 'management');
       } catch (err) {
         toast.error(err.message || 'Não foi possível carregar o usuário.');
       } finally {
@@ -119,6 +140,11 @@ export default function UserDetails() {
       return;
     }
 
+    if (role === 'operator' && !OPERATOR_GROUPS.some((group) => group.value === operatorGroup)) {
+      toast.error('Selecione um grupo para o Operador.');
+      return;
+    }
+
     if (role === 'owner' && ownerConfirmation.trim().toUpperCase() !== 'PROPRIETÁRIO') {
       toast.error('Digite PROPRIETÁRIO para confirmar a mudança para proprietário.');
       return;
@@ -130,7 +156,10 @@ export default function UserDetails() {
         companyId: company.id,
         uid: userId,
         role,
-        modules,
+        modules: role === 'operator'
+          ? OPERATOR_GROUPS.find((group) => group.value === operatorGroup)?.modules || []
+          : modules,
+        operatorGroup: role === 'operator' ? operatorGroup : null,
       });
       setProfile((current) => ({ ...current, role, modules }));
       setAdminConfirmation('');
@@ -225,6 +254,11 @@ export default function UserDetails() {
           const nextRole = event.target.value;
           setRole(nextRole);
           if (nextRole === 'viewer') setModules(availableModules);
+          if (nextRole === 'operator') {
+            const group = OPERATOR_GROUPS.find((item) => item.value === operatorGroup) || OPERATOR_GROUPS[0];
+            setOperatorGroup(group.value);
+            setModules(group.modules);
+          }
         }}>
           {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
@@ -258,6 +292,43 @@ export default function UserDetails() {
         )}
       </section>
 
+      {role === 'operator' && (
+        <section className="card p-6 space-y-5">
+          <div>
+            <h2 className="text-lg font-semibold text-dark-100">Grupo do Operador</h2>
+            <p className="text-sm text-dark-500 mt-1">
+              O Operador fica limitado a um único grupo. Ele poderá visualizar e realizar operações somente nos módulos desse grupo.
+            </p>
+          </div>
+
+          <select
+            className="input max-w-md"
+            value={operatorGroup}
+            onChange={(event) => {
+              const nextGroup = OPERATOR_GROUPS.find((item) => item.value === event.target.value) || OPERATOR_GROUPS[0];
+              setOperatorGroup(nextGroup.value);
+              setModules(nextGroup.modules);
+            }}
+          >
+            {OPERATOR_GROUPS.map((group) => (
+              <option key={group.value} value={group.value}>{group.label}</option>
+            ))}
+          </select>
+
+          <div className="rounded-xl bg-dark-800 p-4">
+            <div className="text-xs text-dark-500 mb-2">Módulos liberados</div>
+            <div className="flex flex-wrap gap-2">
+              {(OPERATOR_GROUPS.find((group) => group.value === operatorGroup)?.modules || []).map((moduleKey) => (
+                <span key={moduleKey} className="badge badge-success">
+                  {MODULES.find(([key]) => key === moduleKey)?.[1] || moduleKey}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {role !== 'operator' && (
       <section className="card p-6 space-y-5">
         <div>
           <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
@@ -287,6 +358,7 @@ export default function UserDetails() {
           })}
         </div>
       </section>
+      )}
 
       <div className="flex justify-end">
         <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
