@@ -84,7 +84,9 @@ export default function UserDetails() {
 
         setProfile({ ...data, isExternal });
         setRole(currentRole);
-        setModules(Array.isArray(configuredModules) ? configuredModules.filter((key) => availableModules.includes(key)) : availableModules);
+        setModules(Array.isArray(configuredModules)
+          ? configuredModules.filter((key) => availableModules.includes(key))
+          : availableModules);
       } catch (err) {
         toast.error(err.message || 'Não foi possível carregar o usuário.');
       } finally {
@@ -154,6 +156,8 @@ export default function UserDetails() {
 
   const fullName = [profile.name, profile.lastName].filter(Boolean).join(' ') || 'Usuário Angler';
   const initials = [profile.name?.[0], profile.lastName?.[0]].filter(Boolean).join('').toUpperCase() || 'U';
+  const isViewer = role === 'viewer' || profile.role === 'viewer';
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center gap-4">
@@ -162,7 +166,11 @@ export default function UserDetails() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-dark-100">Usuário</h1>
-          <p className="text-sm text-dark-500 mt-1">Configure o cargo e os módulos disponíveis para este usuário.</p>
+          <p className="text-sm text-dark-500 mt-1">
+            {isViewer
+              ? 'O Visualizador possui acesso somente para consulta e cálculo.'
+              : 'Configure o cargo e os módulos disponíveis para este usuário.'}
+          </p>
         </div>
       </div>
 
@@ -195,84 +203,86 @@ export default function UserDetails() {
         </div>
       </section>
 
-      <>
-          <section className="card p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-dark-100">Cargo</h2>
-              <p className="text-sm text-dark-500 mt-1">O cargo define o que o usuário pode fazer nos módulos liberados.</p>
-            </div>
+      <section className="card p-6 space-y-5">
+        <div>
+          <h2 className="text-lg font-semibold text-dark-100">Cargo</h2>
+          <p className="text-sm text-dark-500 mt-1">
+            {isViewer
+              ? 'O Visualizador não possui configuração individual de módulos.'
+              : 'O cargo define o que o usuário pode fazer nos módulos liberados.'}
+          </p>
+        </div>
 
-            <select className="input max-w-md" value={role} onChange={(event) => {
-              const nextRole = event.target.value;
-              setRole(nextRole);
-              if (nextRole === 'viewer') setModules(availableModules);
-            }}>
-              {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
+        <select className="input max-w-md" value={role} onChange={(event) => {
+          const nextRole = event.target.value;
+          setRole(nextRole);
+          if (nextRole === 'viewer') setModules(availableModules);
+        }}>
+          {ROLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
 
-            {role === 'owner' && (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
-                <label className="label">Confirmação obrigatória</label>
-                <p className="text-sm text-dark-400">Para promover este usuário a Proprietário, digite <strong className="text-dark-100">PROPRIETÁRIO</strong>.</p>
-                <input
-                  className="input max-w-md"
-                  value={ownerConfirmation}
-                  onChange={(event) => setOwnerConfirmation(event.target.value)}
-                  placeholder="PROPRIETÁRIO"
-                  autoComplete="off"
-                />
-              </div>
-            )}
-
-            {role === 'admin' && (
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
-                <label className="label">Confirmação obrigatória</label>
-                <p className="text-sm text-dark-400">Para promover este usuário a Administrador, digite <strong className="text-dark-100">ADMINISTRADOR</strong>.</p>
-                <input
-                  className="input max-w-md"
-                  value={adminConfirmation}
-                  onChange={(event) => setAdminConfirmation(event.target.value)}
-                  placeholder="ADMINISTRADOR"
-                  autoComplete="off"
-                />
-              </div>
-            )}
-          </section>
-
-          {role !== 'viewer' && (
-            <section className="card p-6 space-y-5">
-              <div>
-                <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
-                <p className="text-sm text-dark-500 mt-1">Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {MODULES.filter(([key]) => availableModules.includes(key)).map(([key, label]) => {
-                  const active = modules.includes(key);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => toggleModule(key)}
-                      className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-400/50 bg-primary-400/10' : 'border-dark-700 bg-dark-900/40'}`}
-                    >
-                      <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500' : 'border-dark-600'}`}>
-                        {active && <Check size={14} className="text-dark-950" />}
-                      </span>
-                      <span className="text-sm text-dark-200">{label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          <div className="flex justify-end">
-            <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
-              <Save size={18} /> {saving ? 'Salvando...' : 'Salvar permissões'}
-            </button>
+        {role === 'owner' && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+            <label className="label">Confirmação obrigatória</label>
+            <p className="text-sm text-dark-400">Para promover este usuário a Proprietário, digite <strong className="text-dark-100">PROPRIETÁRIO</strong>.</p>
+            <input
+              className="input max-w-md"
+              value={ownerConfirmation}
+              onChange={(event) => setOwnerConfirmation(event.target.value)}
+              placeholder="PROPRIETÁRIO"
+              autoComplete="off"
+            />
           </div>
-      </>
+        )}
+
+        {role === 'admin' && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+            <label className="label">Confirmação obrigatória</label>
+            <p className="text-sm text-dark-400">Para promover este usuário a Administrador, digite <strong className="text-dark-100">ADMINISTRADOR</strong>.</p>
+            <input
+              className="input max-w-md"
+              value={adminConfirmation}
+              onChange={(event) => setAdminConfirmation(event.target.value)}
+              placeholder="ADMINISTRADOR"
+              autoComplete="off"
+            />
+          </div>
+        )}
+      </section>
+
+      {!isViewer && (
+        <section className="card p-6 space-y-5">
+          <div>
+            <h2 className="text-lg font-semibold text-dark-100">Módulos deste usuário</h2>
+            <p className="text-sm text-dark-500 mt-1">Escolha quais módulos da empresa este usuário poderá visualizar e utilizar.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {MODULES.filter(([key]) => availableModules.includes(key)).map(([key, label]) => {
+              const active = modules.includes(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => toggleModule(key)}
+                  className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary-400/50 bg-primary-400/10' : 'border-dark-700 bg-dark-900/40'}`}
+                >
+                  <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500' : 'border-dark-600'}`}>
+                    {active && <Check size={14} className="text-dark-950" />}
+                  </span>
+                  <span className="text-sm text-dark-200">{label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      <div className="flex justify-end">
+        <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
+          <Save size={18} /> {saving ? 'Salvando...' : 'Salvar permissões'}
+        </button>
+      </div>
     </div>
   );
 }
