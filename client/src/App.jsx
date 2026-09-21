@@ -58,6 +58,11 @@ function ModuleRoute({ moduleKey, children }) {
   return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
 }
 
+function WriteRoute({ children }) {
+  const { userData } = useAuth();
+  return userData?.role === 'viewer' ? <Navigate to="/app" replace /> : children;
+}
+
 function AdminOrOwnerRoute({ children }) {
   const { userData } = useAuth();
   return ['owner', 'admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />;
@@ -110,7 +115,7 @@ export default function App() {
               <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
               <Route path="/products" element={<ModuleRoute moduleKey="products"><ProductList /></ModuleRoute>} />
               <Route path="/sales" element={<ModuleRoute moduleKey="sales"><SaleList /></ModuleRoute>} />
-              <Route path="/sales/new" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
+              <Route path="/sales/new" element={<ModuleRoute moduleKey="sales"><WriteRoute><SaleForm /></WriteRoute></ModuleRoute>} />
               <Route path="/sales/:id" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
               <Route path="/purchases" element={<ModuleRoute moduleKey="purchases"><PurchaseList /></ModuleRoute>} />
               <Route path="/suppliers" element={<ModuleRoute moduleKey="suppliers"><SupplierList /></ModuleRoute>} />
