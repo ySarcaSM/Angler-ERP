@@ -143,6 +143,13 @@ service cloud.firestore {
       allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
     }
 
+    // ─── Company members index ───
+    match /companyMembers/{memberId} {
+      allow read, list: if isSuperAdmin() || isOwner(resource.data.companyId);
+      allow create: if isSuperAdmin() || isOwner(request.resource.data.companyId);
+      allow update, delete: if isSuperAdmin() || isOwner(resource.data.companyId);
+    }
+
     // ─── Audit Logs ───
     match /auditLogs/{logId} {
       allow read: if isSuperAdmin() ||
