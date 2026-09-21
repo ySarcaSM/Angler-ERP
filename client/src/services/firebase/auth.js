@@ -162,6 +162,21 @@ async function registerInternal({
     throw error;
   }
 
+  // Índice por empresa: a tela de Usuários consulta este caminho, que permite
+  // regras de segurança baseadas diretamente no companyId do documento.
+  await setDoc(doc(db, 'companies', user.uid, 'members', user.uid), {
+    userId: user.uid,
+    companyId: user.uid,
+    email,
+    name,
+    lastName: lastName || '',
+    role: 'owner',
+    active: true,
+    personal: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
   await signOut(auth);
 
   return { user, companyId: user.uid, requiresEmailVerification: !existingAuthAccount };
