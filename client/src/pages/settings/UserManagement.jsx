@@ -255,6 +255,7 @@ export default function UserManagement() {
             </div>
             <label className="label">Cargo
               <select className="input mt-1" value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)}>
+                <option value="owner">Proprietário</option>
                 <option value="admin">Administrador</option>
                 <option value="manager">Gerente</option>
                 <option value="operator">Operador</option>
