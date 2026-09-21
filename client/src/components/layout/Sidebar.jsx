@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
-  FileText, MapPin, ClipboardList, Bell, UserRound, Calculator, FileSignature, ChevronLeft, ChevronRight,
+  FileText, MapPin, ClipboardList, Bell, Bot, UserRound, Calculator, FileSignature, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
@@ -13,6 +13,7 @@ const NAV_SECTIONS = [
     items: [
       { to: '/', icon: Home, label: 'Home', end: true },
       { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/assistant', icon: Bot, label: 'Assistente de IA' },
     ],
   },
   {
@@ -59,8 +60,8 @@ export default function Sidebar({ collapsed, onToggle }) {
   return (
     <aside className={`fixed left-0 top-0 h-screen bg-dark-900 border-r border-dark-700/50 flex flex-col z-40 transition-all duration-300 ${collapsed ? 'w-[72px]' : 'w-64'}`}>
       {/* Header */}
-      <div className="h-16 flex items-center px-4 border-b border-dark-700/50">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className={`h-16 flex items-center px-3 border-b border-dark-700/50 ${collapsed ? 'justify-center' : ''}`}>
+        <div className="flex items-center gap-3 min-w-0 px-3">
           <img
             src="/logo.png"
             alt="Angler ERP"
@@ -94,7 +95,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+                    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${collapsed ? 'justify-center' : ''} ${
                       isActive
                         ? 'bg-primary-400/10 text-primary-300 border border-primary-400/20 shadow-sm'
                         : 'text-dark-400 hover:text-dark-100 hover:bg-dark-800'
@@ -115,15 +116,17 @@ export default function Sidebar({ collapsed, onToggle }) {
         {/* Collapse toggle */}
         <button
           onClick={onToggle}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-dark-400 hover:text-primary-300 hover:bg-dark-800 transition-all mb-2"
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-dark-400 hover:text-primary-300 hover:bg-dark-800 transition-all mb-2 ${collapsed ? 'justify-center' : ''}`}
         >
-          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          <span className="w-5 flex justify-center flex-shrink-0">
+            {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </span>
           {!collapsed && <span>Recolher</span>}
         </button>
 
         {/* Company identity */}
         <div className={`flex items-center gap-3 px-3 py-2 ${collapsed ? 'justify-center' : ''}`}>
-          <img src="/logo.png" alt="Logo da empresa" className="w-8 h-8 object-contain flex-shrink-0" />
+          <img src="/logo.png" alt="Logo da empresa" className="w-5 h-5 object-contain flex-shrink-0" />
           {!collapsed && (
             <div className="min-w-0">
               <div className="text-sm font-medium text-dark-200 truncate">{company?.name || 'Empresa'}</div>
@@ -138,7 +141,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-dark-400 hover:text-red-400 hover:bg-dark-800 transition-all ${collapsed ? 'justify-center' : ''}`}
           title="Sair"
         >
-          <LogOut size={18} />
+          <span className="w-5 flex justify-center flex-shrink-0"><LogOut size={18} /></span>
           {!collapsed && <span>Sair</span>}
         </button>
       </div>

@@ -4,6 +4,7 @@ import {
   TrendingDown, AlertTriangle,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { listSales } from '../../services/firebase/sales';
 import { subscribeClientCount } from '../../services/firebase/clients';
@@ -13,6 +14,7 @@ import { formatBRL, timestampToDate } from '../../utils/format';
 
 export default function Dashboard() {
   const { company } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [cards, setCards] = useState({});
   const [recentSales, setRecentSales] = useState([]);
@@ -120,6 +122,14 @@ export default function Dashboard() {
     emerald: 'text-emerald-400', blue: 'text-blue-400', purple: 'text-purple-400',
     amber: 'text-amber-400', red: 'text-red-400',
   };
+  const statPaths = {
+    'Receita do Mês': '/app/financial',
+    'Vendas do Mês': '/app/sales',
+    Clientes: '/app/clients',
+    Produtos: '/app/products',
+    'Estoque Baixo': '/app/stock',
+    'Saldo do Mês': '/app/financial',
+  };
 
   return (
     <div className="space-y-6">
@@ -130,7 +140,13 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map((stat) => (
-          <div key={stat.label} className={`card bg-gradient-to-br ${colorMap[stat.color]}`}>
+          <button
+            key={stat.label}
+            type="button"
+            onClick={() => navigate(statPaths[stat.label])}
+            className={`card bg-gradient-to-br ${colorMap[stat.color]} text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary-400`}
+            aria-label={`Ir para ${stat.label}`}
+          >
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <stat.icon size={20} className={iconColorMap[stat.color]} />
@@ -138,7 +154,7 @@ export default function Dashboard() {
               <div className="text-xl font-bold text-dark-100">{stat.value}</div>
               <div className="text-xs text-dark-400 mt-1">{stat.label}</div>
             </div>
-          </div>
+          </button>
         ))}
       </div>
 

@@ -55,10 +55,26 @@ service cloud.firestore {
       allow write: if isSuperAdmin() || (isAuth() && request.auth.uid == companyId);
     }
 
+    match /assistantChats/{chatId} {
+      allow read, update, delete: if isSuperAdmin() ||
+        (isAuth() && resource.data.userId == request.auth.uid && isMember(resource.data.companyId));
+      allow create: if isSuperAdmin() ||
+        (isAuth() && request.resource.data.userId == request.auth.uid && isMember(request.resource.data.companyId));
+
+      match /messages/{messageId} {
+        allow read, create: if isSuperAdmin() ||
+          (isAuth() &&
+            get(/databases/$(database)/documents/assistantChats/$(chatId)).data.userId == request.auth.uid &&
+            isMember(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId));
+      }
+    }
+
     // ─── Generic company-scoped collections ───
     match /{collection}/{docId} {
-      allow read, write: if isSuperAdmin() || isMember(resource.data.companyId);
-      allow create: if isSuperAdmin() || isMember(request.resource.data.companyId);
+      allow read, write: if isSuperAdmin() ||
+        (collection != 'assistantChats' && isMember(resource.data.companyId));
+      allow create: if isSuperAdmin() ||
+        (collection != 'assistantChats' && isMember(request.resource.data.companyId));
     }
 
     // ─── Counters ───

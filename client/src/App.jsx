@@ -18,6 +18,7 @@ import StockDashboard from './pages/stock/StockDashboard';
 import ReportsPage from './pages/reports/ReportsPage';
 import LogsPage from './pages/logs/LogsPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
+import AngelAssistant from './pages/assistant/AngelAssistant';
 import ProfileGroupPage from './pages/budgets/ProfileGroupPage';
 import FormulasPage from './pages/budgets/FormulasPage';
 import BudgetsPage from './pages/budgets/BudgetsPage';
@@ -73,6 +74,12 @@ export default function App() {
           </AdminAuthProvider>
         }
       />
+
+      <Route path="/assistant" element={
+        <PrivateRoute>
+          <Layout><AngelAssistant /></Layout>
+        </PrivateRoute>
+      } />
 
       <Route path="/app/*" element={
         <PrivateRoute>
