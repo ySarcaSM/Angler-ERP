@@ -23,9 +23,10 @@ export async function updateCompany(companyId, data) {
 
 // ─── Users ───
 export async function listUsers(companyId) {
-  const q = query(collection(db, 'users'), where('companyId', '==', companyId));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const snapshot = await getDocs(collection(db, 'companies', companyId, 'members'));
+  return snapshot.docs
+    .map((item) => ({ id: item.id, uid: item.data().userId || item.id, ...item.data() }))
+    .filter((item) => item.active !== false);
 }
 
 export async function getUser(uid) {
@@ -96,6 +97,18 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
     userId: uid,
     email: userData.email || '',
     name: userData.name || '',
+    role,
+    active: true,
+    modules,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+
+  batch.set(doc(db, 'companies', companyId, 'members', uid), {
+    companyId,
+    userId: uid,
+    email: userData.email || '',
+    name: userData.name || '',
+    lastName: userData.lastName || '',
     role,
     active: true,
     modules,
