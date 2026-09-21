@@ -13,7 +13,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import {
-  doc, setDoc, getDoc, updateDoc, serverTimestamp, writeBatch,
+  doc, setDoc, getDoc, updateDoc, serverTimestamp, writeBatch, collection, query, where, getDocs,
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
@@ -204,15 +204,36 @@ export async function getUserData(uid) {
   }
 }
 
+export async function getPersonalCompanyId(uid) {
+  if (!uid) return null;
+
+  const snapshot = await getDocs(query(
+    collection(db, 'companies'),
+    where('ownerUid', '==', uid),
+  ));
+
+  return snapshot.empty ? null : snapshot.docs[0].id;
+}
+
 export async function switchActiveCompany(uid, companyId, role) {
   const userRef = doc(db, 'users', uid);
   const snapshot = await getDoc(userRef);
   if (!snapshot.exists()) throw new Error('Perfil da conta não encontrado.');
+
   const data = snapshot.data();
   const membership = data.memberships?.[companyId];
+  const companySnapshot = await getDoc(doc(db, 'companies', companyId));
+  const isPersonalCompany = companySnapshot.exists() && companySnapshot.data()?.ownerUid === uid;
   const legacyMember = data.companyId === companyId;
-  if (!membership?.active && !legacyMember) throw new Error('Você não possui acesso a esta empresa.');
-  const nextRole = membership?.role || role || data.role;
+
+  if (!membership?.active && !legacyMember && !isPersonalCompany) {
+    throw new Error('Você não possui acesso a esta empresa.');
+  }
+
+  const nextRole = isPersonalCompany
+    ? 'owner'
+    : (membership?.role || role || data.role);
+
   await updateDoc(userRef, { companyId, role: nextRole });
   return { companyId, role: nextRole };
 }
