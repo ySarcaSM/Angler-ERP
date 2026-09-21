@@ -9,6 +9,7 @@ import {
   logout as fbLogout,
   resetPassword as fbResetPassword,
   isRegistrationInProgress,
+  switchActiveCompany,
 } from '../services/firebase/auth';
 import { getStoredAdminSession } from '../services/firebase/admin';
 import { isCurrentUserAdmin } from '../services/firebase/admin';
@@ -16,10 +17,25 @@ import toast from 'react-hot-toast';
 import { AuthContext } from './AuthContextValue';
 import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, getAccessibilityPreferences, promptAccessibilityPreferences, promptSavedAccessibilityPreferences, storeAccessibilityPreferences } from '../utils/accessibility';
 
+
+const activeCompanyStorageKey = (uid) => `angler-active-company-${uid}`;
+
+async function loadCompanies(userData) {
+  const memberships = userData?.memberships || {};
+  const ids = Object.keys(memberships).filter((id) => memberships[id]?.active !== false);
+  if (userData?.companyId && !ids.includes(userData.companyId)) ids.push(userData.companyId);
+  const companies = await Promise.all(ids.map(async (id) => {
+    const data = await getCompanyData(id);
+    return data ? { ...data, membershipRole: memberships[id]?.role || (id === userData.companyId ? userData.role : null) } : null;
+  }));
+  return companies.filter(Boolean);
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [company, setCompany] = useState(null);
+  const [availableCompanies, setAvailableCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Listen to Firebase Auth state changes
@@ -47,21 +63,30 @@ export function AuthProvider({ children }) {
               return;
             }
 
-            setUserData(uData);
+            const companies = await loadCompanies(uData);
+            const storedCompanyId = localStorage.getItem(activeCompanyStorageKey(firebaseUser.uid));
+            const activeCompanyId = companies.some((item) => item.id === storedCompanyId)
+              ? storedCompanyId
+              : (companies.some((item) => item.id === uData.companyId) ? uData.companyId : companies[0]?.id);
+            const activeCompany = companies.find((item) => item.id === activeCompanyId) || null;
+            let activeUserData = uData;
+            if (activeCompany && activeCompany.id !== uData.companyId) {
+              const role = activeCompany.membershipRole || uData.role;
+              await switchActiveCompany(firebaseUser.uid, activeCompany.id, role);
+              activeUserData = { ...uData, companyId: activeCompany.id, role };
+            }
+            if (activeCompany) localStorage.setItem(activeCompanyStorageKey(firebaseUser.uid), activeCompany.id);
+            setAvailableCompanies(companies);
+            setUserData(activeUserData);
             setUser(firebaseUser);
-            if (uData.accessibilityPreferences) {
+            if (activeUserData.accessibilityPreferences) {
               const shouldApply = promptAccessibilityPreferences(uData.accessibilityPreferences);
               storeAccessibilityPreferences(shouldApply ? uData.accessibilityPreferences : DEFAULT_ACCESSIBILITY);
             } else {
               const shouldApply = promptSavedAccessibilityPreferences();
               if (shouldApply) applyAccessibilityPreferences(getAccessibilityPreferences());
             }
-
-            // Get company data
-            if (uData.companyId) {
-              const cData = await getCompanyData(uData.companyId);
-              setCompany(cData);
-            }
+            setCompany(activeCompany);
           } else {
             // Documento do usuário não existe (foi excluído pelo admin)
             if (!isRegistrationInProgress()) {
@@ -78,6 +103,7 @@ export function AuthProvider({ children }) {
         setUser(null);
         setUserData(null);
         setCompany(null);
+        setAvailableCompanies([]);
       }
       setLoading(false);
     });
@@ -128,6 +154,18 @@ export function AuthProvider({ children }) {
 
   const navigate = useNavigate();
 
+
+  const switchCompany = useCallback(async (companyId) => {
+    if (!user?.uid || !userData) return;
+    const target = availableCompanies.find((item) => item.id === companyId);
+    if (!target) throw new Error('Você não possui acesso a esta empresa.');
+    const role = target.membershipRole || userData.role;
+    await switchActiveCompany(user.uid, companyId, role);
+    localStorage.setItem(activeCompanyStorageKey(user.uid), companyId);
+    setUserData({ ...userData, companyId, role });
+    setCompany(target);
+  }, [user, userData, availableCompanies]);
+
   const logout = useCallback(async () => {
     await fbLogout();
     sessionStorage.removeItem('angler-accessibility-confirmed');
@@ -135,6 +173,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setUserData(null);
     setCompany(null);
+    setAvailableCompanies([]);
     navigate('/');
   }, [navigate]);
 
@@ -167,6 +206,8 @@ export function AuthProvider({ children }) {
     resetPassword,
     refreshCompany,
     hasPermission,
+    availableCompanies,
+    switchCompany,
     isAuthenticated: !!user && !!userData,
   };
 
