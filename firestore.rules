@@ -170,7 +170,7 @@ service cloud.firestore {
     }
 
     match /auditLogs/{logId} {
-      allow read: if isSuperAdmin() || isAdmin(resource.data.companyId);
+      allow read: if isSuperAdmin() || isMember(resource.data.companyId);
       allow create: if true;
     }
 
