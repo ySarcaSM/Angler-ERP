@@ -48,7 +48,7 @@ const NAV_SECTIONS = [
     items: [
       { to: '/app/settings', icon: Settings, label: 'Configurações' },
       { to: '/app/modules', icon: Blocks, label: 'Módulos' },
-      { to: '/app/users', icon: Users, label: 'Usuários', ownerOnly: true },
+      { to: '/app/users', icon: Users, label: 'Usuários', adminOrOwner: true },
       { to: '/app/logs', icon: ClipboardList, label: 'Logs' },
       { to: '/app/notifications', icon: Bell, label: 'Notificações' },
     ],
@@ -88,6 +88,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           const visibleItems = section.items.filter((item) => (
             (!item.moduleKey || effectiveModules.includes(item.moduleKey))
             && (!item.ownerOnly || userData?.role === 'owner')
+            && (!item.adminOrOwner || ['owner', 'admin'].includes(userData?.role))
           ));
           if (visibleItems.length === 0) return null;
           return (
