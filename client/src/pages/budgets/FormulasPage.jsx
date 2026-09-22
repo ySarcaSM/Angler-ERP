@@ -69,7 +69,7 @@ function FormulaManager() {
     try {
       const result = await listFormulas(company.id, { searchField: ['name', 'expression', 'category'], searchTerm: search });
       setData(filter === 'all' ? result.data : result.data.filter((formula) => filter === 'active' ? formula.active : !formula.active));
-    } catch (error) { toast.error(error.message); }
+    } catch (error) { if (error.code === 'deletion-request-created') { toast.success(error.message); } else { toast.error(error.message); } }
     finally { setLoading(false); }
   }, [company, search, filter]);
 
@@ -106,7 +106,7 @@ function FormulaManager() {
       }
       setModal(false);
       load();
-    } catch (error) { toast.error(error.message); }
+    } catch (error) { if (error.code === 'deletion-request-created') { toast.success(error.message); } else { toast.error(error.message); } }
     finally { setSaving(false); }
   };
 
@@ -117,7 +117,7 @@ function FormulaManager() {
       await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Fórmula', entityId: formula.id, description: `${userData?.name || 'Usuário'} excluiu a fórmula ${formula.name}.`, details: { propriedades: formulaAuditData(formula) } });
       toast.success('Fórmula excluída.');
       load();
-    } catch (error) { toast.error(error.message); }
+    } catch (error) { if (error.code === 'deletion-request-created') { toast.success(error.message); } else { toast.error(error.message); } }
   };
 
   return (
