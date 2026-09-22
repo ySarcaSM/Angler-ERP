@@ -61,6 +61,40 @@ export async function updateDoc_(collectionPath, id, data) {
   return { id, ...currentData, ...safeData };
 }
 
+export async function requestDeletionForOperator(collectionPath, id) {
+  const authUser = getAuth().currentUser;
+  if (!authUser) throw new Error('Usuário não autenticado.');
+
+  const targetRef = doc(db, collectionPath, id);
+  const targetSnapshot = await getDoc(targetRef);
+  if (!targetSnapshot.exists()) throw new Error('Registro não encontrado.');
+
+  const data = targetSnapshot.data();
+  const companyId = data.companyId;
+  if (!companyId) throw new Error('Não foi possível identificar a empresa deste registro.');
+
+  const userSnapshot = await getDoc(doc(db, 'users', authUser.uid));
+  const userData = userSnapshot.exists() ? userSnapshot.data() : null;
+  const membership = userData?.memberships?.[companyId];
+  const role = companyId === userData?.companyId ? userData?.role : membership?.role;
+
+  if (role !== 'operator') return false;
+
+  await addDoc(collection(db, 'deletionRequests'), {
+    companyId,
+    requesterUid: authUser.uid,
+    requesterName: userData?.name || authUser.displayName || authUser.email || 'Usuário',
+    collection: collectionPath,
+    documentId: id,
+    documentData: data,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return true;
+}
+
 export async function deleteDoc_(collectionPath, id) {
   const authUser = getAuth().currentUser;
   const docRef = doc(db, collectionPath, id);
