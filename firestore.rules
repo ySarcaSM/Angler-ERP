@@ -107,7 +107,7 @@ service cloud.firestore {
     function canWriteCollection(companyId, collectionName) {
       return isSuperAdmin() || (
         isMember(companyId) &&
-        (isAdmin(companyId) || roleForCompany(companyId) == 'operator')
+        roleForCompany(companyId) in ['owner', 'admin', 'operator']
       );
     }
 
