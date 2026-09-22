@@ -52,7 +52,7 @@ export default function ClientList() {
     try {
       const res = await listClients(company.id, { pageSize: 100, searchTerm: search });
       setData(res.data);
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setLoading(false); }
   }, [company, search]);
 
@@ -90,7 +90,7 @@ export default function ClientList() {
         toast.success('Cliente criado!');
       }
       setModal(false); load();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setSaving(false); }
   };
 
@@ -100,7 +100,7 @@ export default function ClientList() {
       await deleteClient(c.id);
       await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Cliente', entityId: c.id, description: `${userData?.name || 'Usuário'} excluiu o cliente ${c.name}.`, details: { name: c.name, email: c.email } });
       toast.success('Removido.'); load();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
   };
 
   const columns = [
