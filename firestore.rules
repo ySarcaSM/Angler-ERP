@@ -11,13 +11,23 @@ service cloud.firestore {
       return exists(docPath) ? get(docPath).data : null;
     }
 
+    function companyMemberExists(companyId) {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/companies/$(companyId)/members/$(request.auth.uid));
+    }
+
+    function companyMemberData(companyId) {
+      return get(/databases/$(database)/documents/companies/$(companyId)/members/$(request.auth.uid)).data;
+    }
+
     function isMember(companyId) {
       let user = currentUser();
       return isAuth() && user != null && (
         user.companyId == companyId ||
         ('memberships' in user &&
           companyId in user.memberships &&
-          user.memberships[companyId].active == true)
+          user.memberships[companyId].active == true) ||
+        companyMemberExists(companyId)
       );
     }
 
@@ -28,7 +38,11 @@ service cloud.firestore {
           companyId in user.memberships &&
           user.memberships[companyId].active == true)
         ? user.memberships[companyId].role
-        : (user.companyId == companyId ? user.role : null)
+        : (user.companyId == companyId
+          ? user.role
+          : (companyMemberExists(companyId) && companyMemberData(companyId).active == true
+            ? companyMemberData(companyId).role
+            : null))
       );
     }
 
