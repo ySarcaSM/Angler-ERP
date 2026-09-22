@@ -35,17 +35,16 @@ service cloud.firestore {
     function roleForCompany(companyId) {
       let user = currentUser();
       return user != null && (
-        ('memberships' in user &&
-          companyId in user.memberships &&
-          user.memberships[companyId].active == true &&
-          user.memberships[companyId].role is string)
-        ? user.memberships[companyId].role
-        : (user.companyId == companyId
-          ? user.role
-          : (companyMemberExists(companyId) &&
-             companyMemberData(companyId).active == true
-            ? companyMemberData(companyId).role
-            : null))
+        (companyMemberExists(companyId) &&
+         companyMemberData(companyId).active == true &&
+         companyMemberData(companyId).role is string)
+        ? companyMemberData(companyId).role
+        : (('memberships' in user &&
+            companyId in user.memberships &&
+            user.memberships[companyId].active == true &&
+            user.memberships[companyId].role is string)
+          ? user.memberships[companyId].role
+          : (user.companyId == companyId ? user.role : null))
       );
     }
 
