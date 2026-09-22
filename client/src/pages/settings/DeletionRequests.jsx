@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/useAuth';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import toast from 'react-hot-toast';
 
@@ -15,8 +15,13 @@ export default function DeletionRequests() {
     if (!['owner', 'admin'].includes(userData?.role)) constraints.push(where('requesterUid', '==', user.uid));
     const load = async () => {
       try {
-        const snapshot = await getDocs(query(collection(db, 'deletionRequests'), ...constraints, orderBy('createdAt', 'desc')));
-        setItems(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+        const snapshot = await getDocs(query(collection(db, 'deletionRequests'), ...constraints));
+        const sortedDocs = [...snapshot.docs].sort((a, b) => {
+          const aTime = a.data().createdAt?.toMillis?.() || 0;
+          const bTime = b.data().createdAt?.toMillis?.() || 0;
+          return bTime - aTime;
+        });
+        setItems(sortedDocs.map((item) => ({ id: item.id, ...item.data() })));
       } catch (error) {
         toast.error(error.message || 'Não foi possível carregar as requisições.');
       } finally { setLoading(false); }
