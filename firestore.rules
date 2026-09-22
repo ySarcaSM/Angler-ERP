@@ -236,9 +236,28 @@ service cloud.firestore {
     }
 
     match /deletionRequests/{requestId} {
-      allow create: if isSuperAdmin();
+      allow create: if isSuperAdmin() ||
+        (isAuth() &&
+          request.resource.data.requesterUid == request.auth.uid &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.companyId is string &&
+          isOperator(request.resource.data.companyId) &&
+          request.resource.data.collection is string &&
+          request.resource.data.documentId is string);
 
-      allow get, list: if isSuperAdmin() || isAdmin(resource.data.companyId) || isOwner(resource.data.companyId);
+      allow get: if isSuperAdmin() ||
+        isAdmin(resource.data.companyId) ||
+        isOwner(resource.data.companyId) ||
+        (isAuth() &&
+          resource.data.requesterUid == request.auth.uid &&
+          isOperator(resource.data.companyId));
+
+      allow list: if isSuperAdmin() ||
+        isAdmin(resource.data.companyId) ||
+        isOwner(resource.data.companyId) ||
+        (isAuth() &&
+          resource.data.requesterUid == request.auth.uid &&
+          isOperator(resource.data.companyId));
 
       allow update: if isSuperAdmin() || isAdmin(resource.data.companyId) || isOwner(resource.data.companyId);
       allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
