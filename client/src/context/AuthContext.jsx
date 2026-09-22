@@ -300,9 +300,10 @@ export function AuthProvider({ children }) {
     const configuredModules = Array.isArray(membership?.modules) ? membership.modules : null;
     if (['owner', 'admin'].includes(userData?.role)) return companyModules;
     if (userData?.role === 'operator') {
-      const operatorModules = OPERATOR_GROUP_MODULES[userData?.operatorGroup]
-        || OPERATOR_GROUP_MODULES.management;
-      return operatorModules.filter((moduleKey) => companyModules.includes(moduleKey));
+      // Operadores podem trabalhar em qualquer módulo habilitado na empresa.
+      // O operatorGroup continua sendo usado para definir a tela inicial,
+      // mas não limita mais os módulos acessíveis.
+      return companyModules;
     }
     return configuredModules || companyModules;
   }, [company, userData]);
