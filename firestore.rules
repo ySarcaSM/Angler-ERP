@@ -26,8 +26,7 @@ service cloud.firestore {
         user.companyId == companyId ||
         ('memberships' in user &&
           companyId in user.memberships &&
-          user.memberships[companyId].active == true) ||
-        companyMemberExists(companyId)
+          user.memberships[companyId].active == true)
       );
     }
 
@@ -38,11 +37,7 @@ service cloud.firestore {
           companyId in user.memberships &&
           user.memberships[companyId].active == true)
         ? user.memberships[companyId].role
-        : (user.companyId == companyId
-          ? user.role
-          : (companyMemberExists(companyId) && companyMemberData(companyId).active == true
-            ? companyMemberData(companyId).role
-            : null))
+        : (user.companyId == companyId ? user.role : null)
       );
     }
 
