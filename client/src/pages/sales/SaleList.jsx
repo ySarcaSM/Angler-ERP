@@ -26,7 +26,7 @@ export default function SaleList() {
       if (statusFilter) opts.filters = [{ field: 'status', op: '==', value: statusFilter }];
       const res = await listSales(company.id, opts);
       setData(res.data);
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setLoading(false); }
   }, [company, search, statusFilter]);
 
@@ -34,7 +34,7 @@ export default function SaleList() {
 
   const handleApprove = async (id) => {
     try { const sale = data.find((item) => item.id === id); await approveSale(id, company.id); await logAudit(company.id, { user, userName: userData?.name, action: 'approve', entity: 'Venda', entityId: id, description: `${userData?.name || 'Usuário'} aprovou a venda #${sale?.number || id} de ${sale?.clientName || 'cliente'}.`, details: { number: sale?.number, clientName: sale?.clientName, total: sale?.total } }); toast.success('Venda aprovada!'); load(); }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
   };
 
   const handleCancel = async (id) => {
@@ -46,13 +46,13 @@ export default function SaleList() {
       toast.success('Venda cancelada.');
       load();
     }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Deletar esta venda permanentemente?')) return;
     try { const sale = data.find((item) => item.id === id); await deleteSale(id); await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Venda', entityId: id, description: `${userData?.name || 'Usuário'} excluiu a venda #${sale?.number || id} de ${sale?.clientName || 'cliente'}.`, details: { number: sale?.number, clientName: sale?.clientName, total: sale?.total, status: sale?.status } }); toast.success('Venda deletada.'); }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { load(); }
   };
 
