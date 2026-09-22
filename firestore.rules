@@ -27,7 +27,8 @@ service cloud.firestore {
         ('memberships' in user &&
           companyId in user.memberships &&
           user.memberships[companyId].active == true) ||
-        companyMemberExists(companyId)
+        (companyMemberExists(companyId) &&
+          companyMemberData(companyId).active == true)
       );
     }
 
@@ -36,11 +37,13 @@ service cloud.firestore {
       return user != null && (
         ('memberships' in user &&
           companyId in user.memberships &&
-          user.memberships[companyId].active == true)
+          user.memberships[companyId].active == true &&
+          user.memberships[companyId].role is string)
         ? user.memberships[companyId].role
         : (user.companyId == companyId
           ? user.role
-          : (companyMemberExists(companyId) && companyMemberData(companyId).active == true
+          : (companyMemberExists(companyId) &&
+             companyMemberData(companyId).active == true
             ? companyMemberData(companyId).role
             : null))
       );
@@ -60,8 +63,10 @@ service cloud.firestore {
     }
 
     function isOwner(companyId) {
-      return isAuth() &&
-        roleForCompany(companyId) == 'owner';
+      return isAuth() && (
+        isCompanyOwner(companyId) ||
+        roleForCompany(companyId) == 'owner'
+      );
     }
 
     function isOperator(companyId) {
@@ -105,10 +110,12 @@ service cloud.firestore {
     }
 
     function canWriteCollection(companyId, collectionName) {
-      return isSuperAdmin() || (
-        isMember(companyId) &&
-        roleForCompany(companyId) in ['owner', 'admin', 'operator']
-      );
+      return isSuperAdmin() ||
+        isCompanyOwner(companyId) ||
+        (
+          isMember(companyId) &&
+          roleForCompany(companyId) in ['owner', 'admin', 'operator']
+        );
     }
 
     function canWriteData(companyId) {
