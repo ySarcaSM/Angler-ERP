@@ -69,7 +69,7 @@ export default function StockDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Estoque" subtitle="Controle de movimentações" action={!isViewer && !isOperator && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Ajustar Estoque</button>} />
+      <PageHeader title="Estoque" subtitle="Controle de movimentações" action={!isViewer && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Ajustar Estoque</button>} />
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="card p-5"><div className="text-sm text-dark-400 mb-1">Total de Produtos</div><div className="text-2xl font-bold text-dark-100">{summary.totalProducts}</div></div>
