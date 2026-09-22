@@ -15,6 +15,7 @@ const EMPTY = { name: '', description: '', costPrice: 0, sellPrice: 0, stock: { 
 
 export default function ProductList() {
   const { company, user, userData } = useAuth();
+  const isOperator = userData?.role === 'operator';
   const [searchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
   const [data, setData] = useState([]);
@@ -111,7 +112,7 @@ export default function ProductList() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Produtos" subtitle={`${data.length} produtos`} action={<button onClick={openNew} className="btn-primary"><Plus size={18} /> Novo Produto</button>} />
+      <PageHeader title="Produtos" subtitle={`${data.length} produtos`} action={!isOperator && <button onClick={openNew} className="btn-primary"><Plus size={18} /> Novo Produto</button>} />
       <div className="card">
         <div className="card-header flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 flex-1 max-w-sm">
