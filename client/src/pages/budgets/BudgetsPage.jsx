@@ -14,7 +14,7 @@ const EMPTY = { clientId: '', clientName: '', description: '', value: '', status
 
 export default function BudgetsPage() {
   const { company, user, userData } = useAuth();
-  const isReadOnly = ['viewer', 'operator'].includes(userData?.role);
+  const isReadOnly = userData?.role === 'viewer';
   const [data, setData] = useState([]); const [clients, setClients] = useState([]); const [search, setSearch] = useState(''); const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false); const [editing, setEditing] = useState(null); const [readOnly, setReadOnly] = useState(false); const [form, setForm] = useState(EMPTY); const [saving, setSaving] = useState(false);
   const load = useCallback(async () => { if (!company?.id) return; setLoading(true); try { const result = await listBudgets(company.id); const term = search.trim().toLowerCase(); setData(term ? result.data.filter((item) => `${item.clientName} ${item.description}`.toLowerCase().includes(term)) : result.data); } catch (error) { toast.error(error.message); } finally { setLoading(false); } }, [company, search]);
