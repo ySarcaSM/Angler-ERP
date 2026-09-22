@@ -93,7 +93,11 @@ export default function DeleteConfirmModal({ user, onConfirm, onCancel, loading,
               {[
                 'Documento do usuário no Firestore',
                 'Perfil e dados pessoais',
-                'Associação com a empresa',
+                'Clientes, produtos, vendas, compras e fornecedores',
+                'Financeiro, estoque, orçamentos e fórmulas',
+                'Locais, configurações, contadores e módulos da empresa',
+                'Logs de auditoria, solicitações e chats do assistente',
+                'Associações e acessos dessa conta',
                 ...(isSelfDelete ? ['Acesso administrativo ao painel'] : []),
               ].map((item) => (
                 <li key={item} className="flex items-center gap-2 text-sm text-dark-400">
