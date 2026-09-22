@@ -48,7 +48,7 @@ export default function FormulasPage() {
 
 function FormulaManager() {
   const { company, user, userData } = useAuth();
-  const isReadOnly = ['viewer', 'operator'].includes(userData?.role);
+  const isReadOnly = userData?.role === 'viewer';
   const [searchParams] = useSearchParams();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
