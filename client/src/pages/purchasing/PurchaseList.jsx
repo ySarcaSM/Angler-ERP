@@ -100,7 +100,7 @@ export default function PurchaseList() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Compras" subtitle={`${data.length} compras`} action={!isOperator && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Nova Compra</button>} />
+      <PageHeader title="Compras" subtitle={`${data.length} compras`} action={!isViewer && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Nova Compra</button>} />
       <div className="card">
         <div className="card-header"><div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 max-w-sm"><Search size={16} className="text-dark-500" /><input type="text" placeholder="Buscar..." className="bg-transparent text-sm outline-none w-full" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
         <DataTable columns={columns} data={data} loading={loading} />
@@ -110,10 +110,10 @@ export default function PurchaseList() {
         <form onSubmit={handleCreate} className="space-y-5">
           <div><label className="label">Fornecedor *</label><select className="input" value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })} required><option value="">Selecione...</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-dark-200">Itens</h3>{!isViewer && !isOperator && <button type="button" onClick={() => setForm({ ...form, items: [...form.items, { productId: '', productName: '', quantity: 1, unitCost: 0 }] })} className="btn-secondary btn-sm"><Plus size={14} /> Adicionar</button>}</div>
+            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-dark-200">Itens</h3>{!isViewer && <button type="button" onClick={() => setForm({ ...form, items: [...form.items, { productId: '', productName: '', quantity: 1, unitCost: 0 }] })} className="btn-secondary btn-sm"><Plus size={14} /> Adicionar</button>}</div>
             {form.items.map((item, index) => <div key={index} className="grid grid-cols-12 gap-3 items-end"><div className="col-span-5"><label className="label">Produto *</label><select className="input" value={item.productId} onChange={(event) => updateItem(index, 'productId', event.target.value)} required><option value="">Selecione...</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></div><div className="col-span-2"><label className="label">Qtd *</label><input type="number" step="1" min="1" className="input" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} required /></div><div className="col-span-3"><label className="label">Custo unitário</label><input type="number" step="0.01" className="input" value={item.unitCost} onChange={(event) => updateItem(index, 'unitCost', event.target.value)} /></div>{!isViewer && <button type="button" className="btn-ghost btn-sm text-red-400 col-span-2" onClick={() => setForm({ ...form, items: form.items.filter((_, rowIndex) => rowIndex !== index) })} disabled={form.items.length === 1}><Trash2 size={14} /></button>}</div>)}
           </div>
-          <div className="flex justify-end gap-3 border-t border-dark-800 pt-4"><button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>{!isViewer && !isOperator && <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Criar Compra'}</button>}</div>
+          <div className="flex justify-end gap-3 border-t border-dark-800 pt-4"><button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>{!isViewer && <button type="submit' className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Criar Compra'}</button>}</div>
         </form>
       </Modal>
     </div>
