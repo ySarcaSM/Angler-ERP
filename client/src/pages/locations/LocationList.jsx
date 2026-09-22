@@ -37,7 +37,8 @@ export default function LocationList() {
       const result = await listLocations(company.id, { pageSize: 200, searchTerm: search });
       setData(result.data);
     } catch (error) {
-      toast.error(error.message);
+      if (error.code === 'deletion-request-created') toast.success(error.message);
+      else toast.error(error.message);
     } finally {
       setLoading(false);
     }
