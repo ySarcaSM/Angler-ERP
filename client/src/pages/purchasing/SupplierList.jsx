@@ -52,7 +52,7 @@ export default function SupplierList() {
     if (!company?.id) return;
     setLoading(true);
     try { const res = await listSuppliers(company.id, { pageSize: 200, searchTerm: search }); setData(res.data); }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setLoading(false); }
   }, [company, search]);
 
@@ -71,7 +71,7 @@ export default function SupplierList() {
       const address = await response.json();
       if (address.erro) throw new Error('CEP não encontrado.');
       setForm((current) => ({ ...current, cep: formatCEP(cep), street: address.logradouro || '', neighborhood: address.bairro || '', city: address.localidade || '', state: address.uf || '' }));
-    } catch (error) { toast.error(error.message || 'Não foi possível consultar o CEP.'); }
+    } catch (error) { if (error.code === 'deletion-request-created') { toast.success(error.message || 'Não foi possível consultar o CEP.'); } else { toast.error(error.message || 'Não foi possível consultar o CEP.'); } }
     finally { setCepLoading(false); }
   };
 
@@ -87,14 +87,14 @@ export default function SupplierList() {
       if (editing) { const previousSupplier = data.find((supplier) => supplier.id === editing); await updateSupplier(editing, form); await logAudit(company.id, { user, userName: userData?.name, action: 'update', entity: 'Fornecedor', entityId: editing, description: `${userData?.name || 'Usuário'} alterou o fornecedor ${form.name}.`, details: { antes: { name: previousSupplier?.name, email: previousSupplier?.email, phone: previousSupplier?.phone }, depois: { name: form.name, email: form.email, phone: form.phone } } }); toast.success('Atualizado!'); }
       else { const createdSupplier = await createSupplier(company.id, form); await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Fornecedor', entityId: createdSupplier.id, description: `${userData?.name || 'Usuário'} criou o fornecedor ${form.name}.`, details: { name: form.name, email: form.email } }); toast.success('Criado!'); }
       setModal(false); load();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (s) => {
     if (!confirm(`Remover ${s.name}?`)) return;
     try { await deleteSupplier(s.id); await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Fornecedor', entityId: s.id, description: `${userData?.name || 'Usuário'} excluiu o fornecedor ${s.name}.`, details: { name: s.name } }); toast.success('Removido.'); load(); }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
   };
 
   const columns = [
