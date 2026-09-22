@@ -255,11 +255,9 @@ service cloud.firestore {
           isOperator(resource.data.companyId));
 
       allow list: if isSuperAdmin() ||
+        (isAuth() && resource.data.requesterUid == request.auth.uid && isMember(resource.data.companyId)) ||
         isAdmin(resource.data.companyId) ||
-        isOwner(resource.data.companyId) ||
-        (isAuth() &&
-          resource.data.requesterUid == request.auth.uid &&
-          isOperator(resource.data.companyId));
+        isOwner(resource.data.companyId);
 
       allow update: if isSuperAdmin() || isAdmin(resource.data.companyId) || isOwner(resource.data.companyId);
       allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
