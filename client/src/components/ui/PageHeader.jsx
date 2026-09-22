@@ -3,7 +3,7 @@ import { useAuth } from '../../context/useAuth';
 
 export default function PageHeader({ title, subtitle, action, viewerAction = null }) {
   const { userData } = useAuth();
-  const isReadOnly = ['viewer', 'operator'].includes(userData?.role);
+  const isReadOnly = userData?.role === 'viewer';
   const visibleAction = isReadOnly ? viewerAction : action;
 
   return (
