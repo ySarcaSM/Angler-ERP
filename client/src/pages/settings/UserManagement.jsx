@@ -1,23 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Eye, Trash2, X, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Eye, Trash2, ShieldAlert, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { listUsers, deactivateUser, logAudit, listDeletionRequests, approveDeletionRequest, rejectDeletionRequest } from '../../services/firebase/settings';
-import {
-  listPendingCompanyAccessRequests,
-  approveCompanyAccessRequest,
-  rejectCompanyAccessRequest,
-} from '../../services/firebase/companyAccess';
+import { listPendingCompanyAccessRequests, approveCompanyAccessRequest, rejectCompanyAccessRequest } from '../../services/firebase/companyAccess';
 import Modal from '../../components/ui/Modal';
 import toast from 'react-hot-toast';
 
-const ROLE_LABELS = {
-  owner: 'Proprietário',
-  admin: 'Administrador',
-  manager: 'Gerente',
-  operator: 'Operador',
-  viewer: 'Visualizador',
-};
+const ROLE_LABELS = { owner: 'Proprietário', admin: 'Administrador', operator: 'Operador', viewer: 'Visualizador' };
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -26,11 +16,11 @@ export default function UserManagement() {
   const isAdmin = userData?.role === 'admin';
   const [users, setUsers] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [deletionRequests, setDeletionRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [requestOpen, setRequestOpen] = useState(null);
   const [selectedRole, setSelectedRole] = useState('operator');
   const [processing, setProcessing] = useState(false);
-  const [deletionRequests, setDeletionRequests] = useState([]);
 
   const load = async () => {
     if (!company?.id) return;
@@ -41,16 +31,10 @@ export default function UserManagement() {
         isOwner ? listPendingCompanyAccessRequests(company.id) : Promise.resolve([]),
         (isOwner || isAdmin) ? listDeletionRequests(company.id) : Promise.resolve([]),
       ]);
-      setUsers(companyUsers);
-      setRequests(pendingRequests);
-      setDeletionRequests(pendingDeletions);
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível carregar os usuários.');
-    } finally {
-      setLoading(false);
-    }
+      setUsers(companyUsers); setRequests(pendingRequests); setDeletionRequests(pendingDeletions);
+    } catch (err) { toast.error(err.message || 'Não foi possível carregar os usuários.'); }
+    finally { setLoading(false); }
   };
-
   useEffect(() => { load(); }, [company?.id]);
 
   const handleApprove = async () => {
@@ -58,202 +42,46 @@ export default function UserManagement() {
     setProcessing(true);
     try {
       await approveCompanyAccessRequest(requestOpen, selectedRole);
-      await logAudit(company.id, {
-        user,
-        userName: userData?.name,
-        action: 'approve',
-        entity: 'Solicitação de acesso',
-        entityId: requestOpen.id,
-        description: `${userData?.name || 'Proprietário'} aprovou o acesso de ${requestOpen.email}.`,
-        details: { email: requestOpen.email, role: selectedRole },
-      });
-      toast.success('Acesso aprovado.');
-      setRequestOpen(null);
-      await load();
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível aprovar o acesso.');
-    } finally {
-      setProcessing(false);
-    }
+      await logAudit(company.id, { user, userName: userData?.name, action: 'approve', entity: 'Solicitação de acesso', entityId: requestOpen.id, description: `${userData?.name || 'Proprietário'} aprovou o acesso de ${requestOpen.email}.`, details: { email: requestOpen.email, role: selectedRole } });
+      toast.success('Acesso aprovado.'); setRequestOpen(null); await load();
+    } catch (err) { toast.error(err.message || 'Não foi possível aprovar o acesso.'); }
+    finally { setProcessing(false); }
   };
-
-  const handleApproveDeletion = async (requestItem) => {
+  const handleApproveDeletion = async (item) => {
     if (!confirm('Aprovar esta exclusão? O registro será removido permanentemente.')) return;
     try {
-      await approveDeletionRequest(requestItem);
-      await logAudit(company.id, {
-        user,
-        userName: userData?.name,
-        action: 'delete',
-        entity: requestItem.collection,
-        entityId: requestItem.documentId,
-        description: `${userData?.name || 'Administrador'} aprovou uma solicitação de exclusão.`,
-        details: { collection: requestItem.collection, documentId: requestItem.documentId, requesterUid: requestItem.requesterUid },
-      });
-      toast.success('Exclusão aprovada.');
-      await load();
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível aprovar a exclusão.');
-    }
+      await approveDeletionRequest(item);
+      await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: item.collection, entityId: item.documentId, description: `${userData?.name || 'Administrador'} aprovou uma solicitação de exclusão.`, details: { collection: item.collection, documentId: item.documentId, requesterUid: item.requesterUid } });
+      toast.success('Exclusão aprovada.'); await load();
+    } catch (err) { toast.error(err.message || 'Não foi possível aprovar a exclusão.'); }
   };
-
-  const handleRejectDeletion = async (requestItem) => {
-    try {
-      await rejectDeletionRequest(requestItem);
-      toast.success('Solicitação de exclusão recusada.');
-      await load();
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível recusar a solicitação.');
-    }
+  const handleRejectDeletion = async (item) => {
+    try { await rejectDeletionRequest(item); toast.success('Solicitação de exclusão recusada.'); await load(); }
+    catch (err) { toast.error(err.message || 'Não foi possível recusar a solicitação.'); }
   };
-
-  const handleReject = async (requestItem) => {
-    if (!confirm(`Recusar a solicitação de ${requestItem.email}?`)) return;
-    try {
-      await rejectCompanyAccessRequest(requestItem);
-      toast.success('Solicitação recusada.');
-      await load();
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível recusar a solicitação.');
-    }
+  const handleReject = async (item) => {
+    if (!confirm(`Recusar a solicitação de ${item.email}?`)) return;
+    try { await rejectCompanyAccessRequest(item); toast.success('Solicitação recusada.'); await load(); }
+    catch (err) { toast.error(err.message || 'Não foi possível recusar a solicitação.'); }
   };
-
   const handleDeactivate = async (u) => {
     if (!confirm(`Desativar ${u.name}?`)) return;
     try {
       await deactivateUser(u.uid || u.id);
-      await logAudit(company.id, {
-        user,
-        userName: userData?.name,
-        action: 'update',
-        entity: 'Usuário',
-        entityId: u.uid || u.id,
-        description: `${userData?.name || 'Usuário'} desativou o usuário ${u.name || u.email}.`,
-        details: { name: u.name, email: u.email, role: u.role, status: 'disabled' },
-      });
-      toast.success('Desativado.');
-      load();
-    } catch (err) {
-      toast.error(err.message);
-    }
+      await logAudit(company.id, { user, userName: userData?.name, action: 'update', entity: 'Usuário', entityId: u.uid || u.id, description: `${userData?.name || 'Usuário'} desativou o usuário ${u.name || u.email}.`, details: { name: u.name, email: u.email, role: u.role, status: 'disabled' } });
+      toast.success('Desativado.'); await load();
+    } catch (err) { toast.error(err.message); }
   };
-
   const roleBadge = (role) => {
-    const colors = { owner: 'badge-info', admin: 'badge-danger', manager: 'badge-warning', operator: 'badge-success', viewer: 'badge-neutral' };
-    return <span className={colors[role] || 'badge-neutral'}>{ROLE_LABELS[role] || role}</span>;
+    const colors = { owner: 'badge-info', admin: 'badge-danger', operator: 'badge-success', viewer: 'badge-neutral' };
+    return <span className={colors[role] || 'badge-neutral'}>{ROLE_LABELS[role] || 'Cargo legado'}</span>;
   };
 
-  return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/app/settings')} className="btn-ghost"><ArrowLeft size={18} /></button>
-        <div>
-          <h1 className="text-2xl font-bold text-dark-100">Usuários</h1>
-          <p className="text-sm text-dark-500 mt-1">Gerencie os acessos à sua empresa.</p>
-          {company?.id && (
-            <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-dark-800 px-3 py-2 text-xs text-dark-300">
-              <span>ID da empresa:</span><code className="font-mono text-primary-300 select-all">{company.id}</code>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {deletionRequests.length > 0 && (
-        <section className="card p-5 space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-dark-100 flex items-center gap-2"><ShieldAlert size={18} className="text-amber-400" /> Solicitações de exclusão</h2>
-            <p className="text-sm text-dark-500 mt-1">Operadores precisam da aprovação de um administrador ou proprietário para excluir registros.</p>
-          </div>
-          {deletionRequests.map((requestItem) => (
-            <div key={requestItem.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-dark-800">
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-dark-100">{requestItem.collection} / {requestItem.documentId}</div>
-                <div className="text-xs text-dark-500">Solicitado por {requestItem.requesterName || requestItem.requesterUid}</div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleApproveDeletion(requestItem)} className="btn-primary btn-sm"><Check size={15} /> Aprovar</button>
-                <button onClick={() => handleRejectDeletion(requestItem)} className="btn-ghost btn-sm text-red-400"><X size={15} /> Recusar</button>
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {requests.length > 0 && (
-        <section className="card p-5 space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold text-dark-100">Solicitações de acesso</h2>
-            <p className="text-sm text-dark-500 mt-1">Pessoas que entraram na rota da sua empresa e pediram acesso.</p>
-          </div>
-          {requests.map((requestItem) => (
-            <div key={requestItem.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-dark-800">
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-dark-100">{requestItem.name || 'Usuário Angler'}</div>
-                <div className="text-xs text-dark-500">{requestItem.email}</div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => { setSelectedRole('operator'); setRequestOpen(requestItem); }} className="btn-primary btn-sm"><Check size={15} /> Aceitar</button>
-                <button onClick={() => handleReject(requestItem)} className="btn-ghost btn-sm text-red-400"><X size={15} /> Recusar</button>
-              </div>
-            </div>
-          ))}
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-dark-100">Usuários da empresa</h2>
-        {loading ? (
-          <div className="flex items-center justify-center h-32"><div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full" /></div>
-        ) : users.map((u) => (
-          <div key={u.id} className="card p-4 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-dark-700 flex items-center justify-center text-sm font-bold text-dark-300">{u.name?.[0]}{u.lastName?.[0] || ''}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-dark-100">{u.name} {u.lastName}</span>{roleBadge(u.role)}{!u.active && <span className="badge badge-danger">Inativo</span>}</div>
-              <div className="text-xs text-dark-500">{u.email}</div>
-            </div>
-            {(isOwner || isAdmin) && (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => navigate(`/app/users/${u.uid || u.id}`)}
-                  className="btn-ghost btn-sm"
-                  title="Abrir usuário"
-                >
-                  <Eye size={14} />
-                </button>
-                {u.role !== 'owner' && u.companyId === company.id && (
-                  <button onClick={() => handleDeactivate(u)} className="btn-ghost btn-sm text-red-400" title="Desativar usuário">
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </section>
-
-      <Modal open={!!requestOpen} onClose={() => !processing && setRequestOpen(null)} title="Aprovar acesso" size="md">
-        {requestOpen && (
-          <div className="space-y-5">
-            <div className="rounded-xl bg-dark-800 p-4">
-              <div className="font-medium text-dark-100">{requestOpen.name || 'Usuário Angler'}</div>
-              <div className="text-sm text-dark-500 mt-1">{requestOpen.email}</div>
-            </div>
-            <label className="label">Cargo
-              <select className="input mt-1" value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)}>
-                <option value="owner">Proprietário</option>
-                <option value="admin">Administrador</option>
-                <option value="manager">Gerente</option>
-                <option value="operator">Operador</option>
-                <option value="viewer">Visualizador</option>
-              </select>
-            </label>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setRequestOpen(null)} className="btn-secondary" disabled={processing}>Cancelar</button>
-              <button type="button" onClick={handleApprove} className="btn-primary" disabled={processing}>{processing ? 'Aprovando...' : 'Aprovar acesso'}</button>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
+  return <div className="space-y-6 max-w-4xl">
+    <div className="flex items-center gap-4"><button onClick={() => navigate('/app/settings')} className="btn-ghost"><ArrowLeft size={18} /></button><div><h1 className="text-2xl font-bold text-dark-100">Usuários</h1><p className="text-sm text-dark-500 mt-1">Gerencie os acessos à sua empresa.</p>{company?.id && <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-dark-800 px-3 py-2 text-xs text-dark-300"><span>ID da empresa:</span><code className="font-mono text-primary-300 select-all">{company.id}</code></div>}</div></div>
+    {deletionRequests.length > 0 && <section className="card p-5 space-y-4"><div><h2 className="text-lg font-semibold text-dark-100 flex items-center gap-2"><ShieldAlert size={18} className="text-amber-400" /> Solicitações de exclusão</h2><p className="text-sm text-dark-500 mt-1">Operadores precisam da aprovação de um administrador ou proprietário para excluir registros.</p></div>{deletionRequests.map((item) => <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-dark-800"><div className="flex-1 min-w-0"><div className="font-medium text-dark-100">{item.collection} / {item.documentId}</div><div className="text-xs text-dark-500">Solicitado por {item.requesterName || item.requesterUid}</div></div><div className="flex gap-2"><button onClick={() => handleApproveDeletion(item)} className="btn-primary btn-sm"><Check size={15} /> Aprovar</button><button onClick={() => handleRejectDeletion(item)} className="btn-ghost btn-sm text-red-400"><X size={15} /> Recusar</button></div></div>)}</section>}
+    {requests.length > 0 && <section className="card p-5 space-y-4"><h2 className="text-lg font-semibold text-dark-100">Solicitações de acesso</h2><p className="text-sm text-dark-500 mt-1">Pessoas que pediram acesso à empresa.</p>{requests.map((item) => <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-dark-800"><div className="flex-1 min-w-0"><div className="font-medium text-dark-100">{item.name || 'Usuário Angler'}</div><div className="text-xs text-dark-500">{item.email}</div></div><div className="flex gap-2"><button onClick={() => { setSelectedRole('operator'); setRequestOpen(item); }} className="btn-primary btn-sm"><Check size={15} /> Aceitar</button><button onClick={() => handleReject(item)} className="btn-ghost btn-sm text-red-400"><X size={15} /> Recusar</button></div></div>)}</section>}
+    <section className="space-y-3"><h2 className="text-lg font-semibold text-dark-100">Usuários da empresa</h2>{loading ? <div className="flex items-center justify-center h-32"><div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full" /></div> : users.map((u) => <div key={u.id} className="card p-4 flex items-center gap-4"><div className="w-10 h-10 rounded-xl bg-dark-700 flex items-center justify-center text-sm font-bold text-dark-300">{u.name?.[0]}{u.lastName?.[0] || ''}</div><div className="flex-1 min-w-0"><div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-dark-100">{u.name} {u.lastName}</span>{roleBadge(u.role)}{!u.active && <span className="badge badge-danger">Inativo</span>}</div><div className="text-xs text-dark-500">{u.email}</div></div>{(isOwner || isAdmin) && <div className="flex items-center gap-1"><button onClick={() => navigate(`/app/users/${u.uid || u.id}`)} className="btn-ghost btn-sm" title="Abrir usuário"><Eye size={14} /></button>{u.role !== 'owner' && u.companyId === company.id && <button onClick={() => handleDeactivate(u)} className="btn-ghost btn-sm text-red-400" title="Desativar usuário"><Trash2 size={14} /></button>}</div>}</div>)}</section>
+    <Modal open={!!requestOpen} onClose={() => !processing && setRequestOpen(null)} title="Aprovar acesso" size="md">{requestOpen && <div className="space-y-5"><div className="rounded-xl bg-dark-800 p-4"><div className="font-medium text-dark-100">{requestOpen.name || 'Usuário Angler'}</div><div className="text-sm text-dark-500 mt-1">{requestOpen.email}</div></div><label className="label">Cargo<select className="input mt-1" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}><option value="admin">Administrador</option><option value="operator">Operador</option><option value="viewer">Visualizador</option></select></label><div className="flex justify-end gap-2"><button type="button" onClick={() => setRequestOpen(null)} className="btn-secondary" disabled={processing}>Cancelar</button><button type="button" onClick={handleApprove} className="btn-primary" disabled={processing}>{processing ? 'Aprovando...' : 'Aprovar acesso'}</button></div></div>}</Modal>
+  </div>;
 }
