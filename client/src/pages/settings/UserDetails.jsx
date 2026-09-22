@@ -131,7 +131,6 @@ export default function UserDetails() {
         uid: userId,
         role,
         modules: role === 'operator' ? availableModules : modules,
-        operatorGroup: null,
       });
       setProfile((current) => ({ ...current, role, modules }));
       setAdminConfirmation('');
