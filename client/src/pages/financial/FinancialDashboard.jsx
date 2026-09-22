@@ -17,7 +17,6 @@ export default function FinancialDashboard() {
   const { company, user, userData } = useAuth();
   const isOperator = userData?.role === 'operator';
   const isViewer = userData?.role === 'viewer';
-  const isOperator = userData?.role === 'operator';
   const [summary, setSummary] = useState(null);
   const [data, setData] = useState([]);
   const [budgets, setBudgets] = useState([]);
