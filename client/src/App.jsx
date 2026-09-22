@@ -44,16 +44,19 @@ function ModuleRoute({ moduleKey, children }) {
   if (userData?.role === 'viewer' && moduleKey === 'measurement') return <Navigate to="/app" replace />;
   return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
 }
-function WriteRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'viewer' ? <Navigate to="/app" replace /> : children; }
+function WriteRoute({ children }) { const { userData } = useAuth(); return ['viewer', 'operator'].includes(userData?.role) ? <Navigate to="/app" replace /> : children; }
 function OperatorHome() {
-  const { userData, getEffectiveModules } = useAuth();
-  const routesByGroup = {
-    management: [['clients','/app/clients'],['products','/app/products'],['sales','/app/sales'],['purchases','/app/purchases'],['suppliers','/app/suppliers'],['locations','/app/locations']],
-    financial: [['financial','/app/financial'],['stock','/app/stock'],['reports','/app/reports']],
-    budgets: [['measurement','/app/budgets/profiles'],['formulas','/app/budgets/formulas'],['budgets','/app/budgets']],
-  };
-  const firstAvailable = (routesByGroup[userData?.operatorGroup] || routesByGroup.management).find(([key]) => getEffectiveModules().includes(key));
-  return firstAvailable ? <Navigate to={firstAvailable[1]} replace /> : <div className="card p-6"><h1 className="text-lg font-semibold text-dark-100">Nenhum módulo disponível</h1><p className="text-sm text-dark-500 mt-2">O grupo do Operador está configurado, mas todos os módulos desse grupo estão desativados nesta empresa.</p></div>;
+  const { getEffectiveModules } = useAuth();
+  const routes = [
+    ['clients','/app/clients'], ['products','/app/products'], ['sales','/app/sales'],
+    ['purchases','/app/purchases'], ['suppliers','/app/suppliers'], ['locations','/app/locations'],
+    ['financial','/app/financial'], ['stock','/app/stock'], ['reports','/app/reports'],
+    ['measurement','/app/budgets/profiles'], ['formulas','/app/budgets/formulas'], ['budgets','/app/budgets'],
+  ];
+  const firstAvailable = routes.find(([key]) => getEffectiveModules().includes(key));
+  return firstAvailable
+    ? <Navigate to={firstAvailable[1]} replace />
+    : <div className="card p-6"><h1 className="text-lg font-semibold text-dark-100">Nenhum módulo disponível</h1><p className="text-sm text-dark-500 mt-2">Nenhum módulo operacional está habilitado nesta empresa.</p></div>;
 }
 function OperatorBlockedRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'operator' ? <Navigate to="/app" replace /> : children; }
 function AdminOrOwnerRoute({ children }) { const { userData } = useAuth(); return ['owner','admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />; }
