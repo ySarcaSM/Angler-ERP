@@ -34,11 +34,31 @@ export async function setDocWithId(collectionPath, id, data) {
 
 export async function updateDoc_(collectionPath, id, data) {
   const docRef = doc(db, collectionPath, id);
+  const currentSnapshot = await getDoc(docRef);
+
+  if (!currentSnapshot.exists()) {
+    throw new Error('Registro não encontrado.');
+  }
+
+  const currentData = currentSnapshot.data();
+
+  // companyId is the tenant boundary. It must never be changed by a normal update.
+  if (
+    Object.prototype.hasOwnProperty.call(data, 'companyId') &&
+    data.companyId !== currentData.companyId
+  ) {
+    throw new Error('A empresa do registro não pode ser alterada.');
+  }
+
+  const safeData = { ...data };
+  delete safeData.companyId;
+
   await updateDoc(docRef, {
-    ...data,
+    ...safeData,
     updatedAt: serverTimestamp(),
   });
-  return { id, ...data };
+
+  return { id, ...currentData, ...safeData };
 }
 
 export async function deleteDoc_(collectionPath, id) {
