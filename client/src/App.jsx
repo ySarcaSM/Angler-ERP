@@ -60,7 +60,7 @@ function OperatorHome() {
 }
 function OperatorBlockedRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'operator' ? <Navigate to="/app" replace /> : children; }
 function AdminOrOwnerRoute({ children }) { const { userData } = useAuth(); return ['owner','admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />; }
-function OperatorHomeOrDashboard() { const { userData } = useAuth(); return userData?.role === 'operator' ? <OperatorHome /> : <Dashboard />; }
+function OperatorHomeOrDashboard() { return <Dashboard />; }
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -72,7 +72,7 @@ export default function App() {
     <Route path="/empresa/:companyId" element={<CompanyAccessRequest />} />
     <Route path="/escolher-conta" element={<PrivateRoute><AccountChooser /></PrivateRoute>} />
     <Route path="/admin/*" element={<AdminAuthProvider><Routes><Route path="login" element={<AdminLogin />} /><Route path="contas" element={<AdminPanel />} /><Route path="*" element={<Navigate to="/admin/login" replace />} /></Routes></AdminAuthProvider>} />
-    <Route path="/assistant" element={<PrivateRoute><OperatorBlockedRoute><ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute></OperatorBlockedRoute></PrivateRoute>} />
+    <Route path="/assistant" element={<PrivateRoute><ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute></PrivateRoute>} />
     <Route path="/app/*" element={<PrivateRoute><Layout><Routes>
       <Route path="/" element={<OperatorHomeOrDashboard />} />
       <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
