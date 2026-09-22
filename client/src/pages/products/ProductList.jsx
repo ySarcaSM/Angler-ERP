@@ -41,7 +41,7 @@ export default function ProductList() {
         products = products.filter((p) => (p.stock?.current || 0) <= (p.stock?.minimum || 0) && p.active);
       }
       setData(products);
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setLoading(false); }
   }, [company, search, filter]);
 
@@ -82,7 +82,7 @@ export default function ProductList() {
         toast.success('Produto criado!');
       }
       setModal(false); load();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setSaving(false); }
   };
 
@@ -93,7 +93,7 @@ export default function ProductList() {
       await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Produto', entityId: p.id, description: `${userData?.name || 'Usuário'} excluiu o produto ${p.name}.`, details: { name: p.name, sellPrice: p.sellPrice } });
       toast.success('Removido.'); load();
     }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
   };
 
   const stockBadge = (p) => {
