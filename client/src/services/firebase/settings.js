@@ -77,7 +77,6 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
     role,
     active: true,
     modules,
-    operatorGroup: role === 'operator' ? operatorGroup : null,
   };
 
   batch.update(userRef, {
@@ -101,7 +100,6 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
     role,
     active: true,
     modules,
-    operatorGroup: role === 'operator' ? operatorGroup : null,
     updatedAt: serverTimestamp(),
   }, { merge: true });
 
@@ -114,7 +112,6 @@ export async function updateCompanyUserAccess({ companyId, uid, role, modules })
     role,
     active: true,
     modules,
-    operatorGroup: role === 'operator' ? operatorGroup : null,
     updatedAt: serverTimestamp(),
   }, { merge: true });
 
