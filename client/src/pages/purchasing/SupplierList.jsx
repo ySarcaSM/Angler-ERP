@@ -109,7 +109,7 @@ export default function SupplierList() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fornecedores" subtitle={`${data.length} fornecedores`} action={!isOperator && <button onClick={openNew} className="btn-primary"><Plus size={18} /> Novo Fornecedor</button>} />
+      <PageHeader title="Fornecedores" subtitle={`${data.length} fornecedores`} action={userData?.role !== 'viewer' && <button onClick={openNew} className="btn-primary"><Plus size={18} /> Novo Fornecedor</button>} />
       <div className="card">
         <div className="card-header"><div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 max-w-sm"><Search size={16} className="text-dark-500" /><input type="text" placeholder="Buscar..." className="bg-transparent text-sm outline-none w-full" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
