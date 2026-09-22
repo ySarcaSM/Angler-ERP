@@ -42,6 +42,7 @@ function PrivateRoute({ children }) {
 function ModuleRoute({ moduleKey, children }) {
   const { getEffectiveModules, userData } = useAuth();
   if (userData?.role === 'viewer' && moduleKey === 'measurement') return <Navigate to="/app" replace />;
+  if (userData?.role === 'operator' && moduleKey === 'assistant') return children;
   return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
 }
 function WriteRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'viewer' ? <Navigate to="/app" replace /> : children; }
