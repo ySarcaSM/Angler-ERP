@@ -48,6 +48,7 @@ export default function FormulasPage() {
 
 function FormulaManager() {
   const { company, user, userData } = useAuth();
+  const isOperator = userData?.role === 'operator';
   const isReadOnly = userData?.role === 'viewer';
   const [searchParams] = useSearchParams();
   const [data, setData] = useState([]);
@@ -122,7 +123,7 @@ function FormulaManager() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Fórmulas" subtitle={`${data.length} fórmula(s) reutilizável(is)`} action={!isReadOnly && <button type="button" className="btn-primary" onClick={openNew}><Plus size={17} /> Nova fórmula</button>} />
+      <PageHeader title="Fórmulas" subtitle={`${data.length} fórmula(s) reutilizável(is)`} action={!isReadOnly && !isOperator && <button type="button" className="btn-primary" onClick={openNew}><Plus size={17} /> Nova fórmula</button>} />
       <div className="card">
         <div className="card-header flex flex-wrap items-center gap-3">
           <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-xl bg-dark-800 px-4 py-2">
