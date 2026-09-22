@@ -63,7 +63,7 @@ export async function createCompanyInvitation({ companyId, email, role, createdB
 }
 
 
-export async function updateCompanyUserAccess({ companyId, uid, role, modules, operatorGroup = null }) {
+export async function updateCompanyUserAccess({ companyId, uid, role, modules })
   const userRef = doc(db, 'users', uid);
   const memberRef = doc(db, 'companyMembers', `${companyId}_${uid}`);
   const userSnapshot = await getDoc(userRef);
