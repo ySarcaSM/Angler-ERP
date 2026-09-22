@@ -89,7 +89,7 @@ export default function FinancialDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Financeiro" subtitle="Contas a pagar e receber" action={!isOperator && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Nova Transação</button>} />
+      <PageHeader title="Financeiro" subtitle="Contas a pagar e receber" action={!isViewer && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Nova Transação</button>} />
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="card bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 p-5">
