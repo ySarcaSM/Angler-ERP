@@ -76,7 +76,7 @@ export default function SaleList() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Vendas" subtitle={`${data.length} vendas`} action={!isOperator && <button onClick={() => navigate('/app/sales/new')} className="btn-primary"><Plus size={18} /> Nova Venda</button>} />
+      <PageHeader title="Vendas" subtitle={`${data.length} vendas`} action={userData?.role !== 'viewer' && <button onClick={() => navigate('/app/sales/new')} className="btn-primary"><Plus size={18} /> Nova Venda</button>} />
       <div className="card">
         <div className="card-header flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 flex-1 max-w-sm">
