@@ -44,7 +44,7 @@ function ModuleRoute({ moduleKey, children }) {
   if (userData?.role === 'viewer' && moduleKey === 'measurement') return <Navigate to="/app" replace />;
   return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
 }
-function WriteRoute({ children }) { const { userData } = useAuth(); return ['viewer', 'operator'].includes(userData?.role) ? <Navigate to="/app" replace /> : children; }
+function WriteRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'viewer' ? <Navigate to="/app" replace /> : children; }
 function OperatorHome() {
   const { getEffectiveModules } = useAuth();
   const routes = [
