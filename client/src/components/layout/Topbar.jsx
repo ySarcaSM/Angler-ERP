@@ -17,7 +17,7 @@ function normalize(value) {
 
 export default function Topbar({ onMenuToggle }) {
   const navigate = useNavigate();
-  const { company, availableCompanies, switchCompany, userData } = useAuth();
+  const { company, availableCompanies, switchCompany, userData, loading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [companyMenuOpen, setCompanyMenuOpen] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -63,7 +63,7 @@ export default function Topbar({ onMenuToggle }) {
   };
 
   useEffect(() => {
-    if (!company?.id || isOperator) return;
+    if (authLoading || !company?.id || !userData || isOperator) return;
     const storageKey = `angler-dismissed-notifications-${company.id}`;
     const readStorageKey = `angler-read-notifications-${company.id}`;
     try {
@@ -88,7 +88,7 @@ export default function Topbar({ onMenuToggle }) {
     };
     window.addEventListener('angler:notifications-updated', handleNotificationsUpdate);
     return () => window.removeEventListener('angler:notifications-updated', handleNotificationsUpdate);
-  }, [company, isOperator]);
+  }, [company, isOperator, userData, authLoading]);
 
   const unreadNotifications = notifications.filter((notification) => (
     !dismissedNotifications.includes(notification.id) && !readNotifications.includes(notification.id)
