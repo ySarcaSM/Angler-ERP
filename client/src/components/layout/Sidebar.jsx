@@ -55,10 +55,10 @@ export default function Sidebar({ collapsed, onToggle }) {
         {NAV_SECTIONS.map((section) => {
           const effectiveModules = getEffectiveModules();
           const visibleItems = section.items.filter((item) => (
-            !(userData?.role === 'operator' && !item.moduleKey && !item.requestsPage && item.to !== '/')
+            !(userData?.role === 'operator' && !item.moduleKey && !item.requestsPage && !['/', '/app'].includes(item.to))
             && !(userData?.role === 'viewer' && item.viewerHidden)
             && !(userData?.role === 'viewer' && item.moduleKey === 'measurement')
-            && (!item.moduleKey || effectiveModules.includes(item.moduleKey))
+            && (!item.moduleKey || effectiveModules.includes(item.moduleKey) || (userData?.role === 'operator' && item.moduleKey === 'assistant'))
             && (!item.ownerOnly || userData?.role === 'owner')
             && (!item.adminOrOwner || ['owner', 'admin'].includes(userData?.role))
           ));
