@@ -101,7 +101,7 @@ service cloud.firestore {
     }
 
     function canReadCollection(companyId, collectionName) {
-      return isSuperAdmin() || isActiveCompany(companyId);
+      return isSuperAdmin() || isMember(companyId);
     }
 
     function canWriteCollection(companyId, collectionName) {
