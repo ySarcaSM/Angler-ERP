@@ -243,7 +243,11 @@ service cloud.firestore {
     }
 
     match /companies/{companyId}/members/{userId} {
-      allow get, list: if isSuperAdmin() || isCompanyOwner(companyId) || isAdmin(companyId);
+      allow get: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == userId) ||
+        isCompanyOwner(companyId) ||
+        isAdmin(companyId);
+      allow list: if isSuperAdmin() || isCompanyOwner(companyId) || isAdmin(companyId);
       allow create: if isSuperAdmin() ||
         (isAuth() && request.auth.uid == companyId && userId == request.auth.uid) ||
         isAdmin(companyId);
