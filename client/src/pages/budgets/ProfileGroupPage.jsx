@@ -965,31 +965,106 @@ export default function ProfileGroupPage() {
               </button>
             </div>
           </div>
-          <div className="rounded-xl border border-primary-400/30 bg-primary-400/10 px-6 py-5 text-center">
-            <div className="text-sm font-medium text-primary-200">Capacidade máxima de corte</div>
-            <div className="mt-1 text-3xl font-bold text-primary-300">{formatNumber(result.completeUnitsPerRow, 0)} mochilas</div>
-            <div className="mt-4 grid grid-cols-1 gap-3 text-left text-sm md:grid-cols-2">
-              <div className="rounded-lg bg-dark-800/60 p-3">
-                <div className="text-xs font-medium uppercase tracking-wide text-dark-500">Total acomodado</div>
-                <div className="mt-1 font-semibold text-dark-100">{formatNumber(result.completeUnitsPerRow, 0)} mochila(s) inteira(s) por tampo</div>
-                <div className="mt-2 text-xs text-dark-400">Arranjo para a quantidade informada: {formatNumber(result.tablePlan?.placedColumns || 0, 0)} mochila(s) no comprimento × {formatNumber(result.tablePlan?.placedRows || 0, 0)} mochila(s) na largura.</div>
+          <div className="rounded-2xl border border-primary-400/30 bg-gradient-to-br from-primary-400/10 via-dark-900/30 to-dark-900 px-5 py-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-300">Capacidade de corte</div>
+                <h2 className="mt-1 text-2xl font-bold text-dark-100">Quantas unidades cabem em um plano</h2>
+                <p className="mt-1 text-sm text-dark-400">Cálculo baseado na área útil da mesa e nas medidas informadas.</p>
               </div>
-              <div className="rounded-lg bg-dark-800/60 p-3">
-                <div className="text-xs font-medium uppercase tracking-wide text-dark-500">Sobras físicas</div>
-                <div className="mt-1 text-xs text-dark-300">Comprimento: 262 − ({formatNumber(result.tablePlan?.placedColumns || 0, 0)} × {formatNumber(result.productWidth, 0)}) = <strong className="text-dark-100">{formatNumber(result.tablePlan?.placedLengthLeftover || 0, 0)} cm</strong></div>
-                <div className="mt-1 text-xs text-dark-300">Largura: {formatNumber(result.tablePlan?.width || 0, 0)} − ({formatNumber(result.tablePlan?.placedRows || 0, 0)} × {formatNumber(result.productHeight, 0)}) = <strong className="text-dark-100">{formatNumber(result.tablePlan?.placedWidthLeftover || 0, 0)} cm</strong></div>
+              <div className="rounded-xl border border-primary-400/30 bg-primary-400/10 px-5 py-3 text-center md:min-w-[190px]">
+                <div className="text-xs font-medium text-primary-200">Capacidade máxima</div>
+                <div className="mt-0.5 text-3xl font-bold text-primary-300">{formatNumber(result.completeUnitsPerRow, 0)}</div>
+                <div className="text-xs text-dark-400">unidades por plano</div>
               </div>
             </div>
-            <div className="mt-3 space-y-1 text-sm text-dark-300">
-              <div>Sobram {formatNumber(result.tablePlan?.placedLengthLeftover || 0, 0)} cm no comprimento útil da mesa — espaço insuficiente para mais uma mochila de {formatNumber(result.productWidth, 0)} cm.</div>
-              <div>Sobram {formatNumber(result.tablePlan?.placedWidthLeftover || 0, 0)} cm na largura da mesa — espaço insuficiente para mais uma mochila de {formatNumber(result.productHeight, 0)} cm.</div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <div className="rounded-xl border border-dark-700 bg-dark-800/60 p-4">
+                <div className="text-xs font-medium text-dark-500">Por fileira</div>
+                <div className="mt-1 text-xl font-bold text-dark-100">{formatNumber(result.tablePlan?.piecesPerRow || 0, 0)}</div>
+                <div className="text-xs text-dark-400">unidades no comprimento</div>
+              </div>
+              <div className="rounded-xl border border-dark-700 bg-dark-800/60 p-4">
+                <div className="text-xs font-medium text-dark-500">Fileiras</div>
+                <div className="mt-1 text-xl font-bold text-dark-100">{formatNumber(result.tablePlan?.rows || 0, 0)}</div>
+                <div className="text-xs text-dark-400">na largura útil</div>
+              </div>
+              <div className="rounded-xl border border-dark-700 bg-dark-800/60 p-4">
+                <div className="text-xs font-medium text-dark-500">Mesa útil</div>
+                <div className="mt-1 text-xl font-bold text-dark-100">262 × {formatNumber(result.tablePlan?.width || 0, 0)}</div>
+                <div className="text-xs text-dark-400">cm de área de corte</div>
+              </div>
+              <div className="rounded-xl border border-dark-700 bg-dark-800/60 p-4">
+                <div className="text-xs font-medium text-dark-500">Quantidade informada</div>
+                <div className="mt-1 text-xl font-bold text-dark-100">{formatNumber(result.quantity, 0)}</div>
+                <div className={`text-xs ${result.quantityWithinCapacity ? 'text-emerald-300' : 'text-amber-200'}`}>
+                  {result.quantityWithinCapacity ? 'cabe neste plano' : 'acima da capacidade'}
+                </div>
+              </div>
             </div>
-            <div className="mt-3 text-sm text-dark-300">Sobra física para a quantidade informada: {formatNumber(result.tablePlan?.placedLengthLeftover || 0, 0)} cm no comprimento e {formatNumber(result.tablePlan?.placedWidthLeftover || 0, 0)} cm na largura.</div>
-            <div className="mt-1 text-sm font-medium text-dark-200">Área total de sobra: {formatNumber(result.tablePlan?.placedAreaLeftover || 0, 0)} cm².</div>
-            <div className="mt-1 text-sm text-dark-300">Espaço vago útil: {formatNumber(result.tablePlan?.emptyPositions || 0, 0)} posição(ões) para mochila(s), equivalente a {formatNumber(result.tablePlan?.emptyPositionArea || 0, 0)} cm².</div>
-            <div className="mt-1 text-sm text-dark-300">Sobra residual das bordas: {formatNumber(result.tablePlan?.residualEdgeArea || 0, 0)} cm².</div>
-            {result.hasAccordion && <div className={`mt-2 text-sm font-medium ${result.accordionFits ? 'text-emerald-300' : 'text-amber-200'}`}>{result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth, 0)} cm será acomodada na sobra disponível.` : `A sanfona de ${formatNumber(result.accordionWidth, 0)} cm não cabe na sobra disponível.`}</div>}
-            {result.remainingBackpacks > 0 && <div className="mt-3 text-sm font-semibold text-amber-200">Sobram {formatNumber(result.remainingBackpacks, 0)} mochila(s) para o próximo conjunto de corte.</div>}
+
+            <div className="mt-4 rounded-xl border border-dark-700 bg-dark-950/40 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-dark-500">Como o limite é calculado</div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-dark-300">
+                    <span className="rounded-lg bg-dark-800 px-3 py-2">{formatNumber(result.tablePlan?.piecesPerRow || 0, 0)} por fileira</span>
+                    <span className="text-dark-600">×</span>
+                    <span className="rounded-lg bg-dark-800 px-3 py-2">{formatNumber(result.tablePlan?.rows || 0, 0)} fileiras</span>
+                    <span className="text-dark-600">=</span>
+                    <strong className="rounded-lg border border-primary-400/30 bg-primary-400/10 px-3 py-2 text-primary-300">{formatNumber(result.completeUnitsPerRow, 0)} unidades</strong>
+                  </div>
+                </div>
+                <div className="text-sm text-dark-400 md:max-w-sm md:text-right">
+                  Cada unidade ocupa <strong className="text-dark-200">{formatNumber(result.productWidth, 0)} × {formatNumber(result.productHeight, 0)} cm</strong>.
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-dark-700 bg-dark-800/40 p-4">
+                <div className="text-sm font-semibold text-dark-200">Sobras do plano</div>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-dark-500">Comprimento</div>
+                    <div className="mt-1 font-semibold text-dark-100">{formatNumber(result.tablePlan?.lengthLeftover || 0, 0)} cm</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-dark-500">Largura</div>
+                    <div className="mt-1 font-semibold text-dark-100">{formatNumber(result.tablePlan?.widthLeftover || 0, 0)} cm</div>
+                  </div>
+                </div>
+                <div className="mt-3 text-xs text-dark-400">Essas são as sobras depois de preencher a capacidade máxima do plano.</div>
+              </div>
+
+              <div className="rounded-xl border border-dark-700 bg-dark-800/40 p-4">
+                <div className="text-sm font-semibold text-dark-200">Para a quantidade informada</div>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-dark-500">Espaços vazios</div>
+                    <div className="mt-1 font-semibold text-dark-100">{formatNumber(result.tablePlan?.emptyPositions || 0, 0)} posição(ões)</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-dark-500">Área livre</div>
+                    <div className="mt-1 font-semibold text-dark-100">{formatNumber(result.tablePlan?.placedAreaLeftover || 0, 0)} cm²</div>
+                  </div>
+                </div>
+                <div className="mt-3 text-xs text-dark-400">Mostra o espaço que permanece livre após acomodar a quantidade solicitada.</div>
+              </div>
+            </div>
+
+            {result.hasAccordion && (
+              <div className={`mt-3 rounded-xl border px-4 py-3 text-sm ${result.accordionFits ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-500/30 bg-amber-500/10 text-amber-200'}`}>
+                <strong>Sanfona lateral:</strong> {result.accordionFits ? `os ${formatNumber(result.accordionWidth, 0)} cm cabem na sobra disponível do plano.` : `os ${formatNumber(result.accordionWidth, 0)} cm não cabem na sobra disponível do plano.`}
+              </div>
+            )}
+
+            {result.remainingBackpacks > 0 && (
+              <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                <strong>Próximo corte:</strong> {formatNumber(result.remainingBackpacks, 0)} unidade(s) ficarão para o próximo plano.
+              </div>
+            )}
           </div>
           <CutPreview profile={profile} result={result} onDownload={handleDownloadPreview} />
       </div>
