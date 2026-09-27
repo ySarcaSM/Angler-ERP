@@ -712,9 +712,13 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillStyle = '#111827';
       duplicateContext.font = '700 18px Arial';
       const secondPlan = result.plansToCut[1];
-      duplicateContext.fillText(`PLANO DE CORTE 2 - ${formatNumber(secondPlan.capacity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
+      const secondPlanQuantity = Math.min(
+        secondPlan.capacity,
+        Math.max(0, quantity - (firstPlan?.capacity || 0))
+      );
+      duplicateContext.fillText(`PLANO DE CORTE 2 - ${formatNumber(secondPlanQuantity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
       duplicateContext.font = '600 11px Arial';
-      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlan.capacity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(secondPlan.capacity, 0)} un)` : ''}`, 18, 52);
+      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)` : ''}`, 18, 52);
 
       // O segundo plano não é uma cópia do primeiro: limpa o desenho anterior
       // e posiciona somente as fileiras que cabem na largura restante.
@@ -722,7 +726,7 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillRect(cutAreaX, mainAreaY, cutAreaWidth, materialPlanDrawHeight);
       const secondRows = Math.max(0, secondPlan.verticalRows);
       const secondPiecesPerRow = Math.max(0, secondPlan.wholePiecesPerRow);
-      const secondPiecesToDraw = Math.min(secondPlan.capacity, Math.max(0, quantity - (firstPlan?.capacity || 0)), secondRows * secondPiecesPerRow);
+      const secondPiecesToDraw = Math.min(secondPlanQuantity, secondRows * secondPiecesPerRow);
       for (let index = 0; index < secondPiecesToDraw; index += 1) {
         const row = Math.floor(index / secondPiecesPerRow);
         const column = index % secondPiecesPerRow;
