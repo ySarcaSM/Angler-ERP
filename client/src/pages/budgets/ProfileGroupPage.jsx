@@ -680,8 +680,9 @@ function CutPreview({ profile, result, onDownload }) {
       const totalComprimentoCm = Math.max(0, (mainPieceWidth + (result.hasAccordion ? sidePieceWidth : 0)) * placedPieces);
       const totalComprimentoM = totalComprimentoCm / 100;
       const drawCardTextForContext = (x, y, width, height, title, lines, fill, titleSize = 12, bodySize = 11) => {
-        targetContext.fillStyle = fill;
+        targetContext.fillStyle = '#ffffff';
         targetContext.fillRect(x, y, width, height);
+        targetContext.fillStyle = fill;
         targetContext.strokeStyle = '#111827';
         targetContext.lineWidth = 2;
         targetContext.strokeRect(x, y, width, height);
