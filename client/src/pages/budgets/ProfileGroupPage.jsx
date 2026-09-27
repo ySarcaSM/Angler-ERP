@@ -668,7 +668,7 @@ function CutPreview({ profile, result, onDownload }) {
     const cardHeight = 170;
     const cardStartX = 60;
 
-    const drawPlanCards = (plan, planQuantity, targetContext = context) => {
+    const drawPlanCards = (plan, planQuantity, targetContext = context, accumulatedLeftoverArea = null) => {
       const capacity = Number(plan?.capacity) || 0;
       const placedPieces = Math.min(Math.max(0, Number(planQuantity) || 0), capacity);
       const emptyPositions = Math.max(0, capacity - placedPieces);
@@ -699,6 +699,7 @@ function CutPreview({ profile, result, onDownload }) {
         `Faixa residual: ${formatNumber(plan?.lengthLeftover || 0, 0)} cm no comprimento`,
         `Área residual das bordas: ${formatNumber(residualEdgeArea, 0)} cm²`,
         `Área total de sobra: ${formatNumber(placedAreaLeftover, 0)} cm²`,
+        ...(accumulatedLeftoverArea !== null ? [`Sobra acumulada dos cortes: ${formatNumber(accumulatedLeftoverArea, 0)} cm²`] : []),
       ], '#dfeaf5');
 
       drawCardTextForContext(cardStartX + cardWidth + cardGap, cardY, cardWidth, cardHeight, 'CONSUMO DE TNT — PLANO', [
@@ -724,7 +725,7 @@ function CutPreview({ profile, result, onDownload }) {
 
     setPreviewUrl(canvas.toDataURL('image/png'));
 
-    if (result.plansToCut?.length > 1) {
+    if (result.plansToCut?.length > 1 && quantity > (firstPlan?.capacity || 0)) {
       const duplicateCanvas = document.createElement('canvas');
       duplicateCanvas.width = canvas.width;
       duplicateCanvas.height = canvas.height;
@@ -740,6 +741,9 @@ function CutPreview({ profile, result, onDownload }) {
         secondPlan.capacity,
         Math.max(0, quantity - (firstPlan?.capacity || 0))
       );
+      const firstPlanLeftoverArea = Math.max(0, ((Number(firstPlan?.usableLength) || 262) * (Number(firstPlan?.width) || 0)) - (previewQuantity * (Number(firstPlan?.pieceWidth) || 0) * (Number(firstPlan?.pieceHeight) || 0)));
+      const secondPlanLeftoverArea = Math.max(0, ((Number(secondPlan?.usableLength) || 262) * (Number(secondPlan?.width) || 0)) - (secondPlanQuantity * (Number(secondPlan?.pieceWidth) || 0) * (Number(secondPlan?.pieceHeight) || 0)));
+      const accumulatedLeftoverArea = firstPlanLeftoverArea + secondPlanLeftoverArea;
       duplicateContext.fillText(`PLANO DE CORTE 2 - ${formatNumber(secondPlanQuantity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
       duplicateContext.font = '600 11px Arial';
       duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)` : ''}`, 18, 52);
@@ -755,7 +759,7 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillStyle = '#ffffff';
       duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
       const secondPlanCardsQuantity = secondPlanQuantity;
-      drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext);
+      drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext, accumulatedLeftoverArea);
       const secondRows = Math.max(0, secondPlan.verticalRows);
       const secondPiecesPerRow = Math.max(0, secondPlan.wholePiecesPerRow);
       const secondPiecesToDraw = Math.min(secondPlanQuantity, secondRows * secondPiecesPerRow);
@@ -784,7 +788,11 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
       drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext);
 
-      setSecondaryPreviewUrl(duplicateCanvas.toDataURL('image/png'));
+      if (secondPlanQuantity > 0) {
+        setSecondaryPreviewUrl(duplicateCanvas.toDataURL('image/png'));
+      } else {
+        setSecondaryPreviewUrl('');
+      }
     } else {
       setSecondaryPreviewUrl('');
     }
