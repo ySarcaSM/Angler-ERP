@@ -196,12 +196,13 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
   }, [material.label, plans, result]);
 
   const handleDownload = async () => {
+    const previewUrls = [previewUrl, ...secondaryPreviewUrls].filter(Boolean);
     if (!previewUrls.length || downloading) return;
     setDownloading(true);
     try {
       await onDownload();
 
-      const plans = result.cutPlans || [];
+      const plans = result.plansToCut || result.cutPlans || [];
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageWidth = 210;
       const pageHeight = 297;
@@ -210,7 +211,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       const imageHeight = imageWidth * (760 / 1200);
       const files = [];
 
-      previewUrls.forEach((previewUrl, index) => {
+      previewUrls.forEach((url, index) => {
         const plan = plans[index] || result.tablePlan || {};
         const piecesBefore = plans.slice(0, index).reduce((sum, item) => sum + (Number(item.capacity) || 0), 0);
         const planQuantity = Math.min(
@@ -219,21 +220,22 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         );
         const pieceWidth = Number(plan.pieceWidth) || Number(result.productWidth) || 0;
         const pieceHeight = Number(plan.pieceHeight) || Number(result.productHeight) || 0;
-        const rows = Number(plan.rows) || 0;
-        const piecesPerRow = Number(plan.piecesPerRow) || 0;
+        const rows = Number(plan.rows) || Number(plan.verticalRows) || 0;
+        const piecesPerRow = Number(plan.piecesPerRow) || Number(plan.wholePiecesPerRow) || 0;
         const lengthLeftover = Number(plan.lengthLeftover) || 0;
         const widthLeftover = Number(plan.widthLeftover) || 0;
         const usedLength = piecesPerRow * pieceWidth;
         const usedWidth = rows * pieceHeight;
 
         if (index > 0) pdf.addPage();
+        pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(17);
         pdf.text(`Especificação do corte — Plano ${index + 1}`, margin, 16);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, 22);
-        pdf.addImage(previewUrl, 'PNG', margin, 27, imageWidth, imageHeight);
+        pdf.addImage(url, 'PNG', margin, 27, imageWidth, imageHeight);
 
         let y = 27 + imageHeight + 10;
         pdf.setFont('helvetica', 'bold');
@@ -274,15 +276,14 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.setFontSize(8);
         pdf.setTextColor(90, 90, 90);
         pdf.text(
-          `Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil longitudinal: 262 cm`,
+          'Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil longitudinal: 262 cm',
           margin,
           pageHeight - 10
         );
-        pdf.setTextColor(0, 0, 0);
 
         files.push({
           name: `cortes/plano-${String(index + 1).padStart(2, '0')}.png`,
-          data: dataUrlToUint8Array(previewUrl),
+          data: dataUrlToUint8Array(url),
         });
       });
 
@@ -293,18 +294,12 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
 
       const zipBlob = createZipBlob(files);
       downloadBlob(zipBlob, `plano-de-corte-${profile?.slug || 'medicao'}.zip`);
+    } catch (error) {
+      console.error('Erro ao gerar pacote de corte:', error);
     } finally {
       setDownloading(false);
     }
   };
-
-  const message = !result.quantityValid ? 'Informe uma quantidade maior que zero.'
-    : !result.quantityWithinCapacity ? `A quantidade informada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.totalCapacity || 0, 0)} unidade(s) do material informado.`
-    : !result.materialWidthValid ? 'Informe uma largura de material maior que zero.'
-      : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm não cabe na largura informada do material.`
-        : !result.productWidthValid ? `A largura de ${formatNumber(result.productWidth)} cm excede os 262 cm úteis da mesa.`
-          : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe na sobra física deste encaixe.`
-            : 'Não há peças inteiras que caibam no material informado.';
 
   return (
     <div className="card border-dark-700">
@@ -312,7 +307,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       <div className="card-body space-y-4">
         {previewUrls.length ? previewUrls.map((previewUrl, index) => <img key={previewUrl} src={previewUrl} alt={`Plano de corte ${index + 1} de ${profile?.name}`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{message}</div>}
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-dark-400"><span><strong className="text-dark-200">{formatNumber(result.plansNeeded, 0)}</strong> plano(s) para a quantidade solicitada</span><span><strong className="text-dark-200">{formatNumber(result.totalCapacity || 0, 0)}</strong> unidade(s) de capacidade no material</span></div>
-        <div className="flex justify-end"><button type="button" onClick={handleDownload} disabled={!previewUrls.length || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"><Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}</button></div>
+        <div className="flex justify-end"><button type="button" onClick={handleDownload} disabled={!previewUrls.length || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"><Download size={16} /> {downloading ? 'Gerando ZIP...' : 'Baixar ZIP'}</button></div>
       </div>
     </div>
   );
