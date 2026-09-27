@@ -256,6 +256,8 @@ function CutPreview({ profile, result, onDownload }) {
     const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
     const sidePieceHeight = Number(result.sideCut.pieceLength) || 90;
 
+    setSecondaryPreviewUrl('');
+
     if (!result.quantityValid || !result.quantityWithinCapacity || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {      setPreviewUrl('');
       return undefined;
     }
