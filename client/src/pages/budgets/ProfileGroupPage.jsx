@@ -752,6 +752,8 @@ function CutPreview({ profile, result, onDownload }) {
       // Os cards inferiores também pertencem ao plano atual; nunca reutilize
       // os valores calculados para o primeiro plano.
       duplicateContext.clearRect(0, cardY, panelWidth, panelHeight - cardY);
+      duplicateContext.fillStyle = '#ffffff';
+      duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
       const secondPlanCardsQuantity = secondPlanQuantity;
       drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext);
       const secondRows = Math.max(0, secondPlan.verticalRows);
