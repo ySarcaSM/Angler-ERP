@@ -113,110 +113,118 @@ const MATERIAL_PREVIEW = {
 
 function PhysicalCalculationPreview({ profile, result, onDownload }) {
   const material = MATERIAL_PREVIEW[profile?.kind] || MATERIAL_PREVIEW.bag;
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewUrls, setPreviewUrls] = useState([]);
   const [downloading, setDownloading] = useState(false);
-  const plan = result.tablePlan;
+  const plans = result.cutPlans || [];
 
   useEffect(() => {
-    if (!result.canCut || !plan?.capacity) {
-      setPreviewUrl('');
+    if (!result.canCut || !plans.length) {
+      setPreviewUrls([]);
       return undefined;
     }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 1200;
-    canvas.height = 760;
-    const context = canvas.getContext('2d');
-    const table = { x: 70, y: 110, width: 1060, height: 500 };
-    const scaleX = table.width / 300;
-    const scaleY = table.height / 159;
-    const cutX = table.x + (19 * scaleX);
-    const cutY = table.y + ((159 - plan.width) * scaleY);
-    const cutWidth = 262 * scaleX;
-    const cutHeight = plan.width * scaleY;
-    const pieceWidth = result.productWidth * scaleX;
-    const pieceHeight = result.productHeight * scaleY;
-    const piecesThisPlan = Math.min(result.quantity, plan.capacity);
+    const urls = plans.map((plan, planIndex) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 760;
+      const context = canvas.getContext('2d');
+      const table = { x: 70, y: 110, width: 1060, height: 500 };
+      const scaleX = table.width / 300;
+      const scaleY = table.height / 159;
+      const cutX = table.x + (19 * scaleX);
+      const cutY = table.y + ((159 - plan.width) * scaleY);
+      const cutWidth = 262 * scaleX;
+      const cutHeight = plan.width * scaleY;
+      const pieceWidth = result.productWidth * scaleX;
+      const pieceHeight = result.productHeight * scaleY;
+      const piecesBefore = plans.slice(0, planIndex).reduce((sum, item) => sum + item.capacity, 0);
+      const piecesThisPlan = Math.min(Math.max(0, result.quantity - piecesBefore), plan.capacity);
 
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = '#111827';
-    context.font = '700 22px Arial';
-    context.fillText(`PLANO DE CORTE — ${formatNumber(piecesThisPlan, 0)} unidade(s)`, 48, 42);
-    context.font = '500 14px Arial';
-    context.fillStyle = '#374151';
-    context.fillText(`Mesa: 300 × 159 cm | área útil: 262 × ${formatNumber(plan.width, 0)} cm | material: ${material.label}`, 48, 68);
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = '#111827';
+      context.font = '700 22px Arial';
+      context.fillText(\`PLANO DE CORTE \${planIndex + 1} — \${formatNumber(piecesThisPlan, 0)} unidade(s)\`, 48, 42);
+      context.font = '500 14px Arial';
+      context.fillStyle = '#374151';
+      context.fillText(\`Mesa: 300 × 159 cm | área útil: 262 × \${formatNumber(plan.width, 0)} cm | material: \${material.label}\`, 48, 68);
 
-    context.fillStyle = '#e5e7eb';
-    context.fillRect(table.x, table.y, table.width, table.height);
-    context.strokeStyle = '#111827';
-    context.lineWidth = 3;
-    context.strokeRect(table.x, table.y, table.width, table.height);
-    context.fillStyle = 'rgba(107, 114, 128, 0.42)';
-    context.fillRect(table.x, table.y, 19 * scaleX, table.height);
-    context.fillRect(table.x + table.width - (19 * scaleX), table.y, 19 * scaleX, table.height);
-    context.fillStyle = '#f8fafc';
-    context.fillRect(cutX, cutY, cutWidth, cutHeight);
+      context.fillStyle = '#e5e7eb';
+      context.fillRect(table.x, table.y, table.width, table.height);
+      context.strokeStyle = '#111827';
+      context.lineWidth = 3;
+      context.strokeRect(table.x, table.y, table.width, table.height);
+      context.fillStyle = 'rgba(107, 114, 128, 0.42)';
+      context.fillRect(table.x, table.y, 19 * scaleX, table.height);
+      context.fillRect(table.x + table.width - (19 * scaleX), table.y, 19 * scaleX, table.height);
+      context.fillStyle = '#f8fafc';
+      context.fillRect(cutX, cutY, cutWidth, cutHeight);
 
-    for (let index = 0; index < piecesThisPlan; index += 1) {
-      const row = Math.floor(index / plan.piecesPerRow);
-      const column = index % plan.piecesPerRow;
-      const x = cutX + (column * pieceWidth);
-      const y = cutY + (row * pieceHeight);
-      context.fillStyle = '#8fd4f6';
-      context.fillRect(x, y, pieceWidth, pieceHeight);
-      context.strokeStyle = '#27506a';
-      context.lineWidth = 1.5;
-      context.strokeRect(x, y, pieceWidth, pieceHeight);
-      drawResponsivePieceLabel(context, x, y, pieceWidth, pieceHeight, `${formatNumber(result.productWidth, 0)} × ${formatNumber(result.productHeight, 0)} cm`, '#143b52');
-    }
+      for (let index = 0; index < piecesThisPlan; index += 1) {
+        const row = Math.floor(index / plan.piecesPerRow);
+        const column = index % plan.piecesPerRow;
+        const x = cutX + (column * pieceWidth);
+        const y = cutY + (row * pieceHeight);
+        context.fillStyle = '#8fd4f6';
+        context.fillRect(x, y, pieceWidth, pieceHeight);
+        context.strokeStyle = '#27506a';
+        context.lineWidth = 1.5;
+        context.strokeRect(x, y, pieceWidth, pieceHeight);
+        drawResponsivePieceLabel(context, x, y, pieceWidth, pieceHeight, \`\${formatNumber(result.productWidth, 0)} × \${formatNumber(result.productHeight, 0)} cm\`, '#143b52');
+      }
 
-    context.fillStyle = '#111827';
-    context.font = '700 14px Arial';
-    context.fillText('300 cm', table.x + (table.width / 2) - 24, table.y - 18);
-    context.save();
-    context.translate(table.x - 28, table.y + (table.height / 2));
-    context.rotate(-Math.PI / 2);
-    context.fillText('159 cm', -26, 0);
-    context.restore();
-    context.font = '600 13px Arial';
-    context.fillText(`Por fileira: ⌊262 ÷ ${formatNumber(result.productWidth, 0)}⌋ = ${plan.piecesPerRow}`, 70, 655);
-    context.fillText(`Por coluna: ⌊${formatNumber(plan.width, 0)} ÷ ${formatNumber(result.productHeight, 0)}⌋ = ${plan.rows}`, 70, 680);
-    context.fillText(`Capacidade: ${plan.piecesPerRow} × ${plan.rows} = ${plan.capacity} | sobras: ${formatNumber(plan.lengthLeftover, 0)} cm no comprimento e ${formatNumber(plan.widthLeftover, 0)} cm na largura`, 70, 705);
-    if (result.hasAccordion) context.fillText(`Sanfona de ${formatNumber(result.accordionWidth, 0)} cm: ${result.accordionFits ? 'acomodada na sobra disponível.' : 'não cabe na sobra disponível.'}`, 70, 730);
-    setPreviewUrl(canvas.toDataURL('image/png'));
+      context.fillStyle = '#111827';
+      context.font = '700 14px Arial';
+      context.fillText('300 cm', table.x + (table.width / 2) - 24, table.y - 18);
+      context.save();
+      context.translate(table.x - 28, table.y + (table.height / 2));
+      context.rotate(-Math.PI / 2);
+      context.fillText('159 cm', -26, 0);
+      context.restore();
+      context.font = '600 13px Arial';
+      context.fillText(\`Por fileira: ⌊262 ÷ \${formatNumber(result.productWidth, 0)}⌋ = \${plan.piecesPerRow}\`, 70, 655);
+      context.fillText(\`Por coluna: ⌊\${formatNumber(plan.width, 0)} ÷ \${formatNumber(result.productHeight, 0)}⌋ = \${plan.rows}\`, 70, 680);
+      context.fillText(\`Capacidade: \${plan.piecesPerRow} × \${plan.rows} = \${plan.capacity} | sobras: \${formatNumber(plan.lengthLeftover, 0)} cm no comprimento e \${formatNumber(plan.widthLeftover, 0)} cm na largura\`, 70, 705);
+      if (result.hasAccordion) context.fillText(\`Sanfona de \${formatNumber(result.accordionWidth, 0)} cm: \${result.accordionFits ? 'acomodada na sobra disponível.' : 'não cabe na sobra disponível.'}\`, 70, 730);
+
+      return canvas.toDataURL('image/png');
+    });
+
+    setPreviewUrls(urls);
     return undefined;
-  }, [material.label, plan, result]);
+  }, [material.label, plans, result]);
 
   const handleDownload = async () => {
-    if (!previewUrl || downloading) return;
+    if (!previewUrls.length || downloading) return;
     setDownloading(true);
     try {
       await onDownload();
-      const link = document.createElement('a');
-      link.href = previewUrl;
-      link.download = 'plano-de-corte.png';
-      link.click();
+      previewUrls.forEach((previewUrl, index) => {
+        const link = document.createElement('a');
+        link.href = previewUrl;
+        link.download = \`plano-de-corte-\${index + 1}.png\`;
+        link.click();
+      });
     } finally {
       setDownloading(false);
     }
   };
 
   const message = !result.quantityValid ? 'Informe uma quantidade maior que zero.'
-    : !result.quantityWithinCapacity ? `A quantidade informada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.tablePlan?.capacity || 0, 0)} unidade(s) por plano.`
-    : !result.materialWidthValid ? 'A largura do material deve estar entre 1 e 150 cm.'
-      : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm não cabe na largura útil do material.`
-        : !result.productWidthValid ? `A largura de ${formatNumber(result.productWidth)} cm excede os 262 cm úteis da mesa.`
-          : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe na sobra física deste encaixe.`
-            : 'Não há peças inteiras que caibam neste plano.';
+    : !result.quantityWithinCapacity ? \`A quantidade informada (\${formatNumber(result.quantity, 0)}) excede a capacidade de \${formatNumber(result.totalCapacity || 0, 0)} unidade(s) do material informado.\`
+    : !result.materialWidthValid ? 'Informe uma largura de material maior que zero.'
+      : !result.materialHeightValid ? \`A altura de \${formatNumber(result.productHeight)} cm não cabe na largura informada do material.\`
+        : !result.productWidthValid ? \`A largura de \${formatNumber(result.productWidth)} cm excede os 262 cm úteis da mesa.\`
+          : !result.accordionFits ? \`A sanfona de \${formatNumber(result.accordionWidth)} cm não cabe na sobra física deste encaixe.\`
+            : 'Não há peças inteiras que caibam no material informado.';
 
   return (
     <div className="card border-dark-700">
-      <div className="card-header flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold text-dark-200">Preview do plano de corte</h2><p className="mt-1 text-xs text-dark-500">Cada eixo é arredondado para baixo antes da multiplicação.</p></div><span className={`rounded-full border px-3 py-1 text-xs font-medium ${material.border} ${material.softTone}`}>{material.label}</span></div>
+      <div className="card-header flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold text-dark-200">Preview do plano de corte</h2><p className="mt-1 text-xs text-dark-500">Cada faixa de até 150 cm de material gera um plano separado. A faixa restante só aparece se comportar pelo menos uma mochila.</p></div><span className={\`rounded-full border px-3 py-1 text-xs font-medium \${material.border} \${material.softTone}\`}>{material.label}</span></div>
       <div className="card-body space-y-4">
-        {previewUrl ? <img src={previewUrl} alt={`Plano de corte de ${profile?.name}`} className="w-full rounded-xl border border-dark-700 bg-dark-900" /> : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{message}</div>}
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-dark-400"><span><strong className="text-dark-200">{formatNumber(result.plansNeeded, 0)}</strong> plano(s) para a quantidade solicitada</span><span><strong className="text-dark-200">{formatNumber(result.tablePlan?.capacity || 0, 0)}</strong> unidade(s) por plano</span></div>
-        <div className="flex justify-end"><button type="button" onClick={handleDownload} disabled={!previewUrl || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"><Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}</button></div>
+        {previewUrls.length ? previewUrls.map((previewUrl, index) => <img key={previewUrl} src={previewUrl} alt={\`Plano de corte \${index + 1} de \${profile?.name}\`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{message}</div>}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-dark-400"><span><strong className="text-dark-200">{formatNumber(result.plansNeeded, 0)}</strong> plano(s) para a quantidade solicitada</span><span><strong className="text-dark-200">{formatNumber(result.totalCapacity || 0, 0)}</strong> unidade(s) de capacidade no material</span></div>
+        <div className="flex justify-end"><button type="button" onClick={handleDownload} disabled={!previewUrls.length || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"><Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}</button></div>
       </div>
     </div>
   );
@@ -919,7 +927,7 @@ export default function ProfileGroupPage() {
     const usableCutLength = tableLengthCm - (lateralWasteCm * 2);
     const maxMaterialHeight = 150;
     const quantityValid = quantity > 0;
-    const materialWidthValid = materialWidth > 0 && materialWidth <= maxMaterialHeight;
+    const materialWidthValid = materialWidth > 0;
     const materialHeightValid = height > 0 && width > 0 && (height <= materialWidth || width <= materialWidth);
     const productWidthValid = width > 0 && height > 0 && (width <= usableCutLength || height <= usableCutLength);
     const accordionValid = length > 0;
@@ -927,24 +935,34 @@ export default function ProfileGroupPage() {
     const mainCut = calculateCut(usableCutLength, width, height, quantity, false);
     const sideCut = calculateCut(usableCutLength, sideWidth, height, quantity, false);
     const materialPerBackpack = mainCut.pieceWidth || 0;
-    const baseTablePlan = calculateTablePlan(materialWidth, width, height, accordionWidth);
-    const placedPieces = Math.min(quantity, baseTablePlan.capacity);
-    const placedRows = baseTablePlan.piecesPerRow > 0 ? Math.ceil(placedPieces / baseTablePlan.piecesPerRow) : 0;
-    const placedColumns = placedPieces > 0 ? Math.min(baseTablePlan.piecesPerRow, placedPieces) : 0;
+    const materialPlans = [];
+    let remainingMaterialWidth = materialWidth;
+    while (remainingMaterialWidth > 0) {
+      const segmentWidth = Math.min(150, remainingMaterialWidth);
+      const plan = calculateTablePlan(segmentWidth, width, height, accordionWidth);
+      if (plan.capacity > 0) materialPlans.push(plan);
+      remainingMaterialWidth -= segmentWidth;
+    }
+    const totalCapacity = materialPlans.reduce((sum, plan) => sum + plan.capacity, 0);
+    const baseTablePlan = materialPlans[0] || calculateTablePlan(Math.min(materialWidth, 150), width, height, accordionWidth);
+    const placedPieces = Math.min(quantity, totalCapacity);
+    const placedInFirstPlan = Math.min(placedPieces, baseTablePlan.capacity);
+    const placedRows = baseTablePlan.piecesPerRow > 0 ? Math.ceil(placedInFirstPlan / baseTablePlan.piecesPerRow) : 0;
+    const placedColumns = placedInFirstPlan > 0 ? Math.min(baseTablePlan.piecesPerRow, placedInFirstPlan) : 0;
     const tablePlan = {
       ...baseTablePlan,
-      placedPieces,
+      placedPieces: placedInFirstPlan,
       placedRows,
       placedColumns,
       placedLengthLeftover: baseTablePlan.usableLength - (placedColumns * baseTablePlan.pieceWidth),
       placedWidthLeftover: baseTablePlan.width - (placedRows * baseTablePlan.pieceHeight),
-      placedAreaLeftover: (baseTablePlan.usableLength * baseTablePlan.width) - (placedPieces * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
-      emptyPositions: Math.max(0, baseTablePlan.capacity - placedPieces),
-      emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedPieces) * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight,
+      placedAreaLeftover: (baseTablePlan.usableLength * baseTablePlan.width) - (placedInFirstPlan * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
+      emptyPositions: Math.max(0, baseTablePlan.capacity - placedInFirstPlan),
+      emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedInFirstPlan) * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight,
       residualEdgeArea: (baseTablePlan.usableLength * baseTablePlan.width) - (baseTablePlan.capacity * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
     };
-    const completeUnitsPerRow = tablePlan.capacity;
-    const plansNeeded = completeUnitsPerRow > 0 ? Math.ceil(quantity / completeUnitsPerRow) : 0;
+    const completeUnitsPerRow = totalCapacity;
+    const plansNeeded = materialPlans.length;
     const remainingBackpacks = completeUnitsPerRow > 0 ? quantity % completeUnitsPerRow : quantity;
     const sharedLeftover = tablePlan.lengthLeftover;
     const linearMaterial = plansNeeded * tableLengthCm * wasteFactor;
@@ -953,12 +971,12 @@ export default function ProfileGroupPage() {
     const handleMaterial = usesHandle ? (Number(form.handleLength) || 0) * (Number(form.handleQuantity) || 0) * quantity / 100 : 0;
     const cordMaterial = usesCord ? (Number(form.cordLength) || 0) * (Number(form.cordQuantity) || 0) * quantity / 100 : 0;
     const accordionFits = tablePlan.accordionFits;
-    const quantityWithinCapacity = quantity <= tablePlan.capacity;
-    const canCut = quantityValid && quantityWithinCapacity && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && completeUnitsPerRow > 0;
+    const quantityWithinCapacity = quantity <= totalCapacity;
+    const canCut = quantityValid && quantityWithinCapacity && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && totalCapacity > 0;
     const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
-    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
+    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: materialPlans, plansToCut: materialPlans, totalCapacity, materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
       originalProductHeight: height, originalProductWidth: width, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
@@ -988,7 +1006,7 @@ export default function ProfileGroupPage() {
           <div className="card">
             <div className="card-header"><h2 className="text-lg font-semibold text-dark-100">{profile?.name}</h2><p className="text-sm text-dark-500 mt-1">{profile?.notes}</p></div>
             <div className="card-body grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" max={field === 'quantity' ? (result.tablePlan?.capacity || undefined) : undefined} className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
+              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" max={field === 'quantity' ? (result.totalCapacity || undefined) : undefined} className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
               <label className="label">Largura do material (cm)<input type="number" min="1" className="input mt-1" value={form.materialWidth} onChange={(e) => update('materialWidth', e.target.value)} /></label>
               <label className="label">Desperdício (%)<input type="number" min="0" className="input mt-1" value={form.waste} onChange={(e) => update('waste', e.target.value)} /></label>
               {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
