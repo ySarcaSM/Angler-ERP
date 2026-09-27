@@ -777,6 +777,13 @@ function CutPreview({ profile, result, onDownload }) {
         duplicateContext.fillRect(cutAreaX, mainAreaY + (secondRows * mainAreaHeight), cutAreaWidth, unusedHeight);
         drawResponsivePieceLabel(duplicateContext, cutAreaX, mainAreaY + (secondRows * mainAreaHeight), cutAreaWidth, unusedHeight, `${formatNumber(150 - secondPlan.width, 0)} cm fora do plano`, '#374151');
       }
+
+      // Reconstroi a faixa inferior no final do desenho para garantir que
+      // o fundo atras dos cards do Plano 2 nunca fique transparente/preto.
+      duplicateContext.fillStyle = '#ffffff';
+      duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
+      drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext);
+
       setSecondaryPreviewUrl(duplicateCanvas.toDataURL('image/png'));
     } else {
       setSecondaryPreviewUrl('');
