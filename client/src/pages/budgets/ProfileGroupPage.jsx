@@ -233,7 +233,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
 function CutPreview({ profile, result, onDownload }) {
   const material = MATERIAL_PREVIEW[profile?.kind] || MATERIAL_PREVIEW.bag;
   const [previewUrl, setPreviewUrl] = useState('');
-  const [secondaryPreviewUrl, setSecondaryPreviewUrl] = useState('');
+  const [secondaryPreviewUrls, setSecondaryPreviewUrls] = useState([]);
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
@@ -743,7 +743,11 @@ function CutPreview({ profile, result, onDownload }) {
 
     setPreviewUrl(canvas.toDataURL('image/png'));
 
-    if (result.plansToCut?.length > 1 && quantity > (firstPlan?.capacity || 0)) {
+    if (result.plansToCut?.length > 1) {
+      const generatedSecondaryUrls = [];
+      let quantityAlreadyAssigned = firstPlan?.capacity || 0;
+      let accumulatedLeftoverArea = Math.max(0, ((Number(firstPlan?.usableLength) || 262) * (Number(firstPlan?.width) || 0)) - (previewQuantity * (Number(firstPlan?.pieceWidth) || 0) * (Number(firstPlan?.pieceHeight) || 0)));
+      result.plansToCut.slice(1).forEach((secondPlan, secondPlanIndex) => {
       const duplicateCanvas = document.createElement('canvas');
       duplicateCanvas.width = canvas.width;
       duplicateCanvas.height = canvas.height;
@@ -754,15 +758,10 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillRect(0, 0, 1200, 70);
       duplicateContext.fillStyle = '#111827';
       duplicateContext.font = '700 18px Arial';
-      const secondPlan = result.plansToCut[1];
-      const secondPlanQuantity = Math.min(
-        secondPlan.capacity,
-        Math.max(0, quantity - (firstPlan?.capacity || 0))
-      );
-      const firstPlanLeftoverArea = Math.max(0, ((Number(firstPlan?.usableLength) || 262) * (Number(firstPlan?.width) || 0)) - (previewQuantity * (Number(firstPlan?.pieceWidth) || 0) * (Number(firstPlan?.pieceHeight) || 0)));
+      const secondPlanQuantity = Math.min(secondPlan.capacity, Math.max(0, quantity - quantityAlreadyAssigned));
       const secondPlanLeftoverArea = Math.max(0, ((Number(secondPlan?.usableLength) || 262) * (Number(secondPlan?.width) || 0)) - (secondPlanQuantity * (Number(secondPlan?.pieceWidth) || 0) * (Number(secondPlan?.pieceHeight) || 0)));
-      const accumulatedLeftoverArea = firstPlanLeftoverArea + secondPlanLeftoverArea;
-      duplicateContext.fillText(`PLANO DE CORTE 2 - ${formatNumber(secondPlanQuantity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
+      const planAccumulatedLeftoverArea = accumulatedLeftoverArea + secondPlanLeftoverArea;
+      duplicateContext.fillText(`PLANO DE CORTE ${secondPlanIndex + 2} - ${formatNumber(secondPlanQuantity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
       duplicateContext.font = '600 11px Arial';
       duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)` : ''}`, 18, 52);
 
@@ -777,7 +776,7 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillStyle = '#ffffff';
       duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
       const secondPlanCardsQuantity = secondPlanQuantity;
-      drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext, accumulatedLeftoverArea);
+      drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext, planAccumulatedLeftoverArea);
       const secondRows = Math.max(0, secondPlan.verticalRows);
       const secondPiecesPerRow = Math.max(0, secondPlan.wholePiecesPerRow);
       const secondPiecesToDraw = Math.min(secondPlanQuantity, secondRows * secondPiecesPerRow);
@@ -898,13 +897,13 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
       drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext, accumulatedLeftoverArea);
 
-      if (secondPlanQuantity > 0) {
-        setSecondaryPreviewUrl(duplicateCanvas.toDataURL('image/png'));
-      } else {
-        setSecondaryPreviewUrl('');
-      }
+      if (secondPlanQuantity > 0) generatedSecondaryUrls.push(duplicateCanvas.toDataURL('image/png'));
+      quantityAlreadyAssigned += secondPlanQuantity;
+      accumulatedLeftoverArea = planAccumulatedLeftoverArea;
+      });
+      setSecondaryPreviewUrls(generatedSecondaryUrls);
     } else {
-      setSecondaryPreviewUrl('');
+      setSecondaryPreviewUrls([]);
     }
     });
   }, [material.label, profile, result]);
@@ -938,12 +937,12 @@ function CutPreview({ profile, result, onDownload }) {
             <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />
           </div>
         ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm excede o limite vertical de ${formatNumber(result.maxMaterialHeight)} cm do material.` : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe no comprimento útil de 262 cm.` : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe em nenhuma sobra física do plano.` : `Preview indisponível: a quantidade desejada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.completeUnitsPerRow, 0)} mochila(s) por conjunto de planos.`}</div>}
-        {secondaryPreviewUrl && (
-          <div className="space-y-2">
-            <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 2</div>
-            <img src={secondaryPreviewUrl} alt="Preview complementar para material acima de 150 cm" className="w-full rounded-xl border border-dark-700 bg-dark-900" />
+        {secondaryPreviewUrls.map((url, index) => (
+          <div className="space-y-2" key={`secondary-preview-${index}`}>
+            <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte {index + 2}</div>
+            <img src={url} alt={`Preview do plano de corte ${index + 2}`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />
           </div>
-        )}
+        ))}
         <div className="flex justify-end">
           <button type="button" onClick={handleDownload} disabled={!previewUrl || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
             <Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}
