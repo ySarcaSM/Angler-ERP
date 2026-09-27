@@ -481,7 +481,7 @@ function CutPreview({ profile, result, onDownload }) {
     const mainAreaHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
     const materialPlanBottom = mainAreaY + materialPlanDrawHeight;
     const cutWidthCm = Number(result.productWidth) || mainPieceWidth;
-    const firstCutPlan = result.cutPlans?.[0];
+    const firstCutPlan = result.tablePlan || result.cutPlans?.[0];
     const mainGap = 0;
     const centimeterScale = cutAreaWidth / usableTableLengthCm;
     const mainStartX = cutAreaX;
