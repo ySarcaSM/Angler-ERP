@@ -6,8 +6,8 @@
 // Painel vê TODAS as contas de TODAS as empresas.
 
 import {
-  collection, doc, getDoc, getDocs, query,
-  setDoc, deleteDoc, updateDoc, serverTimestamp, orderBy,
+  collection, doc, getDoc, getDocs, query, where,
+  setDoc, deleteDoc, updateDoc, serverTimestamp, orderBy, writeBatch, deleteField,
 } from 'firebase/firestore';
 import { db, auth } from '../../config/firebase';
 import {
@@ -326,12 +326,170 @@ export async function deleteUserDocument(userId) {
  * a conta associada ao próprio token, encerrando a sessão do administrador.
  */
 export async function deleteUserFull(userId) {
-  await deleteUserDocument(userId);
+  if (!userId) throw new Error('UID da conta não informado.');
 
+  await getValidToken();
+
+  const userRef = doc(db, 'users', userId);
+  const userSnapshot = await getDoc(userRef);
+  if (!userSnapshot.exists()) {
+    return { deleted: true, firestore: false, auth: false, authDetail: 'not_found' };
+  }
+
+  const userData = userSnapshot.data();
+
+  // Uma exclusão de conta precisa remover os dados do tenant inteiro, não
+  // apenas o documento users/{uid}. O Firestore não remove automaticamente
+  // documentos que tenham companyId apontando para uma empresa excluída.
+  const ownedCompaniesSnapshot = await getDocs(query(
+    collection(db, 'companies'),
+    where('ownerUid', '==', userId),
+  ));
+  const ownedCompanyIds = ownedCompaniesSnapshot.docs.map((item) => item.id);
+
+  const deleteDocs = async (refs) => {
+    for (let index = 0; index < refs.length; index += 450) {
+      const batch = writeBatch(db);
+      refs.slice(index, index + 450).forEach((ref) => batch.delete(ref));
+      await batch.commit();
+    }
+  };
+
+  const deleteByCompany = async (collectionName, companyId) => {
+    const snapshot = await getDocs(query(
+      collection(db, collectionName),
+      where('companyId', '==', companyId),
+    ));
+    await deleteDocs(snapshot.docs.map((item) => item.ref));
+    return snapshot.size;
+  };
+
+  let deletedRecords = 0;
+
+  // Remove subcoleções e índices vinculados à empresa.
+  for (const companyId of ownedCompanyIds) {
+    const memberSnapshot = await getDocs(collection(db, 'companies', companyId, 'members'));
+    await deleteDocs(memberSnapshot.docs.map((item) => item.ref));
+    deletedRecords += memberSnapshot.size;
+
+    // Dados operacionais e financeiros do tenant.
+    const tenantCollections = [
+      'clients',
+      'products',
+      'sales',
+      'purchases',
+      'suppliers',
+      'locations',
+      'financialTransactions',
+      'stockMovements',
+      'budgets',
+      'formulas',
+      'auditLogs',
+      'deletionRequests',
+      'companyAccessRequests',
+      'companyMembers',
+    ];
+
+    for (const collectionName of tenantCollections) {
+      deletedRecords += await deleteByCompany(collectionName, companyId);
+    }
+
+    // Chats do assistente possuem uma subcoleção messages que precisa ser
+    // removida antes do documento pai.
+    const chatsSnapshot = await getDocs(query(
+      collection(db, 'assistantChats'),
+      where('companyId', '==', companyId),
+    ));
+
+    for (const chat of chatsSnapshot.docs) {
+      const messagesSnapshot = await getDocs(collection(
+        db,
+        'assistantChats',
+        chat.id,
+        'messages',
+      ));
+      await deleteDocs(messagesSnapshot.docs.map((item) => item.ref));
+      deletedRecords += messagesSnapshot.size;
+    }
+
+    await deleteDocs(chatsSnapshot.docs.map((item) => item.ref));
+    deletedRecords += chatsSnapshot.size;
+
+    // counters/{companyId} não possui companyId dentro do documento.
+    await deleteDocs([doc(db, 'counters', companyId)]);
+
+    // A empresa é o documento que guarda configurações, módulos, plano etc.
+    await deleteDocs([doc(db, 'companies', companyId)]);
+  }
+
+  // Remove o acesso do usuário a empresas de terceiros sem apagar os dados
+  // dessas empresas. Isso evita deixar memberships órfãos.
+  const companyMembersByUser = await getDocs(query(
+    collection(db, 'companyMembers'),
+    where('userId', '==', userId),
+  ));
+  await deleteDocs(companyMembersByUser.docs.map((item) => item.ref));
+  deletedRecords += companyMembersByUser.size;
+
+  const companyMemberships = [];
+  const usersSnapshot = await getDocs(collection(db, 'users'));
+  for (const item of usersSnapshot.docs) {
+    if (item.id === userId) continue;
+
+    const memberships = item.data().memberships || {};
+    const updates = {};
+    for (const companyId of ownedCompanyIds) {
+      if (memberships[companyId]) {
+        updates[`memberships.${companyId}`] = deleteField();
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = serverTimestamp();
+      companyMemberships.push({ ref: item.ref, data: updates });
+    }
+  }
+
+  // Solicitações de acesso feitas pela conta também são dados da conta.
+  const accessRequestsByUser = await getDocs(query(
+    collection(db, 'companyAccessRequests'),
+    where('requesterUid', '==', userId),
+  ));
+  await deleteDocs(accessRequestsByUser.docs.map((item) => item.ref));
+  deletedRecords += accessRequestsByUser.size;
+
+  // Remove registros de auditoria em empresas externas quando o usuário é o
+  // autor. Os logs da empresa excluída já foram removidos acima.
+  const auditByUser = await getDocs(query(
+    collection(db, 'auditLogs'),
+    where('userId', '==', userId),
+  ));
+  await deleteDocs(auditByUser.docs.map((item) => item.ref));
+  deletedRecords += auditByUser.size;
+
+  // Aplicar atualizações de memberships em lotes.
+  for (let index = 0; index < companyMemberships.length; index += 450) {
+    const batch = writeBatch(db);
+    companyMemberships.slice(index, index + 450).forEach(({ ref, data }) => {
+      batch.update(ref, data);
+    });
+    await batch.commit();
+  }
+
+  // Finalmente remove o perfil Firestore.
+  await deleteDoc(userRef);
+
+  // A exclusão de outro usuário no Firebase Auth exige Admin SDK em backend.
+  // Neste projeto o superadmin remove todos os dados do Firestore; a conta
+  // Auth pode permanecer sem perfil e, portanto, não consegue entrar no ERP.
   return {
+    deleted: true,
     firestore: true,
     auth: false,
-    authDetail: 'backend_required',
+    authDetail: 'firebase_auth_requires_backend',
+    ownedCompanies: ownedCompanyIds,
+    deletedRecords,
+    email: userData.email || null,
   };
 }
 

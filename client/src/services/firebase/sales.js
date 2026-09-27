@@ -4,7 +4,7 @@
 
 import {
   getDoc_, updateDoc_, listDocs,
-  getBatch, docRef, newDocRef, serverTimestamp, increment,
+  getBatch, docRef, newDocRef, serverTimestamp, increment, requestDeletionForOperator,
 } from './firestore.js';
 
 const COLLECTION = 'sales';
@@ -170,6 +170,12 @@ export async function cancelSale(saleId) {
 export async function deleteSale(saleId) {
   const sale = await getSale(saleId);
   if (!sale) throw new Error('Venda não encontrada');
+
+  if (await requestDeletionForOperator(COLLECTION, saleId)) {
+    const error = new Error('Solicitação de exclusão enviada para aprovação do administrador ou proprietário.');
+    error.code = 'deletion-request-created';
+    throw error;
+  }
 
   const batch = getBatch();
   const saleRef = docRef(COLLECTION, saleId);

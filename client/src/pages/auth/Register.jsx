@@ -84,9 +84,14 @@ const AVAILABLE_MODULES = [
   { key: 'sales', label: 'Vendas', desc: 'Pedidos, orçamentos, aprovação' },
   { key: 'purchases', label: 'Compras', desc: 'Pedidos, recebimento automático' },
   { key: 'suppliers', label: 'Fornecedores', desc: 'Cadastro completo' },
+  { key: 'locations', label: 'Localizações', desc: 'Endereços e unidades da empresa' },
   { key: 'financial', label: 'Financeiro', desc: 'Contas a pagar/receber, fluxo de caixa' },
   { key: 'stock', label: 'Estoque', desc: 'Movimentações, alertas, ajustes' },
   { key: 'reports', label: 'Relatórios', desc: 'Vendas, lucro, margem' },
+  { key: 'assistant', label: 'Assistente de IA', desc: 'Angel para consultas sobre o ERP' },
+  { key: 'measurement', label: 'Medição', desc: 'Aproveitamento e cálculo de material' },
+  { key: 'formulas', label: 'Fórmulas', desc: 'Fórmulas de cálculo para embalagens' },
+  { key: 'budgets', label: 'Orçamentos', desc: 'Propostas, aprovação e acompanhamento' },
 ];
 
 const STEPS = [
@@ -305,7 +310,7 @@ function Step2({ company, setCompany, errors, onFillRandom }) {
   );
 }
 
-function Step3({ modules, setModules, lockModules, setLockModules, errors }) {
+function Step3({ modules, setModules, errors }) {
   const toggleModule = useCallback((key) => {
     setModules((prev) => ({ ...prev, [key]: !prev[key] }));
   }, [setModules]);
@@ -342,31 +347,6 @@ function Step3({ modules, setModules, lockModules, setLockModules, errors }) {
         {selectedCount} de {AVAILABLE_MODULES.length} módulos selecionados
       </div>
 
-      {/* Lock option */}
-      <div className="border-t border-dark-700/50 pt-4 mt-2">
-        <label className="flex items-start gap-3 cursor-pointer group">
-          <div className="relative mt-0.5">
-            <input
-              type="checkbox"
-              checked={lockModules}
-              onChange={(e) => setLockModules(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-5 h-5 rounded-md border border-dark-600 bg-dark-800 peer-checked:bg-primary-500 peer-checked:border-primary-500 transition-all flex items-center justify-center">
-              {lockModules && <Check size={14} className="text-dark-950" />}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-dark-200 group-hover:text-dark-100 transition-colors">
-              Carimbar configuração
-            </div>
-            <div className="text-xs text-dark-500 mt-0.5">
-              Impede que módulos sejam adicionados ou removidos após o cadastro.
-              Somente um administrador poderá alterar depois.
-            </div>
-          </div>
-        </label>
-      </div>
     </div>
   );
 }
@@ -397,9 +377,9 @@ export default function Register() {
   // ─── Step 3: Módulos ───
   const [modules, setModules] = useState({
     clients: true, products: true, sales: true, purchases: true,
-    suppliers: true, financial: true, stock: true, reports: true,
+    suppliers: true, locations: true, financial: true, stock: true, reports: true,
+    assistant: true, measurement: true, formulas: true, budgets: true,
   });
-  const [lockModules, setLockModules] = useState(false);
 
   // ═══════════════════════════════════════════
   // Validação por passo
@@ -503,7 +483,6 @@ export default function Register() {
         companyEmail: company.companyEmail.trim(),
         companyPhone: company.companyPhone.replace(/\D/g, ''),
         enabledModules,
-        modulesLocked: lockModules,
       });
 
       toast.success(result.requiresEmailVerification
@@ -511,7 +490,7 @@ export default function Register() {
         : 'Conta criada! Você já pode entrar no sistema.');
       navigate('/login');
     } catch (err) {
-      const msg = err.code === 'auth/email-already-in-use' ? 'Este email já está cadastrado.'
+      const msg = err.code === 'auth/email-already-in-use' ? 'Este email já está cadastrado. Use a tela de login para acessar a conta.'
         : err.code === 'auth/weak-password' ? 'A senha precisa ter pelo menos 6 caracteres.'
         : err.code === 'auth/company-write-denied' || err.code === 'auth/profile-write-denied' ? err.message
         : err.message;
@@ -556,8 +535,6 @@ export default function Register() {
                 <Step3
                   modules={modules}
                   setModules={setModules}
-                  lockModules={lockModules}
-                  setLockModules={setLockModules}
                   errors={errors}
                 />
               )}

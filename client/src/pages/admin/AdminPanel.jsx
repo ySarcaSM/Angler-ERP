@@ -140,7 +140,7 @@ export default function AdminPanel() {
       if (result.auth) {
         toast.success(`Conta de ${user.name || user.email} excluída (Firestore + Auth).`);
       } else {
-        toast.success(`Documento removido do Firestore. O login foi bloqueado.`);
+        toast.success(`Dados e empresa removidos do Firestore. A autenticação do Firebase permanece por limitação do plano gratuito.`);
       }
 
       setShowDeleteModal(null);

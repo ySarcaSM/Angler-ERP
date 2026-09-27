@@ -15,6 +15,8 @@ const EMPTY = { type: 'income', category: '', description: '', amount: 0, date: 
 
 export default function FinancialDashboard() {
   const { company, user, userData } = useAuth();
+  const isOperator = userData?.role === 'operator';
+  const isViewer = userData?.role === 'viewer';
   const [summary, setSummary] = useState(null);
   const [data, setData] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -28,14 +30,18 @@ export default function FinancialDashboard() {
     if (!company?.id) return;
     setLoading(true);
     try {
-      const [s, txns, budgetResult] = await Promise.all([
+      const [s, txns] = await Promise.all([
         getSummary(company.id),
         listTransactions(company.id, { pageSize: 100, type: typeFilter || undefined }),
-        listBudgets(company.id, { pageSize: 200 }),
       ]);
       setSummary(s);
       setData(txns.data);
-      setBudgets(budgetResult.data);
+      if (!isOperator) {
+        const budgetResult = await listBudgets(company.id, { pageSize: 200 });
+        setBudgets(budgetResult.data);
+      } else {
+        setBudgets([]);
+      }
     } catch (err) { toast.error(err.message); }
     finally { setLoading(false); }
   };
@@ -78,12 +84,12 @@ export default function FinancialDashboard() {
     { key: 'amount', label: 'Valor', render: (v, row) => <span className={`font-semibold ${row.type === 'income' ? 'text-emerald-400' : 'text-red-400'}`}>{row.type === 'income' ? '+' : '-'} {formatBRL(v)}</span> },
     { key: 'status', label: 'Status', render: (v) => <span className={{ pending: 'badge-warning', paid: 'badge-success', overdue: 'badge-danger' }[v] || 'badge-neutral'}>{statusLabel(v)}</span> },
     { key: 'createdAt', label: 'Data', render: (v) => <span className="text-dark-500 text-xs">{formatDate(v?.toDate?.() || v)}</span> },
-    { key: '_actions', label: '', width: '60px', render: (_, row) => row.status === 'pending' ? <button onClick={(e) => { e.stopPropagation(); handlePay(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button> : null },
+    { key: '_actions', label: '', width: '60px', render: (_, row) => !isViewer && row.status === 'pending' ? <button onClick={(e) => { e.stopPropagation(); handlePay(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button> : null },
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Financeiro" subtitle="Contas a pagar e receber" action={<button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Nova Transação</button>} />
+      <PageHeader title="Financeiro" subtitle="Contas a pagar e receber" action={!isViewer && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Nova Transação</button>} />
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="card bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-500/20 p-5">
@@ -110,7 +116,7 @@ export default function FinancialDashboard() {
           {budgets.length === 0 && <div className="p-6 text-center text-sm text-dark-500">Nenhum orçamento cadastrado.</div>}
           {budgets.map((budget) => {
             const pending = !budget.status || budget.status === 'draft';
-            return <div key={budget.id} className="flex flex-wrap items-center gap-4 p-4"><div className="min-w-[220px] flex-1"><div className="font-medium text-dark-100">{budget.clientName}</div><div className="text-sm text-dark-400">{budget.description || 'Sem observação'}</div></div><strong className="text-primary-300">{formatBRL(budget.value)}</strong><span className={budget.status === 'approved' ? 'badge-success' : budget.status === 'cancelled' ? 'badge-danger' : 'badge-warning'}>{budget.status === 'approved' ? 'Aprovado' : budget.status === 'cancelled' ? 'Cancelado' : 'Rascunho'}</span>{pending && <div className="flex gap-1"><button type="button" className="btn-ghost btn-sm text-emerald-400" title="Aprovar orçamento" onClick={() => handleBudgetStatus(budget, 'approved')}><CheckCircle size={15} /></button><button type="button" className="btn-ghost btn-sm text-red-400" title="Cancelar orçamento" onClick={() => handleBudgetStatus(budget, 'cancelled')}><XCircle size={15} /></button></div>}</div>;
+            return <div key={budget.id} className="flex flex-wrap items-center gap-4 p-4"><div className="min-w-[220px] flex-1"><div className="font-medium text-dark-100">{budget.clientName}</div><div className="text-sm text-dark-400">{budget.description || 'Sem observação'}</div></div><strong className="text-primary-300">{formatBRL(budget.value)}</strong><span className={budget.status === 'approved' ? 'badge-success' : budget.status === 'cancelled' ? 'badge-danger' : 'badge-warning'}>{budget.status === 'approved' ? 'Aprovado' : budget.status === 'cancelled' ? 'Cancelado' : 'Rascunho'}</span>{!isViewer && !isOperator && pending && <div className="flex gap-1"><button type="button" className="btn-ghost btn-sm text-emerald-400" title="Aprovar orçamento" onClick={() => handleBudgetStatus(budget, 'approved')}><CheckCircle size={15} /></button><button type="button" className="btn-ghost btn-sm text-red-400" title="Cancelar orçamento" onClick={() => handleBudgetStatus(budget, 'cancelled')}><XCircle size={15} /></button></div>}</div>;
           })}
         </div>
       </div>

@@ -12,6 +12,8 @@ import { logAudit } from '../../services/firebase/settings';
 export default function SaleList() {
   const navigate = useNavigate();
   const { company, user, userData } = useAuth();
+  const isOperator = userData?.role === 'operator';
+  const isViewer = userData?.role === 'viewer';
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -25,7 +27,7 @@ export default function SaleList() {
       if (statusFilter) opts.filters = [{ field: 'status', op: '==', value: statusFilter }];
       const res = await listSales(company.id, opts);
       setData(res.data);
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setLoading(false); }
   }, [company, search, statusFilter]);
 
@@ -33,7 +35,7 @@ export default function SaleList() {
 
   const handleApprove = async (id) => {
     try { const sale = data.find((item) => item.id === id); await approveSale(id, company.id); await logAudit(company.id, { user, userName: userData?.name, action: 'approve', entity: 'Venda', entityId: id, description: `${userData?.name || 'Usuário'} aprovou a venda #${sale?.number || id} de ${sale?.clientName || 'cliente'}.`, details: { number: sale?.number, clientName: sale?.clientName, total: sale?.total } }); toast.success('Venda aprovada!'); load(); }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
   };
 
   const handleCancel = async (id) => {
@@ -45,13 +47,13 @@ export default function SaleList() {
       toast.success('Venda cancelada.');
       load();
     }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('Deletar esta venda permanentemente?')) return;
     try { const sale = data.find((item) => item.id === id); await deleteSale(id); await logAudit(company.id, { user, userName: userData?.name, action: 'delete', entity: 'Venda', entityId: id, description: `${userData?.name || 'Usuário'} excluiu a venda #${sale?.number || id} de ${sale?.clientName || 'cliente'}.`, details: { number: sale?.number, clientName: sale?.clientName, total: sale?.total, status: sale?.status } }); toast.success('Venda deletada.'); }
-    catch (err) { toast.error(err.message); }
+    catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { load(); }
   };
 
@@ -65,16 +67,16 @@ export default function SaleList() {
     { key: '_actions', label: '', width: '100px', render: (_, row) => (
       <div className="flex gap-1">
         <button onClick={(e) => { e.stopPropagation(); navigate(`/app/sales/${row.id}`); }} className="btn-ghost btn-sm"><Eye size={14} /></button>
-        {(row.status === 'draft' || row.status === 'pending') && <button onClick={(e) => { e.stopPropagation(); handleApprove(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button>}
-        {row.status !== 'approved' && row.status !== 'cancelled' && <button onClick={(e) => { e.stopPropagation(); handleCancel(row.id); }} className="btn-ghost btn-sm text-red-400" title="Cancelar venda"><XCircle size={14} /></button>}
-        <button onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }} className="btn-ghost btn-sm text-red-400" title="Deletar venda"><Trash2 size={14} /></button>
+        {!isViewer && (row.status === 'draft' || row.status === 'pending') && <button onClick={(e) => { e.stopPropagation(); handleApprove(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button>}
+        {!isViewer && row.status !== 'approved' && row.status !== 'cancelled' && <button onClick={(e) => { e.stopPropagation(); handleCancel(row.id); }} className="btn-ghost btn-sm text-red-400" title="Cancelar venda"><XCircle size={14} /></button>}
+        {!isViewer && <button onClick={(e) => { e.stopPropagation(); handleDelete(row.id); }} className="btn-ghost btn-sm text-red-400" title="Deletar venda"><Trash2 size={14} /></button>}
       </div>
     )},
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Vendas" subtitle={`${data.length} vendas`} action={<button onClick={() => navigate('/app/sales/new')} className="btn-primary"><Plus size={18} /> Nova Venda</button>} />
+      <PageHeader title="Vendas" subtitle={`${data.length} vendas`} action={userData?.role !== 'viewer' && <button onClick={() => navigate('/app/sales/new')} className="btn-primary"><Plus size={18} /> Nova Venda</button>} />
       <div className="card">
         <div className="card-header flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 flex-1 max-w-sm">

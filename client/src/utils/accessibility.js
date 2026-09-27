@@ -2,6 +2,10 @@ import { updateDoc_ } from '../services/firebase/firestore.js';
 
 const STORAGE_KEY = 'angler-accessibility-preferences';
 
+function getStorageKey(userId) {
+  return userId ? `${STORAGE_KEY}-${userId}` : null;
+}
+
 export const DEFAULT_ACCESSIBILITY = {
   textScale: 100,
   lineSpacing: 'normal',
@@ -17,9 +21,11 @@ export const DEFAULT_ACCESSIBILITY = {
   reducedMotion: false,
 };
 
-export function getAccessibilityPreferences() {
+export function getAccessibilityPreferences(userId) {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    const storageKey = getStorageKey(userId);
+    if (!storageKey) return { ...DEFAULT_ACCESSIBILITY };
+    const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
     return {
       ...DEFAULT_ACCESSIBILITY,
       ...saved,
@@ -49,19 +55,24 @@ export function applyAccessibilityPreferences(preferences) {
   root.classList.toggle('accessibility-reduced-motion', preferences.reducedMotion);
 }
 
-export function saveAccessibilityPreferences(preferences) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+export function saveAccessibilityPreferences(preferences, userId) {
+  const storageKey = getStorageKey(userId);
+  if (!storageKey) return;
+  localStorage.setItem(storageKey, JSON.stringify(preferences));
   applyAccessibilityPreferences(preferences);
   window.dispatchEvent(new CustomEvent('accessibility-preferences-changed', { detail: preferences }));
 }
 
 export async function saveAccessibilityPreferencesForUser(preferences, userId) {
-  saveAccessibilityPreferences(preferences);
-  if (userId) await updateDoc_('users', userId, { accessibilityPreferences: preferences });
+  if (!userId) throw new Error('Usuário não identificado.');
+  saveAccessibilityPreferences(preferences, userId);
+  await updateDoc_('users', userId, { accessibilityPreferences: preferences });
 }
 
-export function storeAccessibilityPreferences(preferences) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+export function storeAccessibilityPreferences(preferences, userId) {
+  const storageKey = getStorageKey(userId);
+  if (!storageKey) return;
+  localStorage.setItem(storageKey, JSON.stringify(preferences));
   applyAccessibilityPreferences(preferences);
 }
 
@@ -81,7 +92,8 @@ export function promptAccessibilityPreferences(preferences) {
   return shouldApply;
 }
 
-export function promptSavedAccessibilityPreferences() {
-  if (!localStorage.getItem(STORAGE_KEY)) return false;
-  return promptAccessibilityPreferences(getAccessibilityPreferences());
+export function promptSavedAccessibilityPreferences(userId) {
+  const storageKey = getStorageKey(userId);
+  if (!storageKey || !localStorage.getItem(storageKey)) return false;
+  return promptAccessibilityPreferences(getAccessibilityPreferences(userId));
 }

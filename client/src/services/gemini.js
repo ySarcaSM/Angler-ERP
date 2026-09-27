@@ -44,7 +44,12 @@ export async function askAngel({ apiKey, history, message, plan, readContext }) 
     }),
   });
 
-  const payload = await response.json();
+  const payload = await response.json().catch(() => null);
+  if (response.status === 503) {
+    const error = new Error('A Angel está temporariamente indisponível. Aguarde alguns instantes e tente novamente.');
+    error.status = 503;
+    throw error;
+  }
   if (!response.ok) throw new Error(payload?.error?.message || 'Não foi possível obter uma resposta da Gemini.');
   const answer = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('').trim();
   if (!answer) throw new Error('A Gemini não retornou uma resposta. Tente novamente.');

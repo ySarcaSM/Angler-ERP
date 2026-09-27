@@ -6,9 +6,17 @@ import { useAuth } from '../../context/useAuth';
 import { saveAccessibilityPreferencesForUser } from '../../utils/accessibility';
 
 export default function AccessibilitySettingsPanel() {
-  const { user } = useAuth();
-  const [preferences, setPreferences] = useState(getAccessibilityPreferences());
+  const { user, userData } = useAuth();
+  const userId = user?.uid || userData?.uid;
+  const [preferences, setPreferences] = useState(getAccessibilityPreferences(userId));
   const [textScaleDraft, setTextScaleDraft] = useState(preferences.textScale);
+
+  useEffect(() => {
+    if (!userId) return;
+    const saved = userData?.accessibilityPreferences || getAccessibilityPreferences(userId);
+    setPreferences({ ...DEFAULT_ACCESSIBILITY, ...saved });
+    setTextScaleDraft(saved.textScale || DEFAULT_ACCESSIBILITY.textScale);
+  }, [userId, userData?.accessibilityPreferences]);
 
   useEffect(() => {
     const handlePreferencesChange = (event) => {
@@ -22,13 +30,13 @@ export default function AccessibilitySettingsPanel() {
   const updatePreferences = (changes) => {
     const next = { ...preferences, ...changes };
     setPreferences(next);
-    saveAccessibilityPreferencesForUser(next, user?.uid).catch((error) => toast.error(`Não foi possível salvar acessibilidade: ${error.message}`));
+    saveAccessibilityPreferencesForUser(next, userId).catch((error) => toast.error(`Não foi possível salvar acessibilidade: ${error.message}`));
   };
 
   const reset = () => {
     setPreferences(DEFAULT_ACCESSIBILITY);
     setTextScaleDraft(DEFAULT_ACCESSIBILITY.textScale);
-    saveAccessibilityPreferencesForUser(DEFAULT_ACCESSIBILITY, user?.uid).catch((error) => toast.error(`Não foi possível salvar acessibilidade: ${error.message}`));
+    saveAccessibilityPreferencesForUser(DEFAULT_ACCESSIBILITY, userId).catch((error) => toast.error(`Não foi possível salvar acessibilidade: ${error.message}`));
     toast.success('Acessibilidade restaurada.');
   };
 

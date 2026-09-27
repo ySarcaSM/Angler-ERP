@@ -400,7 +400,7 @@ export default function Landing() {
                 <span className="lp-pricing-badge pro">Pro</span>
               </div>
               <div className="lp-pricing-price">
-                <span className="lp-pricing-val">R$ 59<span className="lp-pricing-cents">,99</span></span>
+                <span className="lp-pricing-val">R$ 119<span className="lp-pricing-cents">,98</span></span>
                 <span className="lp-pricing-period">/mês</span>
               </div>
               <ul className="lp-pricing-features">
@@ -424,7 +424,7 @@ export default function Landing() {
                 <span className="lp-pricing-badge ultra">Ultra</span>
               </div>
               <div className="lp-pricing-price">
-                <span className="lp-pricing-val">R$ 99<span className="lp-pricing-cents">,99</span></span>
+                <span className="lp-pricing-val">R$ 199<span className="lp-pricing-cents">,98</span></span>
                 <span className="lp-pricing-period">/mês</span>
               </div>
               <ul className="lp-pricing-features">

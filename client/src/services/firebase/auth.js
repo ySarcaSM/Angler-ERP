@@ -5,6 +5,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
   signOut,
   sendPasswordResetEmail,
   sendEmailVerification,
@@ -12,11 +13,21 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import {
-  doc, setDoc, getDoc, serverTimestamp,
+  doc, setDoc, getDoc, updateDoc, serverTimestamp, writeBatch, collection, query, where, getDocs,
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
 const REGISTRATION_SESSION_KEY = 'angler_registration_in_progress';
+
+function isFirestoreUnavailable(error) {
+  return error?.code === 'unavailable' || /client is offline/i.test(error?.message || '');
+}
+
+function firestoreUnavailableError() {
+  const error = new Error('Não foi possível conectar ao Firestore. Verifique sua internet e confirme que o Cloud Firestore está criado e habilitado no projeto Firebase.');
+  error.code = 'auth/firestore-unavailable';
+  return error;
+}
 
 export function isRegistrationInProgress() {
   return sessionStorage.getItem(REGISTRATION_SESSION_KEY) === 'true';
@@ -29,7 +40,7 @@ async function registerInternal({
   // Company
   companyName, razaoSocial, cnpj, sector, address, companyEmail, companyPhone,
   // Modules
-  enabledModules, modulesLocked,
+  enabledModules,
 }) {
   // Reaproveita uma conta Auth sem perfil apenas quando o documento foi
   // removido pelo administrador. Isso permite recadastrar sem serviço pago.
@@ -46,7 +57,7 @@ async function registerInternal({
     } catch {
       await sendPasswordResetEmail(auth, email);
       const recoveryError = new Error(
-        'Este email já existe no Firebase Authentication. Enviamos um link para redefinir a senha; depois, use essa nova senha para concluir o cadastro.'
+        'Este email já possui uma conta. Enviamos um link para redefinir a senha; depois, entre usando a nova senha.'
       );
       recoveryError.code = 'auth/account-recovery-required';
       throw recoveryError;
@@ -60,6 +71,9 @@ async function registerInternal({
         // A autenticação já confirmou a posse da conta. Continua para recriar
         // o perfil removido, mesmo se a regra antiga bloquear este get.
         console.warn('[Register] Perfil não pôde ser consultado; tentando recriá-lo.');
+      } else if (isFirestoreUnavailable(firestoreError)) {
+        await signOut(auth);
+        throw firestoreUnavailableError();
       } else {
         await signOut(auth);
         throw firestoreError;
@@ -94,6 +108,7 @@ async function registerInternal({
       createdAt: serverTimestamp(),
       plan: 'trial',
       ownerUid: user.uid,
+      companyId: user.uid,
       settings: {
         currency: 'BRL',
         timezone: 'America/Sao_Paulo',
@@ -101,8 +116,10 @@ async function registerInternal({
         lowStockThreshold: 10,
       },
       modules: {
-        enabled: enabledModules || ['clients', 'products', 'sales', 'purchases', 'suppliers', 'financial', 'stock', 'reports'],
-        locked: modulesLocked || false,
+        enabled: enabledModules || [
+          'clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'financial', 'stock', 'reports',
+          'assistant', 'measurement', 'formulas', 'budgets',
+        ],
       },
     });
   } catch (error) {
@@ -112,6 +129,7 @@ async function registerInternal({
       companyError.code = 'auth/company-write-denied';
       throw companyError;
     }
+    if (isFirestoreUnavailable(error)) throw firestoreUnavailableError();
     throw error;
   }
 
@@ -124,9 +142,13 @@ async function registerInternal({
       name,
       lastName: lastName || '',
       role: 'owner',
-      companyId: user.uid, // Owner's company = their uid
+      companyId: user.uid, // contexto ativo inicial = empresa pessoal
+      personalCompanyId: user.uid,
       active: true,
       requiresEmailVerification: !existingAuthAccount,
+      memberships: {
+        [user.uid]: { role: 'owner', active: true, personal: true, createdAt: serverTimestamp() },
+      },
       createdAt: serverTimestamp(),
     });
   } catch (error) {
@@ -136,8 +158,24 @@ async function registerInternal({
       userError.code = 'auth/profile-write-denied';
       throw userError;
     }
+    if (isFirestoreUnavailable(error)) throw firestoreUnavailableError();
     throw error;
   }
+
+  // Índice por empresa: a tela de Usuários consulta este caminho, que permite
+  // regras de segurança baseadas diretamente no companyId do documento.
+  await setDoc(doc(db, 'companies', user.uid, 'members', user.uid), {
+    userId: user.uid,
+    companyId: user.uid,
+    email,
+    name,
+    lastName: lastName || '',
+    role: 'owner',
+    active: true,
+    personal: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 
   await signOut(auth);
 
@@ -156,6 +194,32 @@ export async function register(data) {
 // ─── Login ───
 export async function login(email, password) {
   const cred = await signInWithEmailAndPassword(auth, email, password);
+
+  // Garante o índice da empresa pessoal para contas criadas antes da
+  // introdução da subcoleção companies/{companyId}/members.
+  try {
+    const userSnapshot = await getDoc(doc(db, 'users', cred.user.uid));
+    if (userSnapshot.exists()) {
+      const data = userSnapshot.data();
+      const personalCompanyId = data.personalCompanyId || cred.user.uid;
+      if (personalCompanyId === cred.user.uid) {
+        await setDoc(doc(db, 'companies', personalCompanyId, 'members', cred.user.uid), {
+          companyId: personalCompanyId,
+          userId: cred.user.uid,
+          email: data.email || cred.user.email || '',
+          name: data.name || '',
+          lastName: data.lastName || '',
+          role: 'owner',
+          active: true,
+          personal: true,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+  } catch (error) {
+    console.warn('[Auth] Não foi possível atualizar o índice de membros da empresa pessoal:', error);
+  }
+
   return cred.user;
 }
 
@@ -171,16 +235,59 @@ export async function resetPassword(email) {
 
 // ─── Get current user data from Firestore ───
 export async function getUserData(uid) {
-  const userDoc = await getDoc(doc(db, 'users', uid));
-  if (!userDoc.exists()) return null;
-  return { id: userDoc.id, ...userDoc.data() };
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (!userDoc.exists()) return null;
+    return { id: userDoc.id, ...userDoc.data() };
+  } catch (error) {
+    if (isFirestoreUnavailable(error)) throw firestoreUnavailableError();
+    throw error;
+  }
 }
 
-// ─── Get company data ───
+export async function getPersonalCompanyId(uid) {
+  if (!uid) return null;
+
+  const snapshot = await getDocs(query(
+    collection(db, 'companies'),
+    where('ownerUid', '==', uid),
+  ));
+
+  return snapshot.empty ? null : snapshot.docs[0].id;
+}
+
+export async function switchActiveCompany(uid, companyId, role) {
+  const userRef = doc(db, 'users', uid);
+  const snapshot = await getDoc(userRef);
+  if (!snapshot.exists()) throw new Error('Perfil da conta não encontrado.');
+
+  const data = snapshot.data();
+  const membership = data.memberships?.[companyId];
+  const companySnapshot = await getDoc(doc(db, 'companies', companyId));
+  const isPersonalCompany = companySnapshot.exists() && companySnapshot.data()?.ownerUid === uid;
+  const legacyMember = data.companyId === companyId;
+
+  if (!membership?.active && !legacyMember && !isPersonalCompany) {
+    throw new Error('Você não possui acesso a esta empresa.');
+  }
+
+  const nextRole = isPersonalCompany
+    ? 'owner'
+    : (membership?.role || role || data.role);
+
+  await updateDoc(userRef, { companyId, role: nextRole });
+  return { companyId, role: nextRole };
+}
+
 export async function getCompanyData(companyId) {
-  const companyDoc = await getDoc(doc(db, 'companies', companyId));
-  if (!companyDoc.exists()) return null;
-  return { id: companyDoc.id, ...companyDoc.data() };
+  try {
+    const companyDoc = await getDoc(doc(db, 'companies', companyId));
+    if (!companyDoc.exists()) return null;
+    return { id: companyDoc.id, ...companyDoc.data() };
+  } catch (error) {
+    if (isFirestoreUnavailable(error)) throw firestoreUnavailableError();
+    throw error;
+  }
 }
 
 // ─── Auth state listener ───
