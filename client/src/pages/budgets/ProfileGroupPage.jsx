@@ -800,6 +800,98 @@ function CutPreview({ profile, result, onDownload }) {
         drawResponsivePieceLabel(duplicateContext, cutAreaX, mainAreaY + (secondRows * mainAreaHeight), cutAreaWidth, unusedHeight, `${formatNumber(150 - secondPlan.width, 0)} cm fora do plano`, '#374151');
       }
 
+      // Indicação visual das sobras do Plano 2, calculada exclusivamente
+      // com a grade e a quantidade efetivamente cortada neste plano.
+      const secondPlacedPieces = Math.min(secondPlanQuantity, secondPlan.capacity);
+      const secondPlacedColumns = secondPlacedPieces > 0 ? Math.min(secondPlan.wholePiecesPerRow, secondPlacedPieces) : 0;
+      const secondPlacedRows = secondPlan.wholePiecesPerRow > 0 ? Math.ceil(secondPlacedPieces / secondPlan.wholePiecesPerRow) : 0;
+      const secondPieceWidthCm = Number(secondPlan.pieceWidth) || cutWidthCm;
+      const secondPieceHeightCm = Number(secondPlan.pieceHeight) || cutHeightCm;
+      const secondPieceDrawWidth = secondPieceWidthCm * centimeterScale;
+      const secondPieceDrawHeight = secondPieceHeightCm * verticalCentimeterScale;
+      const secondGridDrawWidth = secondPlacedColumns * secondPieceDrawWidth;
+      const secondGridDrawHeight = secondPlacedRows * secondPieceDrawHeight;
+      const secondLengthWasteX = mainStartX + secondGridDrawWidth;
+      const secondLengthWasteWidth = Math.max(0, cutAreaRight - secondLengthWasteX);
+      const secondWidthWasteY = mainAreaY + secondGridDrawHeight;
+      const secondWidthWasteHeight = Math.max(0, materialPlanBottom - secondWidthWasteY);
+
+      if (secondLengthWasteWidth > 0 && secondGridDrawHeight > 0) {
+        const wasteLineY = mainAreaY + (secondGridDrawHeight / 2);
+        const wasteLabel = 'Sobra: ' + formatNumber(Math.max(0, secondPlan.usableLength - (secondPlacedColumns * secondPieceWidthCm)), 0) + ' cm';
+        const arrowSize = Math.min(8, Math.max(4, secondLengthWasteWidth / 3));
+        const arrowHalf = arrowSize / 2;
+        duplicateContext.save();
+        duplicateContext.strokeStyle = '#dc2626';
+        duplicateContext.fillStyle = '#dc2626';
+        duplicateContext.lineWidth = 2.5;
+        duplicateContext.beginPath();
+        duplicateContext.moveTo(secondLengthWasteX, wasteLineY);
+        duplicateContext.lineTo(cutAreaRight, wasteLineY);
+        duplicateContext.stroke();
+        duplicateContext.beginPath();
+        duplicateContext.moveTo(secondLengthWasteX, wasteLineY);
+        duplicateContext.lineTo(secondLengthWasteX + arrowSize, wasteLineY - arrowHalf);
+        duplicateContext.lineTo(secondLengthWasteX + arrowSize, wasteLineY + arrowHalf);
+        duplicateContext.closePath();
+        duplicateContext.fill();
+        duplicateContext.beginPath();
+        duplicateContext.moveTo(cutAreaRight, wasteLineY);
+        duplicateContext.lineTo(cutAreaRight - arrowSize, wasteLineY - arrowHalf);
+        duplicateContext.lineTo(cutAreaRight - arrowSize, wasteLineY + arrowHalf);
+        duplicateContext.closePath();
+        duplicateContext.fill();
+        duplicateContext.restore();
+        let wasteFontSize = 10;
+        duplicateContext.font = '700 ' + wasteFontSize + 'px Arial';
+        while (wasteFontSize > 5 && duplicateContext.measureText(wasteLabel).width > Math.max(secondLengthWasteWidth - 4, 1)) {
+          wasteFontSize -= 1;
+          duplicateContext.font = '700 ' + wasteFontSize + 'px Arial';
+        }
+        duplicateContext.fillStyle = '#dc2626';
+        const labelWidth = duplicateContext.measureText(wasteLabel).width;
+        duplicateContext.fillText(wasteLabel, ((secondLengthWasteX + cutAreaRight) / 2) - (labelWidth / 2), wasteLineY - 6);
+      }
+
+      if (secondWidthWasteHeight > 0) {
+        const wasteLineX = mainStartX + 18;
+        const arrowSize = Math.min(8, Math.max(4, secondWidthWasteHeight / 3));
+        const arrowHalf = arrowSize / 2;
+        duplicateContext.save();
+        duplicateContext.strokeStyle = '#dc2626';
+        duplicateContext.fillStyle = '#dc2626';
+        duplicateContext.lineWidth = 2.5;
+        duplicateContext.beginPath();
+        duplicateContext.moveTo(wasteLineX, secondWidthWasteY);
+        duplicateContext.lineTo(wasteLineX, materialPlanBottom);
+        duplicateContext.stroke();
+        duplicateContext.beginPath();
+        duplicateContext.moveTo(wasteLineX, secondWidthWasteY);
+        duplicateContext.lineTo(wasteLineX - arrowHalf, secondWidthWasteY + arrowSize);
+        duplicateContext.lineTo(wasteLineX + arrowHalf, secondWidthWasteY + arrowSize);
+        duplicateContext.closePath();
+        duplicateContext.fill();
+        duplicateContext.beginPath();
+        duplicateContext.moveTo(wasteLineX, materialPlanBottom);
+        duplicateContext.lineTo(wasteLineX - arrowHalf, materialPlanBottom - arrowSize);
+        duplicateContext.lineTo(wasteLineX + arrowHalf, materialPlanBottom - arrowSize);
+        duplicateContext.closePath();
+        duplicateContext.fill();
+        duplicateContext.restore();
+        const wasteLabel = 'Sobra: ' + formatNumber(Math.max(0, secondPlan.width - (secondPlacedRows * secondPieceHeightCm)), 0) + ' cm';
+        duplicateContext.save();
+        duplicateContext.translate(wasteLineX + 12, secondWidthWasteY + (secondWidthWasteHeight / 2));
+        duplicateContext.rotate(-Math.PI / 2);
+        let wasteFontSize = 10;
+        duplicateContext.font = '700 ' + wasteFontSize + 'px Arial';
+        while (wasteFontSize > 5 && duplicateContext.measureText(wasteLabel).width > Math.max(secondWidthWasteHeight - 4, 1)) {
+          wasteFontSize -= 1;
+          duplicateContext.font = '700 ' + wasteFontSize + 'px Arial';
+        }
+        duplicateContext.fillStyle = '#dc2626';
+        duplicateContext.fillText(wasteLabel, -(duplicateContext.measureText(wasteLabel).width / 2), 0);
+        duplicateContext.restore();
+      }
       // Reconstroi a faixa inferior no final do desenho para garantir que
       // o fundo atras dos cards do Plano 2 nunca fique transparente/preto.
       duplicateContext.fillStyle = '#ffffff';
