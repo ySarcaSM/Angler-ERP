@@ -1287,7 +1287,7 @@ export default function ProfileGroupPage() {
               <div className="text-sm font-semibold text-dark-200">Aproveitamento das sobras</div>
               <div className="mt-1 text-xs text-dark-500">Teste rotações e encaixes em lados diferentes para tentar aproveitar áreas que a grade simples deixa livres.</div>
             </div>
-            <button type="button" onClick={() => setOptimizedPreview((current) => !current)} disabled={!result.canCut} className="btn-primary whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" onClick={() => setOptimizedPreview((current) => !current)} disabled={!result.quantityValid || !result.materialWidthValid || !result.materialHeightValid || !result.productWidthValid} className="btn-primary whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50">
               <Sparkles size={17} /> {optimizedPreview ? 'Voltar ao corte padrão' : 'Melhor corte otimizado'}
             </button>
           </div>
