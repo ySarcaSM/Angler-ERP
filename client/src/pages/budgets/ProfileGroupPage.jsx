@@ -43,23 +43,62 @@ function calculateCut(materialWidth, pieceWidth, pieceLength, quantity, allowRot
 function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWidth = 0) {
   const usableLength = 262; // 300 cm da mesa, menos 19 cm de cada lateral
   const usableWidth = Math.min(Math.max(0, materialWidth), 150);
-  const piecesPerRow = pieceWidth > 0 ? Math.floor(usableLength / pieceWidth) : 0;
-  const rows = pieceHeight > 0 ? Math.floor(usableWidth / pieceHeight) : 0;
-  const lengthLeftover = usableLength - (piecesPerRow * pieceWidth);
-  const widthLeftover = usableWidth - (rows * pieceHeight);
+  const orientations = [
+    { pieceWidth, pieceHeight, rotated: false },
+    { pieceWidth: pieceHeight, pieceHeight: pieceWidth, rotated: true },
+  ].filter((option, index, list) =>
+    option.pieceWidth > 0 &&
+    option.pieceHeight > 0 &&
+    option.pieceWidth <= usableLength &&
+    option.pieceHeight <= usableWidth &&
+    (index === 0 || option.pieceWidth !== list[0].pieceWidth || option.pieceHeight !== list[0].pieceHeight)
+  );
 
-  return {
+  const plans = orientations.map((option) => {
+    const piecesPerRow = Math.floor(usableLength / option.pieceWidth);
+    const rows = Math.floor(usableWidth / option.pieceHeight);
+    const lengthLeftover = usableLength - (piecesPerRow * option.pieceWidth);
+    const widthLeftover = usableWidth - (rows * option.pieceHeight);
+
+    return {
+      width: usableWidth,
+      usableLength,
+      piecesPerRow,
+      wholePiecesPerRow: piecesPerRow,
+      rows,
+      verticalRows: rows,
+      rowLayouts: Array.from({ length: rows }, () => ({ piecesPerRow })),
+      capacity: piecesPerRow * rows,
+      lengthLeftover,
+      widthLeftover,
+      pieceWidth: option.pieceWidth,
+      pieceHeight: option.pieceHeight,
+      rotated: option.rotated,
+      accordionFits: accordionWidth <= 0 || accordionWidth <= Math.max(lengthLeftover, widthLeftover),
+    };
+  });
+
+  return plans.reduce((best, plan) => {
+    if (!best) return plan;
+    if (plan.capacity !== best.capacity) return plan.capacity > best.capacity ? plan : best;
+    const planWaste = plan.lengthLeftover + plan.widthLeftover;
+    const bestWaste = best.lengthLeftover + best.widthLeftover;
+    return planWaste < bestWaste ? plan : best;
+  }, null) || {
     width: usableWidth,
     usableLength,
-    piecesPerRow,
-    wholePiecesPerRow: piecesPerRow,
-    rows,
-    verticalRows: rows,
-    rowLayouts: Array.from({ length: rows }, () => ({ piecesPerRow })),
-    capacity: piecesPerRow * rows,
-    lengthLeftover,
-    widthLeftover,
-    accordionFits: accordionWidth <= 0 || accordionWidth <= Math.max(lengthLeftover, widthLeftover),
+    piecesPerRow: 0,
+    wholePiecesPerRow: 0,
+    rows: 0,
+    verticalRows: 0,
+    rowLayouts: [],
+    capacity: 0,
+    lengthLeftover: usableLength,
+    widthLeftover: usableWidth,
+    pieceWidth,
+    pieceHeight,
+    rotated: false,
+    accordionFits: false,
   };
 }
 
@@ -878,8 +917,8 @@ export default function ProfileGroupPage() {
     const maxMaterialHeight = 150;
     const quantityValid = quantity > 0;
     const materialWidthValid = materialWidth > 0 && materialWidth <= maxMaterialHeight;
-    const materialHeightValid = height > 0 && height <= materialWidth;
-    const productWidthValid = width > 0 && width <= usableCutLength;
+    const materialHeightValid = height > 0 && width > 0 && (height <= materialWidth || width <= materialWidth);
+    const productWidthValid = width > 0 && height > 0 && (width <= usableCutLength || height <= usableCutLength);
     const accordionValid = length > 0;
     const usableMaterialWidth = usableCutLength;
     const mainCut = calculateCut(usableCutLength, width, height, quantity, false);
@@ -894,12 +933,12 @@ export default function ProfileGroupPage() {
       placedPieces,
       placedRows,
       placedColumns,
-      placedLengthLeftover: baseTablePlan.usableLength - (placedColumns * width),
-      placedWidthLeftover: baseTablePlan.width - (placedRows * height),
-      placedAreaLeftover: (baseTablePlan.usableLength * baseTablePlan.width) - (placedPieces * width * height),
+      placedLengthLeftover: baseTablePlan.usableLength - (placedColumns * baseTablePlan.pieceWidth),
+      placedWidthLeftover: baseTablePlan.width - (placedRows * baseTablePlan.pieceHeight),
+      placedAreaLeftover: (baseTablePlan.usableLength * baseTablePlan.width) - (placedPieces * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
       emptyPositions: Math.max(0, baseTablePlan.capacity - placedPieces),
-      emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedPieces) * width * height,
-      residualEdgeArea: (baseTablePlan.usableLength * baseTablePlan.width) - (baseTablePlan.capacity * width * height),
+      emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedPieces) * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight,
+      residualEdgeArea: (baseTablePlan.usableLength * baseTablePlan.width) - (baseTablePlan.capacity * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
     };
     const completeUnitsPerRow = tablePlan.capacity;
     const plansNeeded = completeUnitsPerRow > 0 ? Math.ceil(quantity / completeUnitsPerRow) : 0;
@@ -916,7 +955,8 @@ export default function ProfileGroupPage() {
     const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
-    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: height, productWidth: width, productLength: length, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
+    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
+      originalProductHeight: height, originalProductWidth: width, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
   const budgetResult = useMemo(() => {
@@ -970,7 +1010,7 @@ export default function ProfileGroupPage() {
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-300">Capacidade de corte</div>
                 <h2 className="mt-1 text-2xl font-bold text-dark-100">Quantas unidades cabem em um plano</h2>
-                <p className="mt-1 text-sm text-dark-400">Cálculo baseado na área útil da mesa e nas medidas informadas.</p>
+                <p className="mt-1 text-sm text-dark-400">O preview testa as duas orientações possíveis e usa automaticamente a que acomoda mais unidades.</p>
               </div>
               <div className="rounded-xl border border-primary-400/30 bg-primary-400/10 px-5 py-3 text-center md:min-w-[190px]">
                 <div className="text-xs font-medium text-primary-200">Capacidade máxima</div>
@@ -1017,7 +1057,8 @@ export default function ProfileGroupPage() {
                   </div>
                 </div>
                 <div className="text-sm text-dark-400 md:max-w-sm md:text-right">
-                  Cada unidade ocupa <strong className="text-dark-200">{formatNumber(result.productWidth, 0)} × {formatNumber(result.productHeight, 0)} cm</strong>.
+                  Cada unidade ocupa <strong className="text-dark-200">{formatNumber(result.productWidth, 0)} × {formatNumber(result.productHeight, 0)} cm</strong> nesta orientação.
+                  {result.tablePlan?.rotated && <span className="block mt-1 text-primary-300">✓ Rotação de 90° escolhida para aumentar o aproveitamento.</span>}
                 </div>
               </div>
             </div>
