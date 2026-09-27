@@ -242,8 +242,8 @@ function CutPreview({ profile, result, onDownload }) {
     const color = colors[profile?.kind] || colors.bag;
     const quantity = Number(result.quantity) || 100;
     const materialWidth = Number(result.materialWidth) || 140;
-    const mainPieceWidth = Number(result.mainCut.pieceWidth) || 50;
-    const mainPieceHeight = Number(result.mainCut.pieceLength) || 90;
+    const mainPieceWidth = Number(result.tablePlan?.pieceWidth) || Number(result.mainCut.pieceWidth) || 50;
+    const mainPieceHeight = Number(result.tablePlan?.pieceHeight) || Number(result.mainCut.pieceLength) || 90;
     const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
     const sidePieceHeight = Number(result.sideCut.pieceLength) || 90;
 
@@ -324,6 +324,11 @@ function CutPreview({ profile, result, onDownload }) {
     const firstPlan = result.cutPlans?.[0];
     const previewQuantity = Math.min(quantity, firstPlan?.capacity || 0);
     context.fillText(`PLANO DE CORTE 1 - ${formatNumber(previewQuantity, 0)} SACOLAS (LARGURA: ${formatNumber(firstPlan?.width || materialWidth, 0)} cm)`, panelX + 18, panelY + 28);
+    if (firstPlan?.rotated) {
+      context.font = '700 10px Arial';
+      context.fillStyle = '#0f766e';
+      context.fillText('ORIENTAÇÃO ROTACIONADA — melhor aproveitamento da mesa', panelX + 18, panelY + 60);
+    }
     context.font = '600 11px Arial';
     context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)` : ''}`, panelX + 18, panelY + 46);
 
