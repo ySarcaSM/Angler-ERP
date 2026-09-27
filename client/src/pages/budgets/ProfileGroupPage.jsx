@@ -144,10 +144,10 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.fillStyle = '#111827';
       context.font = '700 22px Arial';
-      context.fillText(\`PLANO DE CORTE \${planIndex + 1} — \${formatNumber(piecesThisPlan, 0)} unidade(s)\`, 48, 42);
+      context.fillText(`PLANO DE CORTE ${planIndex + 1} — ${formatNumber(piecesThisPlan, 0)} unidade(s)`, 48, 42);
       context.font = '500 14px Arial';
       context.fillStyle = '#374151';
-      context.fillText(\`Mesa: 300 × 159 cm | área útil: 262 × \${formatNumber(plan.width, 0)} cm | material: \${material.label}\`, 48, 68);
+      context.fillText(`Mesa: 300 × 159 cm | área útil: 262 × ${formatNumber(plan.width, 0)} cm | material: ${material.label}`, 48, 68);
 
       context.fillStyle = '#e5e7eb';
       context.fillRect(table.x, table.y, table.width, table.height);
@@ -170,7 +170,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         context.strokeStyle = '#27506a';
         context.lineWidth = 1.5;
         context.strokeRect(x, y, pieceWidth, pieceHeight);
-        drawResponsivePieceLabel(context, x, y, pieceWidth, pieceHeight, \`\${formatNumber(result.productWidth, 0)} × \${formatNumber(result.productHeight, 0)} cm\`, '#143b52');
+        drawResponsivePieceLabel(context, x, y, pieceWidth, pieceHeight, `${formatNumber(result.productWidth, 0)} × ${formatNumber(result.productHeight, 0)} cm`, '#143b52');
       }
 
       context.fillStyle = '#111827';
@@ -182,10 +182,10 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       context.fillText('159 cm', -26, 0);
       context.restore();
       context.font = '600 13px Arial';
-      context.fillText(\`Por fileira: ⌊262 ÷ \${formatNumber(result.productWidth, 0)}⌋ = \${plan.piecesPerRow}\`, 70, 655);
-      context.fillText(\`Por coluna: ⌊\${formatNumber(plan.width, 0)} ÷ \${formatNumber(result.productHeight, 0)}⌋ = \${plan.rows}\`, 70, 680);
-      context.fillText(\`Capacidade: \${plan.piecesPerRow} × \${plan.rows} = \${plan.capacity} | sobras: \${formatNumber(plan.lengthLeftover, 0)} cm no comprimento e \${formatNumber(plan.widthLeftover, 0)} cm na largura\`, 70, 705);
-      if (result.hasAccordion) context.fillText(\`Sanfona de \${formatNumber(result.accordionWidth, 0)} cm: \${result.accordionFits ? 'acomodada na sobra disponível.' : 'não cabe na sobra disponível.'}\`, 70, 730);
+      context.fillText(`Por fileira: ⌊262 ÷ ${formatNumber(result.productWidth, 0)}⌋ = ${plan.piecesPerRow}`, 70, 655);
+      context.fillText(`Por coluna: ⌊${formatNumber(plan.width, 0)} ÷ ${formatNumber(result.productHeight, 0)}⌋ = ${plan.rows}`, 70, 680);
+      context.fillText(`Capacidade: ${plan.piecesPerRow} × ${plan.rows} = ${plan.capacity} | sobras: ${formatNumber(plan.lengthLeftover, 0)} cm no comprimento e ${formatNumber(plan.widthLeftover, 0)} cm na largura`, 70, 705);
+      if (result.hasAccordion) context.fillText(`Sanfona de ${formatNumber(result.accordionWidth, 0)} cm: ${result.accordionFits ? 'acomodada na sobra disponível.' : 'não cabe na sobra disponível.'}`, 70, 730);
 
       return canvas.toDataURL('image/png');
     });
@@ -202,7 +202,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       previewUrls.forEach((previewUrl, index) => {
         const link = document.createElement('a');
         link.href = previewUrl;
-        link.download = \`plano-de-corte-\${index + 1}.png\`;
+        link.download = `plano-de-corte-${index + 1}.png`;
         link.click();
       });
     } finally {
@@ -211,18 +211,18 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
   };
 
   const message = !result.quantityValid ? 'Informe uma quantidade maior que zero.'
-    : !result.quantityWithinCapacity ? \`A quantidade informada (\${formatNumber(result.quantity, 0)}) excede a capacidade de \${formatNumber(result.totalCapacity || 0, 0)} unidade(s) do material informado.\`
+    : !result.quantityWithinCapacity ? `A quantidade informada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.totalCapacity || 0, 0)} unidade(s) do material informado.`
     : !result.materialWidthValid ? 'Informe uma largura de material maior que zero.'
-      : !result.materialHeightValid ? \`A altura de \${formatNumber(result.productHeight)} cm não cabe na largura informada do material.\`
-        : !result.productWidthValid ? \`A largura de \${formatNumber(result.productWidth)} cm excede os 262 cm úteis da mesa.\`
-          : !result.accordionFits ? \`A sanfona de \${formatNumber(result.accordionWidth)} cm não cabe na sobra física deste encaixe.\`
+      : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm não cabe na largura informada do material.`
+        : !result.productWidthValid ? `A largura de ${formatNumber(result.productWidth)} cm excede os 262 cm úteis da mesa.`
+          : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe na sobra física deste encaixe.`
             : 'Não há peças inteiras que caibam no material informado.';
 
   return (
     <div className="card border-dark-700">
-      <div className="card-header flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold text-dark-200">Preview do plano de corte</h2><p className="mt-1 text-xs text-dark-500">Cada faixa de até 150 cm de material gera um plano separado. A faixa restante só aparece se comportar pelo menos uma mochila.</p></div><span className={\`rounded-full border px-3 py-1 text-xs font-medium \${material.border} \${material.softTone}\`}>{material.label}</span></div>
+      <div className="card-header flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-sm font-semibold text-dark-200">Preview do plano de corte</h2><p className="mt-1 text-xs text-dark-500">Cada faixa de até 150 cm de material gera um plano separado. A faixa restante só aparece se comportar pelo menos uma mochila.</p></div><span className={`rounded-full border px-3 py-1 text-xs font-medium ${material.border} ${material.softTone}`}>{material.label}</span></div>
       <div className="card-body space-y-4">
-        {previewUrls.length ? previewUrls.map((previewUrl, index) => <img key={previewUrl} src={previewUrl} alt={\`Plano de corte \${index + 1} de \${profile?.name}\`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{message}</div>}
+        {previewUrls.length ? previewUrls.map((previewUrl, index) => <img key={previewUrl} src={previewUrl} alt={`Plano de corte ${index + 1} de ${profile?.name}`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{message}</div>}
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-dark-400"><span><strong className="text-dark-200">{formatNumber(result.plansNeeded, 0)}</strong> plano(s) para a quantidade solicitada</span><span><strong className="text-dark-200">{formatNumber(result.totalCapacity || 0, 0)}</strong> unidade(s) de capacidade no material</span></div>
         <div className="flex justify-end"><button type="button" onClick={handleDownload} disabled={!previewUrls.length || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"><Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}</button></div>
       </div>
