@@ -1340,7 +1340,7 @@ export default function ProfileGroupPage() {
   const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const handleDownloadPreview = async () => {
     if (!company?.id) return;
-    await logAudit(company.id, { user, userName: userData?.name, action: 'export', entity: 'Medição', description: `${userData?.name || 'Usuário'} baixou o preview PNG da medição da mochila.`, details: { format: 'PNG', profile: profile?.name, quantity: result.quantity, dimensions: `${result.productHeight}x${result.productWidth}x${result.productLength}` } });
+    await logAudit(company.id, { user, userName: userData?.name, action: 'export', entity: 'Medição', description: `${userData?.name || 'Usuário'} exportou o pacote ZIP da medição, com os previews PNG e o relatório PDF.`, details: { format: 'ZIP+PDF', profile: profile?.name, quantity: result.quantity, dimensions: `${result.productHeight}x${result.productWidth}x${result.productLength}` } });
   };
 
   return (
