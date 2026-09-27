@@ -214,18 +214,13 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       previewUrls.forEach((url, index) => {
         const plan = plans[index] || result.tablePlan || {};
         const piecesBefore = plans.slice(0, index).reduce((sum, item) => sum + (Number(item.capacity) || 0), 0);
-        const planQuantity = Math.min(
-          Number(plan.capacity) || 0,
-          Math.max(0, (Number(result.quantity) || 0) - piecesBefore)
-        );
+        const planQuantity = Math.min(Number(plan.capacity) || 0, Math.max(0, (Number(result.quantity) || 0) - piecesBefore));
         const pieceWidth = Number(plan.pieceWidth) || Number(result.productWidth) || 0;
         const pieceHeight = Number(plan.pieceHeight) || Number(result.productHeight) || 0;
         const rows = Number(plan.rows) || Number(plan.verticalRows) || 0;
         const piecesPerRow = Number(plan.piecesPerRow) || Number(plan.wholePiecesPerRow) || 0;
         const lengthLeftover = Number(plan.lengthLeftover) || 0;
         const widthLeftover = Number(plan.widthLeftover) || 0;
-        const usedLength = piecesPerRow * pieceWidth;
-        const usedWidth = rows * pieceHeight;
 
         if (index > 0) pdf.addPage();
         pdf.setTextColor(0, 0, 0);
@@ -244,42 +239,28 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         y += 7;
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-
-        const specs = [
+        [
           [`Quantidade neste corte: ${formatNumber(planQuantity, 0)} unidade(s)`, `Capacidade física: ${formatNumber(plan.capacity || 0, 0)} unidade(s)`],
           [`Peça posicionada: ${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`, `Orientação: ${plan.rotated ? 'rotacionada em 90°' : 'original'}`],
           [`Por fileira: ${formatNumber(piecesPerRow, 0)} unidade(s)`, `Fileiras: ${formatNumber(rows, 0)}`],
           [`Área útil: 262 × ${formatNumber(plan.width || 0, 0)} cm`, `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`],
-          [`Comprimento utilizado: ${formatNumber(usedLength, 0)} cm`, `Largura utilizada: ${formatNumber(usedWidth, 0)} cm`],
           [`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`],
-        ];
-
-        specs.forEach(([left, right]) => {
+        ].forEach(([left, right]) => {
           pdf.text(left, margin, y);
           pdf.text(right, 108, y);
           y += 6;
         });
 
         if (result.hasAccordion) {
-          y += 2;
           pdf.setFont('helvetica', 'bold');
-          pdf.text('Sanfona lateral', margin, y);
+          pdf.text('Sanfona lateral', margin, y + 2);
           pdf.setFont('helvetica', 'normal');
-          pdf.text(
-            `${formatNumber(result.accordionWidth, 0)} cm — ${result.accordionFits ? 'acomodada na sobra disponível' : 'não acomoda na sobra disponível'}`,
-            margin + 34,
-            y
-          );
-          y += 6;
+          pdf.text(`${formatNumber(result.accordionWidth, 0)} cm — ${result.accordionFits ? 'acomodada na sobra disponível' : 'não acomoda na sobra disponível'}`, margin + 34, y + 2);
         }
 
         pdf.setFontSize(8);
         pdf.setTextColor(90, 90, 90);
-        pdf.text(
-          'Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil longitudinal: 262 cm',
-          margin,
-          pageHeight - 10
-        );
+        pdf.text('Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil: 262 × até 150 cm', margin, pageHeight - 10);
 
         files.push({
           name: `cortes/plano-${String(index + 1).padStart(2, '0')}.png`,
@@ -1129,7 +1110,7 @@ function CutPreview({ profile, result, onDownload }) {
         ))}
         <div className="flex justify-end">
           <button type="button" onClick={handleDownload} disabled={!previewUrl || downloading} className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50">
-            <Download size={16} /> {downloading ? 'Registrando...' : 'Baixar PNG'}
+            <Download size={16} /> {downloading ? 'Gerando ZIP...' : 'Baixar ZIP'}
           </button>
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-dark-400">
