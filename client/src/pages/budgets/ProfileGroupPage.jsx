@@ -671,13 +671,21 @@ function CutPreview({ profile, result, onDownload }) {
     const totalComprimentoCm = Math.max(0, (mainPieceWidth + (result.hasAccordion ? sidePieceWidth : 0)) * quantity);
     const totalComprimentoM = totalComprimentoCm / 100;
 
+    const firstPlanPlaced = result.tablePlan || firstCutPlan;
+    const firstPlanCapacity = Number(firstCutPlan?.capacity) || 0;
+    const firstPlanPlacedPieces = Number(firstPlanPlaced?.placedPieces) || Math.min(quantity, firstPlanCapacity);
+    const firstPlanEmptyPositions = Number(firstPlanPlaced?.emptyPositions) || Math.max(0, firstPlanCapacity - firstPlanPlacedPieces);
+    const firstPlanEmptyArea = Number(firstPlanPlaced?.emptyPositionArea) || (firstPlanEmptyPositions * (Number(firstCutPlan?.pieceWidth) || 0) * (Number(firstCutPlan?.pieceHeight) || 0));
+    const firstPlanResidualEdgeArea = Number(firstPlanPlaced?.residualEdgeArea) || Math.max(0, ((Number(firstCutPlan?.usableLength) || 262) * (Number(firstCutPlan?.width) || 0)) - (firstPlanCapacity * (Number(firstCutPlan?.pieceWidth) || 0) * (Number(firstCutPlan?.pieceHeight) || 0)));
+    const firstPlanPlacedAreaLeftover = Number(firstPlanPlaced?.placedAreaLeftover) || Math.max(0, ((Number(firstCutPlan?.usableLength) || 262) * (Number(firstCutPlan?.width) || 0)) - (firstPlanPlacedPieces * (Number(firstCutPlan?.pieceWidth) || 0) * (Number(firstCutPlan?.pieceHeight) || 0)));
+
     drawCardText(cardStartX, cardY, cardWidth, cardHeight, 'APROVEITAMENTO POR FAIXA DE 300 cm', [
-      `Grade máxima: ${formatNumber(firstCutPlan.wholePiecesPerRow, 0)} × ${formatNumber(firstCutPlan.verticalRows, 0)} = ${formatNumber(firstCutPlan.capacity, 0)} mochilas`,
-      `Acomodadas neste tampo: ${formatNumber(firstCutPlan.placedPieces, 0)} mochila(s)`,
-      `Espaço vago útil: ${formatNumber(firstCutPlan.emptyPositions, 0)} posição(ões) (${formatNumber(firstCutPlan.emptyPositionArea, 0)} cm²)`,
-      `Faixa residual: ${formatNumber(firstCutPlan.lengthLeftover, 0)} cm no comprimento`,
-      `Área residual das bordas: ${formatNumber(firstCutPlan.residualEdgeArea, 0)} cm²`,
-      `Área total de sobra: ${formatNumber(firstCutPlan.placedAreaLeftover || 0, 0)} cm²`,
+      `Grade máxima: ${formatNumber(firstCutPlan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(firstCutPlan?.verticalRows || 0, 0)} = ${formatNumber(firstPlanCapacity, 0)} mochilas`,
+      `Acomodadas neste tampo: ${formatNumber(firstPlanPlacedPieces, 0)} mochila(s)`,
+      `Espaço vago útil: ${formatNumber(firstPlanEmptyPositions, 0)} posição(ões) (${formatNumber(firstPlanEmptyArea, 0)} cm²)`,
+      `Faixa residual: ${formatNumber(firstCutPlan?.lengthLeftover || 0, 0)} cm no comprimento`,
+      `Área residual das bordas: ${formatNumber(firstPlanResidualEdgeArea, 0)} cm²`,
+      `Área total de sobra: ${formatNumber(firstPlanPlacedAreaLeftover, 0)} cm²`,
     ], '#dfeaf5', 12, 9.5);
 
     drawCardText(cardStartX + cardWidth + cardGap, cardY, cardWidth, cardHeight, 'CONSUMO DE TNT', [
