@@ -788,7 +788,7 @@ function CutPreview({ profile, result, onDownload }) {
       // o fundo atras dos cards do Plano 2 nunca fique transparente/preto.
       duplicateContext.fillStyle = '#ffffff';
       duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
-      drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext);
+      drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext, accumulatedLeftoverArea);
 
       if (secondPlanQuantity > 0) {
         setSecondaryPreviewUrl(duplicateCanvas.toDataURL('image/png'));
