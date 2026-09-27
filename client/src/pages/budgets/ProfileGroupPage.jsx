@@ -163,6 +163,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
   };
 
   const message = !result.quantityValid ? 'Informe uma quantidade maior que zero.'
+    : !result.quantityWithinCapacity ? `A quantidade informada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.tablePlan?.capacity || 0, 0)} unidade(s) por plano.`
     : !result.materialWidthValid ? 'A largura do material deve estar entre 1 e 150 cm.'
       : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm não cabe na largura útil do material.`
         : !result.productWidthValid ? `A largura de ${formatNumber(result.productWidth)} cm excede os 262 cm úteis da mesa.`
@@ -207,7 +208,7 @@ function CutPreview({ profile, result, onDownload }) {
     const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
     const sidePieceHeight = Number(result.sideCut.pieceLength) || 90;
 
-    if (!result.quantityValid || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {
+    if (!result.quantityValid || !result.quantityWithinCapacity || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {
       setPreviewUrl('');
       return undefined;
     }
@@ -910,11 +911,12 @@ export default function ProfileGroupPage() {
     const handleMaterial = usesHandle ? (Number(form.handleLength) || 0) * (Number(form.handleQuantity) || 0) * quantity / 100 : 0;
     const cordMaterial = usesCord ? (Number(form.cordLength) || 0) * (Number(form.cordQuantity) || 0) * quantity / 100 : 0;
     const accordionFits = tablePlan.accordionFits;
-    const canCut = quantityValid && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && completeUnitsPerRow > 0;
-    const validCompleteUnitsPerRow = canCut ? completeUnitsPerRow : 0;
+    const quantityWithinCapacity = quantity <= tablePlan.capacity;
+    const canCut = quantityValid && quantityWithinCapacity && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && completeUnitsPerRow > 0;
+    const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
-    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: height, productWidth: width, productLength: length, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
+    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: height, productWidth: width, productLength: length, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
   const budgetResult = useMemo(() => {
@@ -943,7 +945,7 @@ export default function ProfileGroupPage() {
           <div className="card">
             <div className="card-header"><h2 className="text-lg font-semibold text-dark-100">{profile?.name}</h2><p className="text-sm text-dark-500 mt-1">{profile?.notes}</p></div>
             <div className="card-body grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
+              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" max={field === 'quantity' ? (result.tablePlan?.capacity || undefined) : undefined} className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
               <label className="label">Largura do material (cm)<input type="number" min="1" className="input mt-1" value={form.materialWidth} onChange={(e) => update('materialWidth', e.target.value)} /></label>
               <label className="label">Desperdício (%)<input type="number" min="0" className="input mt-1" value={form.waste} onChange={(e) => update('waste', e.target.value)} /></label>
               {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
