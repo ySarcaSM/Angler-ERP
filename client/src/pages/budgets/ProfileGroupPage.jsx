@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Download, DollarSign } from 'lucide-react';
+import { Download, DollarSign, Sparkles } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import { findProfileGroup } from '../../data/budgetProfiles';
@@ -99,6 +99,113 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
     pieceHeight,
     rotated: false,
     accordionFits: false,
+  };
+}
+
+
+function calculateOptimizedPlan(materialWidth, pieceWidth, pieceHeight) {
+  const usableLength = 262;
+  const usableWidth = Math.min(Math.max(0, Number(materialWidth) || 0), 150);
+  const baseWidth = Number(pieceWidth) || 0;
+  const baseHeight = Number(pieceHeight) || 0;
+  if (usableLength <= 0 || usableWidth <= 0 || baseWidth <= 0 || baseHeight <= 0) {
+    return { placements: [], capacity: 0, usedArea: 0, leftoverArea: usableLength * usableWidth, rotatedPieces: 0, orientationMix: false, usableLength, usableWidth };
+  }
+
+  const orientations = [
+    { width: baseWidth, height: baseHeight, rotated: false },
+    { width: baseHeight, height: baseWidth, rotated: true },
+  ].filter((item, index, list) =>
+    item.width <= usableLength &&
+    item.height <= usableWidth &&
+    (index === 0 || item.width !== list[0].width || item.height !== list[0].height)
+  );
+
+  const tryPack = (preferRotated, axisFirst) => {
+    const placements = [];
+    const candidates = [{ x: 0, y: 0 }];
+    const maxPieces = 300;
+
+    const overlaps = (x, y, width, height) => placements.some((placed) =>
+      x < placed.x + placed.width &&
+      x + width > placed.x &&
+      y < placed.y + placed.height &&
+      y + height > placed.y
+    );
+
+    const addCandidate = (x, y) => {
+      if (x < -0.0001 || y < -0.0001 || x > usableLength + 0.0001 || y > usableWidth + 0.0001) return;
+      if (!candidates.some((point) => Math.abs(point.x - x) < 0.0001 && Math.abs(point.y - y) < 0.0001)) {
+        candidates.push({ x, y });
+      }
+    };
+
+    for (let index = 0; index < maxPieces; index += 1) {
+      let best = null;
+      candidates.forEach((point) => {
+        const orderedOrientations = preferRotated ? [...orientations].reverse() : orientations;
+        orderedOrientations.forEach((orientation) => {
+          if (point.x + orientation.width > usableLength + 0.0001 || point.y + orientation.height > usableWidth + 0.0001) return;
+          if (overlaps(point.x, point.y, orientation.width, orientation.height)) return;
+
+          const right = point.x + orientation.width;
+          const bottom = point.y + orientation.height;
+          const score = axisFirst
+            ? [point.x, point.y, right + bottom]
+            : [point.y, point.x, right + bottom];
+
+          if (!best || score.some((value, scoreIndex) => value < best.score[scoreIndex] - 0.0001 && score.slice(0, scoreIndex).every((previous, i) => Math.abs(previous - best.score[i]) < 0.0001))) {
+            best = { point, orientation, score };
+          }
+        });
+      });
+
+      if (!best) break;
+      const placed = {
+        x: best.point.x,
+        y: best.point.y,
+        width: best.orientation.width,
+        height: best.orientation.height,
+        rotated: best.orientation.rotated,
+      };
+      placements.push(placed);
+      addCandidate(placed.x + placed.width, placed.y);
+      addCandidate(placed.x, placed.y + placed.height);
+    }
+
+    return placements;
+  };
+
+  const variants = [
+    tryPack(false, false),
+    tryPack(true, false),
+    tryPack(false, true),
+    tryPack(true, true),
+  ];
+
+  const bestPlacements = variants.reduce((best, candidate) => {
+    if (!best || candidate.length > best.length) return candidate;
+    if (candidate.length === best.length) {
+      const bestBottom = Math.max(...best.map((item) => item.y + item.height), 0);
+      const candidateBottom = Math.max(...candidate.map((item) => item.y + item.height), 0);
+      const bestRight = Math.max(...best.map((item) => item.x + item.width), 0);
+      const candidateRight = Math.max(...candidate.map((item) => item.x + item.width), 0);
+      if ((candidateBottom * candidateRight) < (bestBottom * bestRight)) return candidate;
+    }
+    return best;
+  }, []);
+
+  const usedArea = bestPlacements.reduce((sum, item) => sum + (item.width * item.height), 0);
+  const rotatedPieces = bestPlacements.filter((item) => item.rotated).length;
+  return {
+    placements: bestPlacements,
+    capacity: bestPlacements.length,
+    usedArea,
+    leftoverArea: (usableLength * usableWidth) - usedArea,
+    rotatedPieces,
+    orientationMix: rotatedPieces > 0 && rotatedPieces < bestPlacements.length,
+    usableLength,
+    usableWidth,
   };
 }
 
@@ -221,13 +328,78 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
   );
 }
 
-function CutPreview({ profile, result, onDownload }) {
+function CutPreview({ profile, result, onDownload, optimizedMode }) {
   const material = MATERIAL_PREVIEW[profile?.kind] || MATERIAL_PREVIEW.bag;
   const [previewUrl, setPreviewUrl] = useState('');
   const [secondaryPreviewUrl, setSecondaryPreviewUrl] = useState('');
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
+    if (optimizedMode) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 760;
+      const context = canvas.getContext('2d');
+      const plan = result.optimizedPlan;
+      if (!plan?.capacity) {
+        setPreviewUrl('');
+        setSecondaryPreviewUrl('');
+        return undefined;
+      }
+
+      const marginX = 70;
+      const marginY = 100;
+      const drawWidth = 1060;
+      const drawHeight = 500;
+      const scaleX = drawWidth / plan.usableLength;
+      const scaleY = drawHeight / plan.usableWidth;
+      const piecesToDraw = Math.min(Number(result.quantity) || 0, plan.capacity);
+
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = '#111827';
+      context.font = '700 22px Arial';
+      context.fillText('MELHOR CORTE OTIMIZADO', 48, 42);
+      context.font = '500 14px Arial';
+      context.fillStyle = '#374151';
+      context.fillText(`Mesa útil: ${formatNumber(plan.usableLength, 0)} × ${formatNumber(plan.usableWidth, 0)} cm | peças acomodadas: ${formatNumber(piecesToDraw, 0)}`, 48, 68);
+
+      context.fillStyle = '#eef2f7';
+      context.fillRect(marginX, marginY, drawWidth, drawHeight);
+      context.strokeStyle = '#111827';
+      context.lineWidth = 3;
+      context.strokeRect(marginX, marginY, drawWidth, drawHeight);
+
+      plan.placements.slice(0, piecesToDraw).forEach((piece, index) => {
+        const x = marginX + (piece.x * scaleX);
+        const y = marginY + (piece.y * scaleY);
+        const width = piece.width * scaleX;
+        const height = piece.height * scaleY;
+        context.fillStyle = piece.rotated ? '#9fe3c1' : '#8fd4f6';
+        context.fillRect(x, y, width, height);
+        context.strokeStyle = '#27506a';
+        context.lineWidth = 1.5;
+        context.strokeRect(x, y, width, height);
+        drawResponsivePieceLabel(context, x, y, width, height, `${formatNumber(piece.width, 0)} × ${formatNumber(piece.height, 0)} cm${piece.rotated ? ' ↻' : ''}`, '#143b52');
+        if (index < 2) {
+          context.fillStyle = '#111827';
+        }
+      });
+
+      context.fillStyle = '#111827';
+      context.font = '600 13px Arial';
+      context.fillText(`Área aproveitada: ${formatNumber(plan.usedArea, 0)} cm² | área livre: ${formatNumber(plan.leftoverArea, 0)} cm²`, 70, 635);
+      context.fillText(`Rotacionadas: ${formatNumber(plan.rotatedPieces, 0)} | mistura de orientações: ${plan.orientationMix ? 'sim' : 'não'}`, 70, 660);
+      context.fillText('O algoritmo testa encaixes nos lados das peças e rotações de 90° para reaproveitar sobras.', 70, 685);
+      context.fillStyle = '#0f766e';
+      context.font = '700 13px Arial';
+      context.fillText('Modo otimizado ativo', 70, 715);
+
+      setPreviewUrl(canvas.toDataURL('image/png'));
+      setSecondaryPreviewUrl('');
+      return undefined;
+    }
+
     const canvas = document.createElement('canvas');
     canvas.width = 1200;
     canvas.height = 760;
@@ -247,8 +419,7 @@ function CutPreview({ profile, result, onDownload }) {
     const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
     const sidePieceHeight = Number(result.sideCut.pieceLength) || 90;
 
-    if (!result.quantityValid || !result.quantityWithinCapacity || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {
-      setPreviewUrl('');
+    if (!result.quantityValid || !result.quantityWithinCapacity || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {      setPreviewUrl('');
       return undefined;
     }
 
@@ -497,8 +668,7 @@ function CutPreview({ profile, result, onDownload }) {
         context.strokeRect(pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight);
         drawResponsivePieceLabel(context, pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight, label, color.dark);
       }
-      remainingPiecesToDraw -= piecesThisRow;
-      currentRowY += pieceDrawHeight;
+      remainingPiecesToDraw -= piecesThisRow;      currentRowY += pieceDrawHeight;
     });
 
     // Marca no próprio tampo as duas sobras resultantes da grade completa.
@@ -739,7 +909,7 @@ function CutPreview({ profile, result, onDownload }) {
       setSecondaryPreviewUrl('');
     }
     });
-  }, [material.label, profile, result]);
+  }, [material.label, profile, result, optimizedMode]);
 
   const handleDownload = async () => {
     if (!previewUrl || downloading) return;
@@ -747,8 +917,7 @@ function CutPreview({ profile, result, onDownload }) {
     try {
       await onDownload();
       const link = document.createElement('a');
-      link.href = previewUrl;
-      link.download = 'preview-corte.png';
+      link.href = previewUrl;      link.download = 'preview-corte.png';
       link.click();
     } finally {
       setDownloading(false);
@@ -901,6 +1070,7 @@ export default function ProfileGroupPage() {
   const firstProfile = group?.items[0];
   const [form, setForm] = useState({ ...DEFAULT_FORM, profileSlug: firstProfile?.slug || '', cordQuantity: firstProfile?.cordQuantity ?? DEFAULT_FORM.cordQuantity, handleQuantity: firstProfile?.handleQuantity ?? DEFAULT_FORM.handleQuantity });
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [optimizedPreview, setOptimizedPreview] = useState(false);
   const [budget, setBudget] = useState(DEFAULT_BUDGET);
   const profile = group?.items.find((item) => item.slug === form.profileSlug) || group?.items[0];
   const result = useMemo(() => {
@@ -945,6 +1115,7 @@ export default function ProfileGroupPage() {
       emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedPieces) * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight,
       residualEdgeArea: (baseTablePlan.usableLength * baseTablePlan.width) - (baseTablePlan.capacity * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
     };
+    const optimizedPlan = calculateOptimizedPlan(materialWidth, width, height);
     const completeUnitsPerRow = tablePlan.capacity;
     const plansNeeded = completeUnitsPerRow > 0 ? Math.ceil(quantity / completeUnitsPerRow) : 0;
     const remainingBackpacks = completeUnitsPerRow > 0 ? quantity % completeUnitsPerRow : quantity;
@@ -960,7 +1131,7 @@ export default function ProfileGroupPage() {
     const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
-    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
+    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, optimizedPlan, cutPlans: [tablePlan], plansToCut: [tablePlan], materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
       originalProductHeight: height, originalProductWidth: width, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
@@ -997,8 +1168,7 @@ export default function ProfileGroupPage() {
               {profile?.kind === 'backpack' && <label className="label">Acabamento<select className="input mt-1" value={form.accessoryType} onChange={(e) => update('accessoryType', e.target.value)}><option value="cord">Cordão</option><option value="handle">Alça</option></select></label>}
               {(profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle')) && <>
                 <label className="label">Comprimento da alça (cm)<input type="number" min="0" className="input mt-1" value={form.handleLength} onChange={(e) => update('handleLength', e.target.value)} /></label>
-                <label className="label">Quantidade de alças<select className="input mt-1" value={form.handleQuantity} onChange={(e) => update('handleQuantity', e.target.value)}><option value="0">0 alças</option><option value="1">1 alça</option><option value="2">2 alças</option></select></label>
-              </>}
+                <label className="label">Quantidade de alças<select className="input mt-1" value={form.handleQuantity} onChange={(e) => update('handleQuantity', e.target.value)}><option value="0">0 alças</option><option value="1">1 alça</option><option value="2">2 alças</option></select></label>              </>}
               {(profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord')) && <>
                 <label className="label">Comprimento do cordão (cm)<input type="number" min="0" className="input mt-1" value={form.cordLength} onChange={(e) => update('cordLength', e.target.value)} /></label>
                 <label className="label">Quantidade de cordões<select className="input mt-1" value={form.cordQuantity} onChange={(e) => update('cordQuantity', e.target.value)}><option value="0">0 cordões</option><option value="1">1 cordão</option><option value="2">2 cordões</option></select></label>
@@ -1112,7 +1282,16 @@ export default function ProfileGroupPage() {
               </div>
             )}
           </div>
-          <CutPreview profile={profile} result={result} onDownload={handleDownloadPreview} />
+          <div className="flex flex-col gap-3 rounded-2xl border border-primary-400/20 bg-dark-900/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-dark-200">Aproveitamento das sobras</div>
+              <div className="mt-1 text-xs text-dark-500">Teste rotações e encaixes em lados diferentes para tentar aproveitar áreas que a grade simples deixa livres.</div>
+            </div>
+            <button type="button" onClick={() => setOptimizedPreview((current) => !current)} disabled={!result.canCut} className="btn-primary whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50">
+              <Sparkles size={17} /> {optimizedPreview ? 'Voltar ao corte padrão' : 'Melhor corte otimizado'}
+            </button>
+          </div>
+          <CutPreview profile={profile} result={result} onDownload={handleDownloadPreview} optimizedMode={optimizedPreview} />
       </div>
       <Modal open={budgetOpen} onClose={() => setBudgetOpen(false)} title="Orçamento rápido" size="md">
         <div className="space-y-5">
