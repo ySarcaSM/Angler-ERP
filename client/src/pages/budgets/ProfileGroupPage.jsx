@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Download, DollarSign } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { useParams } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import { findProfileGroup } from '../../data/budgetProfiles';
@@ -199,12 +200,99 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
     setDownloading(true);
     try {
       await onDownload();
+
+      const plans = result.cutPlans || [];
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 14;
+      const imageWidth = pageWidth - (margin * 2);
+      const imageHeight = imageWidth * (760 / 1200);
+      const files = [];
+
       previewUrls.forEach((previewUrl, index) => {
-        const link = document.createElement('a');
-        link.href = previewUrl;
-        link.download = `plano-de-corte-${index + 1}.png`;
-        link.click();
+        const plan = plans[index] || result.tablePlan || {};
+        const piecesBefore = plans.slice(0, index).reduce((sum, item) => sum + (Number(item.capacity) || 0), 0);
+        const planQuantity = Math.min(
+          Number(plan.capacity) || 0,
+          Math.max(0, (Number(result.quantity) || 0) - piecesBefore)
+        );
+        const pieceWidth = Number(plan.pieceWidth) || Number(result.productWidth) || 0;
+        const pieceHeight = Number(plan.pieceHeight) || Number(result.productHeight) || 0;
+        const rows = Number(plan.rows) || 0;
+        const piecesPerRow = Number(plan.piecesPerRow) || 0;
+        const lengthLeftover = Number(plan.lengthLeftover) || 0;
+        const widthLeftover = Number(plan.widthLeftover) || 0;
+        const usedLength = piecesPerRow * pieceWidth;
+        const usedWidth = rows * pieceHeight;
+
+        if (index > 0) pdf.addPage();
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(17);
+        pdf.text(`Especificação do corte — Plano ${index + 1}`, margin, 16);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, 22);
+        pdf.addImage(previewUrl, 'PNG', margin, 27, imageWidth, imageHeight);
+
+        let y = 27 + imageHeight + 10;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text('Especificações', margin, y);
+        y += 7;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+
+        const specs = [
+          [`Quantidade neste corte: ${formatNumber(planQuantity, 0)} unidade(s)`, `Capacidade física: ${formatNumber(plan.capacity || 0, 0)} unidade(s)`],
+          [`Peça posicionada: ${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`, `Orientação: ${plan.rotated ? 'rotacionada em 90°' : 'original'}`],
+          [`Por fileira: ${formatNumber(piecesPerRow, 0)} unidade(s)`, `Fileiras: ${formatNumber(rows, 0)}`],
+          [`Área útil: 262 × ${formatNumber(plan.width || 0, 0)} cm`, `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`],
+          [`Comprimento utilizado: ${formatNumber(usedLength, 0)} cm`, `Largura utilizada: ${formatNumber(usedWidth, 0)} cm`],
+          [`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`],
+        ];
+
+        specs.forEach(([left, right]) => {
+          pdf.text(left, margin, y);
+          pdf.text(right, 108, y);
+          y += 6;
+        });
+
+        if (result.hasAccordion) {
+          y += 2;
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Sanfona lateral', margin, y);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(
+            `${formatNumber(result.accordionWidth, 0)} cm — ${result.accordionFits ? 'acomodada na sobra disponível' : 'não acomoda na sobra disponível'}`,
+            margin + 34,
+            y
+          );
+          y += 6;
+        }
+
+        pdf.setFontSize(8);
+        pdf.setTextColor(90, 90, 90);
+        pdf.text(
+          `Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil longitudinal: 262 cm`,
+          margin,
+          pageHeight - 10
+        );
+        pdf.setTextColor(0, 0, 0);
+
+        files.push({
+          name: `cortes/plano-${String(index + 1).padStart(2, '0')}.png`,
+          data: dataUrlToUint8Array(previewUrl),
+        });
       });
+
+      files.push({
+        name: 'relatorio/relatorio-de-cortes.pdf',
+        data: new Uint8Array(pdf.output('arraybuffer')),
+      });
+
+      const zipBlob = createZipBlob(files);
+      downloadBlob(zipBlob, `plano-de-corte-${profile?.slug || 'medicao'}.zip`);
     } finally {
       setDownloading(false);
     }
@@ -228,6 +316,107 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       </div>
     </div>
   );
+}
+
+function dataUrlToUint8Array(dataUrl) {
+  const base64 = dataUrl.split(',')[1] || '';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc ^= bytes[index];
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function writeZipUint16(view, offset, value) {
+  view.setUint16(offset, value, true);
+}
+
+function writeZipUint32(view, offset, value) {
+  view.setUint32(offset, value >>> 0, true);
+}
+
+function createZipBlob(files) {
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const centralDirectory = [];
+  let offset = 0;
+
+  files.forEach(({ name, data }) => {
+    const nameBytes = encoder.encode(name);
+    const content = data instanceof Uint8Array ? data : new Uint8Array(data);
+    const crc = crc32(content);
+    const localHeader = new ArrayBuffer(30 + nameBytes.length);
+    const localView = new DataView(localHeader);
+    writeZipUint32(localView, 0, 0x04034b50);
+    writeZipUint16(localView, 4, 20);
+    writeZipUint16(localView, 6, 0x0800);
+    writeZipUint16(localView, 8, 0);
+    writeZipUint16(localView, 10, 0);
+    writeZipUint16(localView, 12, 0);
+    writeZipUint32(localView, 14, crc);
+    writeZipUint32(localView, 18, content.length);
+    writeZipUint32(localView, 22, content.length);
+    writeZipUint16(localView, 26, nameBytes.length);
+    writeZipUint16(localView, 28, 0);
+    new Uint8Array(localHeader, 30).set(nameBytes);
+
+    chunks.push(new Uint8Array(localHeader), content);
+
+    const centralHeader = new ArrayBuffer(46 + nameBytes.length);
+    const centralView = new DataView(centralHeader);
+    writeZipUint32(centralView, 0, 0x02014b50);
+    writeZipUint16(centralView, 4, 20);
+    writeZipUint16(centralView, 6, 20);
+    writeZipUint16(centralView, 8, 0x0800);
+    writeZipUint16(centralView, 10, 0);
+    writeZipUint16(centralView, 12, 0);
+    writeZipUint16(centralView, 14, 0);
+    writeZipUint32(centralView, 16, crc);
+    writeZipUint32(centralView, 20, content.length);
+    writeZipUint32(centralView, 24, content.length);
+    writeZipUint16(centralView, 28, nameBytes.length);
+    writeZipUint16(centralView, 30, 0);
+    writeZipUint16(centralView, 32, 0);
+    writeZipUint16(centralView, 34, 0);
+    writeZipUint16(centralView, 36, 0);
+    writeZipUint32(centralView, 38, 0);
+    writeZipUint32(centralView, 42, offset);
+    new Uint8Array(centralHeader, 46).set(nameBytes);
+    centralDirectory.push(new Uint8Array(centralHeader));
+
+    offset += localHeader.byteLength + content.length;
+  });
+
+  const centralSize = centralDirectory.reduce((sum, chunk) => sum + chunk.length, 0);
+  const endRecord = new ArrayBuffer(22);
+  const endView = new DataView(endRecord);
+  writeZipUint32(endView, 0, 0x06054b50);
+  writeZipUint16(endView, 4, 0);
+  writeZipUint16(endView, 6, 0);
+  writeZipUint16(endView, 8, files.length);
+  writeZipUint16(endView, 10, files.length);
+  writeZipUint32(endView, 12, centralSize);
+  writeZipUint32(endView, 16, offset);
+  writeZipUint16(endView, 20, 0);
+
+  return new Blob([...chunks, ...centralDirectory, new Uint8Array(endRecord)], { type: 'application/zip' });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function CutPreview({ profile, result, onDownload }) {
