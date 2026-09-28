@@ -1385,8 +1385,13 @@ export default function ProfileGroupPage() {
     const linearMaterial = plansNeeded * tableLengthCm * wasteFactor;
     const usesCord = profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord');
     const usesHandle = profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle');
-    const handleLength = (Number(form.handleQuantity) || 0) === 1 ? 35 : (Number(form.handleQuantity) || 0) === 2 ? 70 : 0;
-    const cordLength = (Number(form.cordQuantity) || 0) === 1 ? 60 : (Number(form.cordQuantity) || 0) === 2 ? 120 : 0;
+    // Medidas de referência para uma sacola 30 × 20 × 10 cm.
+    // O comprimento do acessório acompanha proporcionalmente a altura da sacola.
+    const accessoryScale = height > 0 ? height / 30 : 0;
+    const handleLengthPerUnit = 35 * accessoryScale;
+    const cordLengthPerUnit = 60 * accessoryScale;
+    const handleLength = (Number(form.handleQuantity) || 0) * handleLengthPerUnit;
+    const cordLength = (Number(form.cordQuantity) || 0) * cordLengthPerUnit;
     const handleMaterial = usesHandle ? handleLength * quantity / 100 : 0;
     const cordMaterial = usesCord ? cordLength * quantity / 100 : 0;
     const accordionFits = tablePlan.accordionFits;
@@ -1431,8 +1436,16 @@ export default function ProfileGroupPage() {
               {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
               {profile?.kind === 'backpack' && <label className="label">Acabamento<select className="input mt-1" value={form.accessoryType} onChange={(e) => update('accessoryType', e.target.value)}><option value="cord">Cordão</option><option value="handle">Alça</option></select></label>}
               {(profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle')) && <>
+                <div className="col-span-2 md:col-span-4 rounded-xl border border-primary-400/20 bg-primary-400/5 px-4 py-3 text-sm text-dark-300">
+                  <strong className="text-dark-100">Alça automática:</strong> {formatNumber(result.handleLength || 0, 1)} cm por alça
+                  <span className="ml-1 text-dark-500">(referência: 35 cm para 30 × 20 × 10 cm, ajustada pela altura informada)</span>
+                </div>
                 <label className="label">Quantidade de alças<select className="input mt-1" value={form.handleQuantity} onChange={(e) => update('handleQuantity', e.target.value)}><option value="0">0 alças</option><option value="1">1 alça</option><option value="2">2 alças</option></select></label>              </>}
               {(profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord')) && <>
+                <div className="col-span-2 md:col-span-4 rounded-xl border border-primary-400/20 bg-primary-400/5 px-4 py-3 text-sm text-dark-300">
+                  <strong className="text-dark-100">Cordão automático:</strong> {formatNumber(result.cordLength || 0, 1)} cm por cordão
+                  <span className="ml-1 text-dark-500">(referência: 60 cm para 30 × 20 × 10 cm, ajustada pela altura informada)</span>
+                </div>
                 <label className="label">Quantidade de cordões<select className="input mt-1" value={form.cordQuantity} onChange={(e) => update('cordQuantity', e.target.value)}><option value="0">0 cordões</option><option value="1">1 cordão</option><option value="2">2 cordões</option></select></label>
               </>}
             </div>
