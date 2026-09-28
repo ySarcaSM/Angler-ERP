@@ -452,6 +452,8 @@ function CutPreview({ profile, result, onDownload }) {
     const color = colors[profile?.kind] || colors.bag;
     const quantity = Number(result.quantity) || 100;
     const materialWidth = Number(result.materialWidth) || 140;
+
+
     const mainPieceWidth = Number(previewPlan?.pieceWidth) || Number(result.mainCut.pieceWidth) || 50;
     const mainPieceHeight = Number(previewPlan?.pieceHeight) || Number(result.mainCut.pieceLength) || 90;
     const accordionWidth = Number(result.accordionWidth) || 0;
