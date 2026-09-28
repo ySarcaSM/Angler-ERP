@@ -291,20 +291,41 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.setTextColor(90, 90, 90);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8);
-        y += 4;
+        pdf.addPage();
+        y = 20;
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(17);
+        pdf.text(`Relatório do corte — Plano ${index + 1}`, margin, y);
+        y += 10;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, y);
+        y += 12;
+
         const reportColumnWidth = (pageWidth - (margin * 2) - 12) / 3;
         const reportColumnGap = 6;
+        const reportCardHeight = 58;
         const drawReportSection = (x, title, lines) => {
           pdf.setFillColor(248, 249, 251);
-          pdf.setDrawColor(205, 210, 216);
-          pdf.roundedRect(x, y, reportColumnWidth, 30, 2, 2, 'FD');
-          pdf.setTextColor(20, 24, 30);
+          pdf.setDrawColor(190, 196, 204);
+          pdf.roundedRect(x, y, reportColumnWidth, reportCardHeight, 3, 3, 'FD');
+          pdf.setTextColor(15, 23, 42);
           pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(8.5);
-          pdf.text(title, x + 3, y + 5);
+          pdf.setFontSize(10);
+          pdf.text(title, x + 4, y + 7);
+          pdf.setDrawColor(205, 210, 216);
+          pdf.line(x + 4, y + 10, x + reportColumnWidth - 4, y + 10);
+          pdf.setTextColor(35, 40, 48);
           pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(7);
-          lines.forEach((line, index) => pdf.text(line, x + 3, y + 10 + (index * 5.5)));
+          pdf.setFontSize(7.5);
+          lines.forEach((line, lineIndex) => {
+            const maxWidth = reportColumnWidth - 8;
+            const wrapped = pdf.splitTextToSize(line, maxWidth);
+            wrapped.forEach((textLine, wrapIndex) => {
+              pdf.text(textLine, x + 4, y + 16 + (lineIndex * 9) + (wrapIndex * 3.5));
+            });
+          });
         };
 
         drawReportSection(margin, 'APROVEITAMENTO', [
@@ -325,8 +346,21 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
           `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm.`,
           `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm.`,
         ]);
-        y += 34;
+        y += reportCardHeight + 14;
 
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('Resumo das sobras', margin, y);
+        y += 7;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10);
+        pdf.text(`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, margin, y);
+        pdf.text(`Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`, 108, y);
+        y += 7;
+        pdf.text(`Área total de sobra: ${formatNumber(leftoverArea, 0)} cm²`, margin, y);
+        pdf.text(`Posições vazias: ${formatNumber(emptyPositions, 0)}`, 108, y);
+        y += 14;
         if (result.hasAccordion) {
           pdf.setFont('helvetica', 'bold');
           pdf.text('Sanfona lateral', margin, y + 2);
