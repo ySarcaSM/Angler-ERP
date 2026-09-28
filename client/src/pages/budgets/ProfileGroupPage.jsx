@@ -1074,13 +1074,87 @@ function CutPreview({ profile, result, onDownload }) {
   }, [material.label, profile, result]);
 
   const handleDownload = async () => {
-    if (!previewUrl || downloading) return;
+    const previewUrls = [previewUrl, ...secondaryPreviewUrls].filter(Boolean);
+    if (!previewUrls.length || downloading) return;
     setDownloading(true);
     try {
       await onDownload();
-      const link = document.createElement('a');
-      link.href = previewUrl;      link.download = 'preview-corte.png';
-      link.click();
+
+      const plans = result.plansToCut || result.cutPlans || [];
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 14;
+      const imageWidth = pageWidth - (margin * 2);
+      const imageHeight = imageWidth * (760 / 1200);
+      const files = [];
+
+      previewUrls.forEach((url, index) => {
+        const plan = plans[index] || result.tablePlan || {};
+        const piecesBefore = plans.slice(0, index).reduce((sum, item) => sum + (Number(item.capacity) || 0), 0);
+        const planQuantity = Math.min(Number(plan.capacity) || 0, Math.max(0, (Number(result.quantity) || 0) - piecesBefore));
+        const pieceWidth = Number(plan.pieceWidth) || Number(result.productWidth) || 0;
+        const pieceHeight = Number(plan.pieceHeight) || Number(result.productHeight) || 0;
+        const rows = Number(plan.rows) || Number(plan.verticalRows) || 0;
+        const piecesPerRow = Number(plan.piecesPerRow) || Number(plan.wholePiecesPerRow) || 0;
+        const lengthLeftover = Number(plan.lengthLeftover) || 0;
+        const widthLeftover = Number(plan.widthLeftover) || 0;
+
+        if (index > 0) pdf.addPage();
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(17);
+        pdf.text(`Especificação do corte — Plano ${index + 1}`, margin, 16);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, 22);
+        pdf.addImage(url, 'PNG', margin, 27, imageWidth, imageHeight);
+
+        let y = 27 + imageHeight + 10;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text('Especificações', margin, y);
+        y += 7;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        [
+          [`Quantidade neste corte: ${formatNumber(planQuantity, 0)} unidade(s)`, `Capacidade física: ${formatNumber(plan.capacity || 0, 0)} unidade(s)`],
+          [`Peça posicionada: ${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`, `Orientação: ${plan.rotated ? 'rotacionada em 90°' : 'original'}`],
+          [`Por fileira: ${formatNumber(piecesPerRow, 0)} unidade(s)`, `Fileiras: ${formatNumber(rows, 0)}`],
+          [`Área útil: 262 × ${formatNumber(plan.width || 0, 0)} cm`, `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`],
+          [`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`],
+        ].forEach(([left, right]) => {
+          pdf.text(left, margin, y);
+          pdf.text(right, 108, y);
+          y += 6;
+        });
+
+        if (result.hasAccordion) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Sanfona lateral', margin, y + 2);
+          pdf.setFont('helvetica', 'normal');
+          pdf.text(`${formatNumber(result.accordionWidth, 0)} cm — ${result.accordionFits ? 'acomodada na sobra disponível' : 'não acomoda na sobra disponível'}`, margin + 34, y + 2);
+        }
+
+        pdf.setFontSize(8);
+        pdf.setTextColor(90, 90, 90);
+        pdf.text('Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil: 262 × até 150 cm', margin, pageHeight - 10);
+
+        files.push({
+          name: `cortes/plano-${String(index + 1).padStart(2, '0')}.png`,
+          data: dataUrlToUint8Array(url),
+        });
+      });
+
+      files.push({
+        name: 'relatorio/relatorio-de-cortes.pdf',
+        data: new Uint8Array(pdf.output('arraybuffer')),
+      });
+
+      const zipBlob = createZipBlob(files);
+      downloadBlob(zipBlob, `plano-de-corte-${profile?.slug || 'medicao'}.zip`);
+    } catch (error) {
+      console.error('Erro ao gerar pacote de corte:', error);
     } finally {
       setDownloading(false);
     }
