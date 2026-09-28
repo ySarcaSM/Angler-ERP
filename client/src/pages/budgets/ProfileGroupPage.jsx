@@ -476,7 +476,9 @@ function CutPreview({ profile, result, onDownload }) {
 
     setSecondaryPreviewUrls([]);
 
-    if (!result.quantityValid || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {      setPreviewUrl('');
+    const hasPhysicalPlan = Array.isArray(result.cutPlans) && result.cutPlans.some((plan) => Number(plan?.capacity) > 0);
+    if (!result.quantityValid || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || !hasPhysicalPlan) {
+      setPreviewUrl('');
       return undefined;
     }
 
@@ -1526,7 +1528,7 @@ export default function ProfileGroupPage() {
           <div className="card">
             <div className="card-header"><h2 className="text-lg font-semibold text-dark-100">{profile?.name}</h2><p className="text-sm text-dark-500 mt-1">{profile?.notes}</p></div>
             <div className="card-body grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" max={undefined} className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
+              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
               <label className="label">Largura do material (cm)<input type="number" min="1" className="input mt-1" value={form.materialWidth} onChange={(e) => update('materialWidth', e.target.value)} /></label>
               <label className="label">Desperdício (%)<input type="number" min="0" className="input mt-1" value={form.waste} onChange={(e) => update('waste', e.target.value)} /></label>
               {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" min="0" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
