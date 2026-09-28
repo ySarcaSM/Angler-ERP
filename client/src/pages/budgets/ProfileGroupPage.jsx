@@ -142,7 +142,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
   const plans = result.cutPlans || [];
 
   useEffect(() => {
-    if (!result.canCut || !plans.length) {
+    if (!result.quantityValid || !result.materialHeightValid || !plans.length) {
       setPreviewUrls([]);
       return undefined;
     }
@@ -209,7 +209,6 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
       context.fillText(`Por fileira: ⌊262 ÷ ${formatNumber(result.productWidth, 0)}⌋ = ${plan.piecesPerRow}`, 70, 655);
       context.fillText(`Por coluna: ⌊${formatNumber(plan.width, 0)} ÷ ${formatNumber(result.productHeight, 0)}⌋ = ${plan.rows}`, 70, 680);
       context.fillText(`Capacidade: ${plan.piecesPerRow} × ${plan.rows} = ${plan.capacity} | sobras: ${formatNumber(plan.lengthLeftover, 0)} cm no comprimento e ${formatNumber(plan.widthLeftover, 0)} cm na largura`, 70, 705);
-      if (result.hasAccordion) context.fillText(`Sanfona de ${formatNumber(result.accordionWidth, 0)} cm: ${result.accordionFits ? 'acomodada na sobra disponível.' : 'não cabe na sobra disponível.'}`, 70, 730);
 
       return canvas.toDataURL('image/png');
     });
@@ -465,7 +464,7 @@ function CutPreview({ profile, result, onDownload }) {
     setSecondaryPreviewUrls([]);
 
     const hasPhysicalPlan = Array.isArray(result.cutPlans) && result.cutPlans.some((plan) => Number(plan?.capacity) > 0);
-    if (!result.quantityValid || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || !hasPhysicalPlan) {
+    if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan) {
       setPreviewUrl('');
       return undefined;
     }
@@ -890,7 +889,7 @@ function CutPreview({ profile, result, onDownload }) {
       const totalPlanArea = (Number(plan?.usableLength) || 262) * (Number(plan?.width) || 0);
       const placedAreaLeftover = Math.max(0, totalPlanArea - (placedPieces * pieceArea));
       const residualEdgeArea = Math.max(0, totalPlanArea - (capacity * pieceArea));
-      const totalComprimentoCm = Math.max(0, (mainPieceWidth + (result.hasAccordion ? (result.accordionWidth * 2) : 0)) * placedPieces);
+      const totalComprimentoCm = Math.max(0, mainPieceWidth * placedPieces);
       const totalComprimentoM = totalComprimentoCm / 100;
       const drawCardTextForContext = (x, y, width, height, title, lines, fill, titleSize = 12, bodySize = 11) => {
         targetContext.fillStyle = fill;
@@ -973,7 +972,7 @@ function CutPreview({ profile, result, onDownload }) {
       const planAccumulatedLeftoverArea = accumulatedLeftoverArea + secondPlanLeftoverArea;
       duplicateContext.fillText(`PLANO DE CORTE ${secondPlanIndex + 2} - ${formatNumber(secondPlanQuantity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
       duplicateContext.font = '600 11px Arial';
-      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)${result.hasAccordion ? ` | Sanfonas: 2 × ${formatNumber(result.accordionWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm por mochila (${formatNumber(secondPlanQuantity * 2, 0)} un)` : ''}`, 18, 52);
+      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)`, 18, 52);
 
       // O segundo plano não é uma cópia do primeiro: limpa o desenho anterior
       // e posiciona somente as fileiras que cabem na largura restante.
@@ -1012,22 +1011,6 @@ function CutPreview({ profile, result, onDownload }) {
         secondLastPieceRowY = pieceY;
       }
 
-      if (result.hasAccordion && secondPiecesToDraw > 0) {
-        const accordionWidthCm = Number(result.accordionWidth) || 0;
-        if (accordionWidthCm > 0) {
-          drawAccordionFlow(duplicateContext, {
-            count: secondPiecesToDraw * 2,
-            drawWidth: accordionWidthCm * centimeterScale,
-            drawHeight: Math.min(secondPieceHeightCm * verticalCentimeterScale, materialPlanDrawHeight),
-            firstX: secondLastPieceEndX,
-            firstY: secondLastPieceRowY,
-            startX: mainStartX,
-            rightLimit: cutAreaRight,
-            bottomLimit: materialPlanBottom,
-            label: `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
-          });
-        }
-      }
       const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * (Number(secondPlan?.pieceHeight) || cutHeightCm) * verticalCentimeterScale));
       if (unusedHeight > 0) {
         duplicateContext.fillStyle = 'rgba(156, 163, 175, 0.5)';
@@ -1198,12 +1181,6 @@ function CutPreview({ profile, result, onDownload }) {
           y += 6;
         });
 
-        if (result.hasAccordion) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Sanfona lateral', margin, y + 2);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text(`${formatNumber(result.accordionWidth, 0)} cm — ${result.accordionFits ? 'acomodada na sobra disponível' : 'não acomoda na sobra disponível'}`, margin + 34, y + 2);
-        }
 
         pdf.setFontSize(8);
         pdf.setTextColor(90, 90, 90);
@@ -1244,7 +1221,7 @@ function CutPreview({ profile, result, onDownload }) {
             <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 1</div>
             <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />
           </div>
-        ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm excede o limite vertical de ${formatNumber(result.maxMaterialHeight)} cm do material.` : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe no comprimento útil de 262 cm.` : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe em nenhuma sobra física do plano.` : `Preview indisponível: não há capacidade física disponível para gerar o plano de corte.`}</div>}
+        ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm excede o limite vertical de ${formatNumber(result.maxMaterialHeight)} cm do material.` : `Preview indisponível: não há capacidade física disponível para gerar o plano de corte.`}</div>}
         {secondaryPreviewUrls.map((url, index) => (
           <div className="space-y-2" key={`secondary-preview-${index}`}>
             <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte {index + 2}</div>
@@ -1264,51 +1241,6 @@ function CutPreview({ profile, result, onDownload }) {
       </div>
     </div>
   );
-}
-
-function drawAccordionFlow(context, { count, drawWidth, drawHeight, firstX, firstY, startX, rightLimit, bottomLimit, label }) {
-  const safeCount = Math.max(0, Math.floor(Number(count) || 0));
-  const width = Math.max(0, Number(drawWidth) || 0);
-  const height = Math.max(0, Number(drawHeight) || 0);
-  const gap = 0;
-  if (!safeCount || width <= 0 || height <= 0) return;
-
-  let x = Number(firstX) || startX;
-  let y = Number(firstY) || 0;
-
-  for (let index = 0; index < safeCount; index += 1) {
-    if (x + width > rightLimit + 0.01) {
-      x = startX;
-      y += height + gap;
-    }
-
-    if (y + height > bottomLimit + 0.01) {
-      break;
-    }
-
-    context.fillStyle = '#22c55e';
-    context.fillRect(x, y, width, height);
-    context.strokeStyle = '#15803d';
-    context.lineWidth = 1.5;
-    context.strokeRect(x, y, width, height);
-    drawResponsivePieceLabel(context, x, y, width, height, label, '#052e16');
-
-    x += width + gap;
-  }
-}
-
-function drawAccordionSide(context, x, y, height, accordionWidth, mirrored) {
-  const foldWidth = Math.min(55, Math.max(12, accordionWidth * 10));
-  const folds = 5;
-  const step = height / folds;
-  context.beginPath();
-  context.moveTo(x, y);
-  for (let index = 0; index < folds; index += 1) {
-    const direction = (index % 2 === 0 ? 1 : -1) * (mirrored ? -1 : 1);
-    context.lineTo(x + (direction * foldWidth), y + step * (index + 0.5));
-    context.lineTo(x, y + step * (index + 1));
-  }
-  context.stroke();
 }
 
 function drawDimension(context, startX, startY, endX, endY, label, direction) {
@@ -1439,12 +1371,12 @@ export default function ProfileGroupPage() {
     let remainingMaterialWidth = materialWidth;
     while (remainingMaterialWidth > 0) {
       const segmentWidth = Math.min(150, remainingMaterialWidth);
-      const plan = calculateTablePlan(segmentWidth, width, height, accordionWidth);
+      const plan = calculateTablePlan(segmentWidth, width, height);
       if (plan.capacity > 0) materialPlans.push(plan);
       remainingMaterialWidth -= segmentWidth;
     }
     const totalCapacity = materialPlans.reduce((sum, plan) => sum + plan.capacity, 0);
-    const baseTablePlan = materialPlans[0] || calculateTablePlan(Math.min(materialWidth, 150), width, height, accordionWidth);
+    const baseTablePlan = materialPlans[0] || calculateTablePlan(Math.min(materialWidth, 150), width, height);
     const placedPieces = Math.min(quantity, totalCapacity);
     const placedInFirstPlan = Math.min(placedPieces, baseTablePlan.capacity);
     const placedRows = baseTablePlan.piecesPerRow > 0 ? Math.ceil(placedInFirstPlan / baseTablePlan.piecesPerRow) : 0;
