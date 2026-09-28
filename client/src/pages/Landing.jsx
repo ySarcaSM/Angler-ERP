@@ -557,12 +557,14 @@ export default function Landing() {
 
       {/* ═══ FOOTER ═══ */}
       <footer className="lp-footer">
-        <span>&copy; 2026 Angler ERP</span>
-        <span className="lp-footer-sep">&bull;</span>
-        <a href="https://github.com/ySarcaSM/Angler-ERP" target="_blank" rel="noopener">GitHub</a>
-        <span className="lp-footer-sep">&bull;</span>
-        <span>MIT License</span>
-        <span className="lp-footer-disclaimer">Esse é um protótipo e não deve ser usado como ERP real</span>
+        <div className="lp-footer-main">
+          <span>&copy; 2026 Angler ERP</span>
+          <span className="lp-footer-sep">&bull;</span>
+          <a href="https://github.com/ySarcaSM/Angler-ERP" target="_blank" rel="noopener">GitHub</a>
+          <span className="lp-footer-sep">&bull;</span>
+          <span>MIT License</span>
+        </div>
+        <div className="lp-footer-disclaimer">Esse é um protótipo e não deve ser usado como ERP real</div>
       </footer>
     </div>
   );
