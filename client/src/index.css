@@ -2183,10 +2183,11 @@ html[data-accessibility-theme='light'] .text-dark-500 {
   position: absolute;
   inset: 0;
   z-index: -3;
-  background-image: url('/pitch-angler.jpg');
+  background-image: url('./assets/erp.jpg');
   background-position: center center;
   background-size: cover;
   background-repeat: no-repeat;
+  filter: sepia(1) saturate(1.65) hue-rotate(335deg) brightness(0.82) contrast(1.06);
   transform: scale(1.015);
 }
 
