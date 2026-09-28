@@ -418,6 +418,7 @@ function CutPreview({ profile, result, onDownload }) {
   const [previewUrl, setPreviewUrl] = useState('');
   const [secondaryPreviewUrls, setSecondaryPreviewUrls] = useState([]);
   const [downloading, setDownloading] = useState(false);
+  const [hoveredLastPiece, setHoveredLastPiece] = useState(false);
 
   useEffect(() => {
     const canvas = document.createElement('canvas');
@@ -1159,7 +1160,43 @@ function CutPreview({ profile, result, onDownload }) {
         {previewUrl ? (
           <div className="space-y-2">
             <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 1</div>
-            <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />
+            <div className="relative w-full overflow-hidden rounded-xl border border-dark-700 bg-dark-900">
+              <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="block w-full" />
+              {(() => {
+                const firstPlan = result.tablePlan || result.cutPlans?.[0];
+                const previewQuantity = Math.min(Number(result.quantity) || 0, Number(firstPlan?.capacity) || 0);
+                const piecesPerRow = Math.max(1, Number(firstPlan?.piecesPerRow) || 1);
+                const lastPieceIndex = Math.max(0, previewQuantity - 1);
+                const lastRow = Math.floor(lastPieceIndex / piecesPerRow);
+                const lastColumn = lastPieceIndex % piecesPerRow;
+                const cutWidthCm = Number(firstPlan?.pieceWidth) || Number(result.productWidth) || 0;
+                const cutHeightCm = Number(firstPlan?.pieceHeight) || Number(result.productHeight) || 0;
+                const cutAreaX = 231;
+                const mainAreaY = 128.6;
+                const cutAreaWidth = 758;
+                const materialPlanDrawHeight = 344.34;
+                const pieceWidth = cutWidthCm * (cutAreaWidth / 262);
+                const pieceHeight = cutHeightCm * (materialPlanDrawHeight / 150);
+                const pieceX = cutAreaX + (lastColumn * pieceWidth);
+                const pieceY = mainAreaY + (lastRow * pieceHeight);
+                return previewQuantity > 0 ? (
+                  <div
+                    aria-hidden="true"
+                    className="absolute rounded-sm border-2 border-transparent transition-colors duration-100"
+                    style={{
+                      left: `${(pieceX / 1200) * 100}%`,
+                      top: `${(pieceY / 760) * 100}%`,
+                      width: `${(pieceWidth / 1200) * 100}%`,
+                      height: `${(pieceHeight / 760) * 100}%`,
+                      borderColor: hoveredLastPiece ? '#facc15' : 'transparent',
+                      pointerEvents: 'auto',
+                    }}
+                    onMouseEnter={() => setHoveredLastPiece(true)}
+                    onMouseLeave={() => setHoveredLastPiece(false)}
+                  />
+                ) : null;
+              })()}
+            </div>
           </div>
         ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm excede o limite vertical de ${formatNumber(result.maxMaterialHeight)} cm do material.` : `Preview indisponível: não há capacidade física disponível para gerar o plano de corte.`}</div>}
         {secondaryPreviewUrls.map((url, index) => (
