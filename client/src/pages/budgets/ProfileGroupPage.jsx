@@ -476,7 +476,7 @@ function CutPreview({ profile, result, onDownload }) {
 
     setSecondaryPreviewUrls([]);
 
-    if (!result.quantityValid || !result.quantityWithinCapacity || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {      setPreviewUrl('');
+    if (!result.quantityValid || !result.accordionValid || !result.accordionFits || !result.materialHeightValid || result.completeUnitsPerRow < 1) {      setPreviewUrl('');
       return undefined;
     }
 
@@ -1254,7 +1254,7 @@ function CutPreview({ profile, result, onDownload }) {
             <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte 1</div>
             <img src={previewUrl} alt={`Preview de ${profile?.name} com medidas e melhor corte`} className="w-full rounded-xl border border-dark-700 bg-dark-900" />
           </div>
-        ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm excede o limite vertical de ${formatNumber(result.maxMaterialHeight)} cm do material.` : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe no comprimento útil de 262 cm.` : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe em nenhuma sobra física do plano.` : `Preview indisponível: a quantidade desejada (${formatNumber(result.quantity, 0)}) excede a capacidade de ${formatNumber(result.completeUnitsPerRow, 0)} mochila(s) por conjunto de planos.`}</div>}
+        ) : <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-200">{!result.quantityValid ? 'Informe uma quantidade maior que zero para gerar o preview.' : !result.materialHeightValid ? `A altura de ${formatNumber(result.productHeight)} cm excede o limite vertical de ${formatNumber(result.maxMaterialHeight)} cm do material.` : !result.accordionValid ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe no comprimento útil de 262 cm.` : !result.accordionFits ? `A sanfona de ${formatNumber(result.accordionWidth)} cm não cabe em nenhuma sobra física do plano.` : `Preview indisponível: não há capacidade física disponível para gerar o plano de corte.`}</div>}
         {secondaryPreviewUrls.map((url, index) => (
           <div className="space-y-2" key={`secondary-preview-${index}`}>
             <div className="text-xs font-medium uppercase tracking-wide text-dark-400">Parte {index + 2}</div>
@@ -1492,7 +1492,7 @@ export default function ProfileGroupPage() {
     const cordMaterial = usesCord ? cordLength * quantity / 100 : 0;
     const accordionFits = tablePlan.accordionFits;
     const quantityWithinCapacity = quantity <= totalCapacity;
-    const canCut = quantityValid && quantityWithinCapacity && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && totalCapacity > 0;
+    const canCut = quantityValid && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && totalCapacity > 0;
     const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
@@ -1526,7 +1526,7 @@ export default function ProfileGroupPage() {
           <div className="card">
             <div className="card-header"><h2 className="text-lg font-semibold text-dark-100">{profile?.name}</h2><p className="text-sm text-dark-500 mt-1">{profile?.notes}</p></div>
             <div className="card-body grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" max={field === 'quantity' ? (result.totalCapacity || undefined) : undefined} className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
+              {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" max={undefined} className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
               <label className="label">Largura do material (cm)<input type="number" min="1" className="input mt-1" value={form.materialWidth} onChange={(e) => update('materialWidth', e.target.value)} /></label>
               <label className="label">Desperdício (%)<input type="number" min="0" className="input mt-1" value={form.waste} onChange={(e) => update('waste', e.target.value)} /></label>
               {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" min="0" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
