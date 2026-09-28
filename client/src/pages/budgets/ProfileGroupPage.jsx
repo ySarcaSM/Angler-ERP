@@ -453,8 +453,22 @@ function CutPreview({ profile, result, onDownload }) {
     const quantity = Number(result.quantity) || 100;
     const materialWidth = Number(result.materialWidth) || 140;
 
+    // Resolva o plano antes de qualquer leitura de previewPlan.
+    const fallbackPlan = result.tablePlan && Number(result.tablePlan.capacity) > 0 ? result.tablePlan : null;
+    const previewPlan = fallbackPlan || result.cutPlans?.find((plan) => Number(plan?.capacity) > 0) || null;
+    const hasPhysicalPlan = Boolean(previewPlan);
+    const physicalCapacity = Number(result.totalCapacity) > 0
+      ? Number(result.totalCapacity)
+      : Number(previewPlan?.capacity) || 0;
+    const quantityWithinCapacity = Number(result.quantity) > 0 && Number(result.quantity) <= physicalCapacity;
 
-    const mainPieceWidth = Number(previewPlan?.pieceWidth) || Number(result.mainCut.pieceWidth) || 50;
+    if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan || !quantityWithinCapacity) {
+      setPreviewUrl('');
+      setSecondaryPreviewUrls([]);
+      return undefined;
+    }
+
+    const mainPieceWidth = Number(previewPlan?.pieceWidth) || Number(result.mainCut?.pieceWidth) || 50;
     const mainPieceHeight = Number(previewPlan?.pieceHeight) || Number(result.mainCut.pieceLength) || 90;
     const accordionWidth = Number(result.accordionWidth) || 0;
     const hasAccordion = profile?.kind === 'backpack' && accordionWidth > 0;
@@ -463,20 +477,6 @@ function CutPreview({ profile, result, onDownload }) {
 
     setSecondaryPreviewUrls([]);
 
-    // O preview deve usar a mesma capacidade exibida no card de "Capacidade de corte".
-    // Em alguns estados do formulário, cutPlans pode estar vazio enquanto tablePlan já
-    // possui uma capacidade física válida. Nesse caso, o preview não deve ser bloqueado.
-    const fallbackPlan = result.tablePlan && Number(result.tablePlan.capacity) > 0 ? result.tablePlan : null;
-    const hasPhysicalPlan = (Array.isArray(result.cutPlans) && result.cutPlans.some((plan) => Number(plan?.capacity) > 0)) || Boolean(fallbackPlan);
-    const physicalCapacity = Number(result.totalCapacity) > 0
-      ? Number(result.totalCapacity)
-      : Number(fallbackPlan?.capacity) || 0;
-    const quantityWithinCapacity = Number(result.quantity) > 0 && Number(result.quantity) <= physicalCapacity;
-    const previewPlan = fallbackPlan || result.cutPlans?.find((plan) => Number(plan?.capacity) > 0);
-    if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan || !quantityWithinCapacity || !previewPlan) {
-      setPreviewUrl('');
-      return undefined;
-    }
 
     const loadTableImage = () => new Promise((resolve) => {
       const img = new Image();
