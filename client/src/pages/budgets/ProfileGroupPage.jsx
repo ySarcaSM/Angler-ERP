@@ -865,7 +865,7 @@ function CutPreview({ profile, result, onDownload }) {
       const pieceArea = (Number(plan?.pieceWidth) || 0) * (Number(plan?.pieceHeight) || 0);
       const emptyArea = emptyPositions * completeUnitArea;
       const totalPlanArea = (Number(plan?.usableLength) || 262) * (Number(plan?.width) || 0);
-      const accordionAreaPerUnit = hasAccordion ? (result.accordionWidth * result.accordionWidth * 2) : 0;
+      const accordionAreaPerUnit = hasAccordion ? (result.accordionWidth * result.originalProductHeight * 2) : 0;
       const completeUnitArea = pieceArea + accordionAreaPerUnit;
       const placedAreaLeftover = Math.max(0, totalPlanArea - (placedPieces * completeUnitArea));
       const residualEdgeArea = Math.max(0, totalPlanArea - (capacity * completeUnitArea));
