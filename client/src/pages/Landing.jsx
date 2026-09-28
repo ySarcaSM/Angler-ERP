@@ -562,6 +562,7 @@ export default function Landing() {
         <a href="https://github.com/ySarcaSM/Angler-ERP" target="_blank" rel="noopener">GitHub</a>
         <span className="lp-footer-sep">&bull;</span>
         <span>MIT License</span>
+        <span className="lp-footer-disclaimer">Esse é um protótipo e não deve ser usado como ERP real</span>
       </footer>
     </div>
   );
