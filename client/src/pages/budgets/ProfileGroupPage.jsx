@@ -547,7 +547,7 @@ function CutPreview({ profile, result, onDownload }) {
       context.fillText('ORIENTAÇÃO ROTACIONADA — melhor aproveitamento da mesa', panelX + 18, panelY + 60);
     }
     context.font = '600 11px Arial';
-    context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)${result.hasAccordion ? ` | Sanfonas: 2 × ${formatNumber(result.accordionWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm por mochila (${formatNumber(previewQuantity * 2, 0)} un)` : ''}`, panelX + 18, panelY + 46);
+    context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)`, panelX + 18, panelY + 46);
 
     const wasteBlockOffset = 74 + 10;
     const pieceSpacingOffset = 14;
@@ -719,45 +719,6 @@ function CutPreview({ profile, result, onDownload }) {
       currentRowY += pieceDrawHeight;
       if (remainingPiecesToDraw <= 0) return;
     });
-
-    // Sanfonas: quando o ajuste informado for maior que zero, desenha
-    // exatamente 2 sanfonas verdes para cada mochila, imediatamente após
-    // a última mochila desenhada no plano.
-    const accordionWidthCm = Number(result.accordionWidth) || 0;
-    if (accordionWidthCm > 0 && mainPiecesToDraw > 0) {
-      const accordionCount = mainPiecesToDraw * 2;
-      const accordionDrawWidth = accordionWidthCm * centimeterScale;
-      const accordionDrawHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
-      const accordionPiecesPerRow = Math.max(1, firstCutPlan?.accordionPiecesPerRow || Math.floor(usableTableLengthCm / Math.max(accordionWidthCm, 0.01)));
-      const accordionStartX = mainStartX;
-      let accordionX = accordionStartX;
-      let accordionY = currentRowY;
-      // A capacidade física já considera as fileiras das sanfonas.\n      // Não adicionamos espaçamento vertical para não fazer o preview\n      // ultrapassar a área útil quando há muitas mochilas.\n      const accordionGap = 0;
-
-      for (let index = 0; index < accordionCount; index += 1) {
-        if (accordionX + accordionDrawWidth > cutAreaRight) {
-          accordionX = accordionStartX;
-          accordionY += accordionDrawHeight + accordionGap;
-        }
-        if (accordionY + accordionDrawHeight > materialPlanBottom) break;
-
-        context.fillStyle = '#22c55e';
-        context.fillRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
-        context.strokeStyle = '#15803d';
-        context.lineWidth = 1.5;
-        context.strokeRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
-        drawResponsivePieceLabel(
-          context,
-          accordionX,
-          accordionY,
-          accordionDrawWidth,
-          accordionDrawHeight,
-          `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
-          '#052e16'
-        );
-        accordionX += accordionDrawWidth + accordionGap;
-      }
-    }
 
     // Marca no próprio tampo as duas sobras resultantes da grade completa.
     // Elas são calculadas depois de acomodar somente peças inteiras em cada eixo.
