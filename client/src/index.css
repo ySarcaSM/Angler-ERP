@@ -1683,6 +1683,19 @@
   color: #444;
 }
 
+.lp-footer-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.lp-footer-disclaimer {
+  display: block;
+  margin-top: 12px;
+  color: #777;
+}
+
 .lp-footer a {
   color: #666;
   text-decoration: none;
