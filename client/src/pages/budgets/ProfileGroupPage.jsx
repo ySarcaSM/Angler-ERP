@@ -749,9 +749,9 @@ function CutPreview({ profile, result, onDownload }) {
         }
         if (accordionY + accordionDrawHeight > materialPlanBottom) break;
 
-        context.fillStyle = '#86efac';
+        context.fillStyle = '#22c55e';
         context.fillRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
-        context.strokeStyle = '#166534';
+        context.strokeStyle = '#15803d';
         context.lineWidth = 1.5;
         context.strokeRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
         drawResponsivePieceLabel(
@@ -761,7 +761,7 @@ function CutPreview({ profile, result, onDownload }) {
           accordionDrawWidth,
           accordionDrawHeight,
           `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
-          '#14532d'
+          '#052e16'
         );
         accordionX += accordionDrawWidth + accordionGap;
       }
@@ -1026,9 +1026,9 @@ function CutPreview({ profile, result, onDownload }) {
             accordionY += accordionDrawHeight + accordionGap;
           }
           if (accordionY + accordionDrawHeight > materialPlanBottom) break;
-          duplicateContext.fillStyle = '#86efac';
+          duplicateContext.fillStyle = '#22c55e';
           duplicateContext.fillRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
-          duplicateContext.strokeStyle = '#166534';
+          duplicateContext.strokeStyle = '#15803d';
           duplicateContext.lineWidth = 1.5;
           duplicateContext.strokeRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
           drawResponsivePieceLabel(
@@ -1038,7 +1038,7 @@ function CutPreview({ profile, result, onDownload }) {
             accordionDrawWidth,
             accordionDrawHeight,
             `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
-            '#14532d'
+            '#052e16'
           );
           accordionX += accordionDrawWidth + accordionGap;
         }
