@@ -456,6 +456,52 @@ export default function Landing() {
       </section>
 
       {/* ═══ TECH CAROUSEL ═══ */}
+
+
+      {/* ═══ CONTACT ═══ */}
+      <section className="lp-section lp-contact" id="contact">
+        <Reveal>
+          <div className="lp-section-head">
+            <span className="lp-section-tag">Contato</span>
+            <h2>Fale com a gente</h2>
+            <p className="lp-section-sub">Tem dúvida, sugestão ou encontrou um problema? Nos envie uma mensagem.</p>
+          </div>
+        </Reveal>
+        <Reveal>
+          <form className="lp-contact-form" onSubmit={(e) => e.preventDefault()}>
+            <div className="lp-contact-field">
+              <label htmlFor="contact-title">Título</label>
+              <input id="contact-title" type="text" placeholder="Ex: Dúvida sobre integração" />
+            </div>
+            <div className="lp-contact-field">
+              <label htmlFor="contact-email">Email</label>
+              <input id="contact-email" type="email" placeholder="seu@email.com" />
+            </div>
+            <div className="lp-contact-field">
+              <label htmlFor="contact-desc">Descrição do problema</label>
+              <textarea id="contact-desc" rows={5} placeholder="Descreva com detalhes o que aconteceu..." />
+            </div>
+            <button type="submit" className="lp-btn lp-btn-gold lp-contact-submit">
+              Enviar mensagem
+            </button>
+          </form>
+        </Reveal>
+      </section>
+
+      {/* ═══ CTA ═══ */}
+      <section className="lp-cta">
+        <Reveal>
+          <div className="lp-cta-inner">
+            <h2>Pronto para gerenciar<br /><span className="lp-gold-text">seu negócio?</span></h2>
+            <p>Crie sua conta gratuitamente. Sem cartão, sem pegadinha.</p>
+            <div className="lp-cta-btns">
+              <Link to="/register" className="lp-btn lp-btn-gold">Criar Conta Grátis</Link>
+              <Link to="/login" className="lp-btn lp-btn-ghost">Já tenho conta</Link>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
       <section className="lp-carousel-section" id="tech">
         <div className="lp-carousel-head">
           <span className="lp-section-tag">Stack</span>
@@ -507,50 +553,6 @@ export default function Landing() {
             <ChevronRight size={18} />
           </button>
         </div>
-      </section>
-
-      {/* ═══ CONTACT ═══ */}
-      <section className="lp-section lp-contact" id="contact">
-        <Reveal>
-          <div className="lp-section-head">
-            <span className="lp-section-tag">Contato</span>
-            <h2>Fale com a gente</h2>
-            <p className="lp-section-sub">Tem dúvida, sugestão ou encontrou um problema? Nos envie uma mensagem.</p>
-          </div>
-        </Reveal>
-        <Reveal>
-          <form className="lp-contact-form" onSubmit={(e) => e.preventDefault()}>
-            <div className="lp-contact-field">
-              <label htmlFor="contact-title">Título</label>
-              <input id="contact-title" type="text" placeholder="Ex: Dúvida sobre integração" />
-            </div>
-            <div className="lp-contact-field">
-              <label htmlFor="contact-email">Email</label>
-              <input id="contact-email" type="email" placeholder="seu@email.com" />
-            </div>
-            <div className="lp-contact-field">
-              <label htmlFor="contact-desc">Descrição do problema</label>
-              <textarea id="contact-desc" rows={5} placeholder="Descreva com detalhes o que aconteceu..." />
-            </div>
-            <button type="submit" className="lp-btn lp-btn-gold lp-contact-submit">
-              Enviar mensagem
-            </button>
-          </form>
-        </Reveal>
-      </section>
-
-      {/* ═══ CTA ═══ */}
-      <section className="lp-cta">
-        <Reveal>
-          <div className="lp-cta-inner">
-            <h2>Pronto para gerenciar<br /><span className="lp-gold-text">seu negócio?</span></h2>
-            <p>Crie sua conta gratuitamente. Sem cartão, sem pegadinha.</p>
-            <div className="lp-cta-btns">
-              <Link to="/register" className="lp-btn lp-btn-gold">Criar Conta Grátis</Link>
-              <Link to="/login" className="lp-btn lp-btn-ghost">Já tenho conta</Link>
-            </div>
-          </div>
-        </Reveal>
       </section>
 
       {/* ═══ FOOTER ═══ */}
