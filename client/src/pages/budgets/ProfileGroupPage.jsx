@@ -43,10 +43,15 @@ function calculateCut(materialWidth, pieceWidth, pieceLength, quantity, allowRot
 // Frações e rotações não formam uma nova peça ou fileira válida.
 function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWidth = 0) {
   const usableLength = 262; // 300 cm da mesa, menos 19 cm de cada lateral
-  const usableWidth = Math.min(Math.max(0, materialWidth), 150);
+  const usableWidth = Math.min(Math.max(0, Number(materialWidth) || 0), 150);
+  const safeAccordionWidth = Math.max(0, Number(accordionWidth) || 0);
+
+  // O plano considera a mochila e, quando houver sanfona, as duas sanfonas
+  // de cada mochila. A sanfona não deve invalidar uma peça só porque a
+  // capacidade máxima teórica do plano exigiria uma disposição diferente.
   const orientations = [
-    { pieceWidth, pieceHeight, rotated: false },
-    { pieceWidth: pieceHeight, pieceHeight: pieceWidth, rotated: true },
+    { pieceWidth: Number(pieceWidth) || 0, pieceHeight: Number(pieceHeight) || 0, rotated: false },
+    { pieceWidth: Number(pieceHeight) || 0, pieceHeight: Number(pieceWidth) || 0, rotated: true },
   ].filter((option, index, list) =>
     option.pieceWidth > 0 &&
     option.pieceHeight > 0 &&
@@ -58,33 +63,38 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
   const plans = orientations.map((option) => {
     const piecesPerRow = Math.floor(usableLength / option.pieceWidth);
     const totalRows = Math.floor(usableWidth / option.pieceHeight);
-    const lengthLeftover = usableLength - (piecesPerRow * option.pieceWidth);
-    const widthLeftover = usableWidth - (totalRows * option.pieceHeight);
-    const accordionPiecesPerRow = accordionWidth > 0 ? Math.floor(usableLength / accordionWidth) : 0;
+    const mainCapacity = piecesPerRow * totalRows;
 
-    let capacity = piecesPerRow * totalRows;
-    let accordionRows = 0;
+    let capacity = mainCapacity;
     let mainRowsForCapacity = totalRows;
+    let accordionRows = 0;
+    let accordionPiecesPerRow = 0;
+    let accordionFits = safeAccordionWidth <= 0;
 
-    if (accordionWidth > 0) {
-      capacity = 0;
-      for (let candidate = piecesPerRow * totalRows; candidate >= 1; candidate -= 1) {
-        const mainRows = Math.ceil(candidate / Math.max(1, piecesPerRow));
-        const requiredAccordionRows = accordionPiecesPerRow > 0
-          ? Math.ceil((candidate * 2) / accordionPiecesPerRow)
-          : Number.POSITIVE_INFINITY;
-        if (mainRows + requiredAccordionRows <= totalRows) {
-          capacity = candidate;
-          mainRowsForCapacity = mainRows;
-          accordionRows = requiredAccordionRows;
-          break;
+    if (safeAccordionWidth > 0 && mainCapacity > 0) {
+      accordionPiecesPerRow = Math.floor(usableLength / safeAccordionWidth);
+
+      // Cada mochila precisa de exatamente duas sanfonas. Procuramos a maior
+      // quantidade de mochilas para a qual existe uma divisão inteira entre
+      // fileiras da mochila e fileiras das sanfonas.
+      if (accordionPiecesPerRow > 0) {
+        for (let candidate = mainCapacity; candidate >= 1; candidate -= 1) {
+          const mainRows = Math.ceil(candidate / piecesPerRow);
+          const requiredAccordionRows = Math.ceil((candidate * 2) / accordionPiecesPerRow);
+
+          if (mainRows + requiredAccordionRows <= totalRows) {
+            capacity = candidate;
+            mainRowsForCapacity = mainRows;
+            accordionRows = requiredAccordionRows;
+            accordionFits = true;
+            break;
+          }
         }
       }
     }
 
-    const accordionFits = accordionWidth <= 0
-      ? true
-      : accordionPiecesPerRow > 0 && capacity > 0 && (mainRowsForCapacity + accordionRows <= totalRows);
+    const lengthLeftover = usableLength - (piecesPerRow * option.pieceWidth);
+    const widthLeftover = usableWidth - (totalRows * option.pieceHeight);
 
     return {
       width: usableWidth,
