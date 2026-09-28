@@ -292,16 +292,38 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8);
         pdf.addPage();
-        y = 20;
+        y = 18;
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(17);
-        pdf.text(`Relatório do corte — Plano ${index + 1}`, margin, y);
-        y += 10;
+        pdf.text('Relatório do corte — Plano ' + (index + 1), margin, y);
+        y += 8;
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, y);
-        y += 12;
+        pdf.text('Perfil: ' + (profile?.name || 'Medição') + ' | Material: ' + material.label, margin, y);
+        y += 9;
+
+        // Página 2: especificações no topo e relatório exatamente abaixo.
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('Especificações', margin, y);
+        y += 6;
+        [
+          ['Quantidade neste corte', formatNumber(planQuantity, 0) + ' unidade(s)'],
+          ['Capacidade física', formatNumber(plan.capacity || 0, 0) + ' unidade(s)'],
+          ['Peça posicionada', formatNumber(pieceWidth, 0) + ' × ' + formatNumber(pieceHeight, 0) + ' cm'],
+          ['Orientação', plan.rotated ? 'Rotacionada em 90°' : 'Original'],
+          ['Por fileira', formatNumber(piecesPerRow, 0) + ' unidade(s)'],
+          ['Fileiras', formatNumber(rows, 0)],
+          ['Área útil', '262 × ' + formatNumber(plan.width || 0, 0) + ' cm'],
+          ['Material informado', formatNumber(result.materialWidth || 0, 0) + ' cm'],
+        ].forEach(([label, value], cardIndex) => {
+          const column = cardIndex % 2;
+          if (column === 0 && cardIndex > 0) y += cardHeight + cardGap;
+          drawInfoCard(margin + column * (cardWidth + cardGap), label, value);
+        });
+        y += cardHeight + 10;
 
         const reportColumnWidth = (pageWidth - (margin * 2) - 12) / 3;
         const reportColumnGap = 6;
