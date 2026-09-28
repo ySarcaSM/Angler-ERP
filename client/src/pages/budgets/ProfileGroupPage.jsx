@@ -1171,8 +1171,8 @@ function CutPreview({ profile, result, onDownload }) {
                 const lastColumn = lastPieceIndex % piecesPerRow;
                 const cutWidthCm = Number(firstPlan?.pieceWidth) || Number(result.productWidth) || 0;
                 const cutHeightCm = Number(firstPlan?.pieceHeight) || Number(result.productHeight) || 0;
-                const cutAreaX = 231;
-                const mainAreaY = 128.6;
+                const cutAreaX = 221;
+                const mainAreaY = 108 + (365 - (365 * (150 / 159)));
                 const cutAreaWidth = 758;
                 const materialPlanDrawHeight = 344.34;
                 const pieceWidth = cutWidthCm * (cutAreaWidth / 262);
