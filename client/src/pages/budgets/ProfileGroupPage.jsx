@@ -693,6 +693,44 @@ function CutPreview({ profile, result, onDownload }) {
       remainingPiecesToDraw -= piecesThisRow;      currentRowY += pieceDrawHeight;
     });
 
+    // Sanfonas: quando o ajuste informado for maior que zero, desenha
+    // exatamente 2 sanfonas verdes para cada mochila, imediatamente após
+    // a última mochila desenhada no plano.
+    const accordionWidthCm = Number(result.accordionWidth) || 0;
+    if (accordionWidthCm > 0 && mainPiecesToDraw > 0) {
+      const accordionCount = mainPiecesToDraw * 2;
+      const accordionDrawWidth = accordionWidthCm * centimeterScale;
+      const accordionDrawHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
+      const accordionStartX = mainStartX;
+      let accordionX = accordionStartX;
+      let accordionY = currentRowY;
+      const accordionGap = Math.max(2, centimeterScale * 0.8);
+
+      for (let index = 0; index < accordionCount; index += 1) {
+        if (accordionX + accordionDrawWidth > cutAreaRight) {
+          accordionX = accordionStartX;
+          accordionY += accordionDrawHeight + accordionGap;
+        }
+        if (accordionY + accordionDrawHeight > materialPlanBottom) break;
+
+        context.fillStyle = '#86efac';
+        context.fillRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
+        context.strokeStyle = '#166534';
+        context.lineWidth = 1.5;
+        context.strokeRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
+        drawResponsivePieceLabel(
+          context,
+          accordionX,
+          accordionY,
+          accordionDrawWidth,
+          accordionDrawHeight,
+          `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
+          '#14532d'
+        );
+        accordionX += accordionDrawWidth + accordionGap;
+      }
+    }
+
     // Marca no próprio tampo as duas sobras resultantes da grade completa.
     // Elas são calculadas depois de acomodar somente peças inteiras em cada eixo.
     const gridDrawWidth = (firstCutPlan.placedColumns * mainPieceDrawWidth) + (Math.max(0, firstCutPlan.placedColumns - 1) * mainGap);
