@@ -716,6 +716,7 @@ function CutPreview({ profile, result, onDownload }) {
       const pieceDrawHeight = pieceHeightCm * verticalCentimeterScale;
       const label = layout.rotated ? `${mainLabel} (girada)` : mainLabel;
       const piecesThisRow = Math.min(remainingPiecesToDraw, layout.piecesPerRow);
+      if (piecesThisRow <= 0) return;
       for (let column = 0; column < piecesThisRow; column += 1) {
         const pieceX = mainStartX + (column * (pieceDrawWidth + mainGap));
         context.fillStyle = color.fill;
@@ -725,7 +726,9 @@ function CutPreview({ profile, result, onDownload }) {
         context.strokeRect(pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight);
         drawResponsivePieceLabel(context, pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight, label, color.dark);
       }
-      remainingPiecesToDraw -= piecesThisRow;      currentRowY += pieceDrawHeight;
+      remainingPiecesToDraw -= piecesThisRow;
+      currentRowY += pieceDrawHeight;
+      if (remainingPiecesToDraw <= 0) return;
     });
 
     // Sanfonas: quando o ajuste informado for maior que zero, desenha
