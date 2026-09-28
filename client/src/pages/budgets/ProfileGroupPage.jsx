@@ -452,8 +452,8 @@ function CutPreview({ profile, result, onDownload }) {
     const color = colors[profile?.kind] || colors.bag;
     const quantity = Number(result.quantity) || 100;
     const materialWidth = Number(result.materialWidth) || 140;
-    const mainPieceWidth = Number(result.tablePlan?.pieceWidth) || Number(result.mainCut.pieceWidth) || 50;
-    const mainPieceHeight = Number(result.tablePlan?.pieceHeight) || Number(result.mainCut.pieceLength) || 90;
+    const mainPieceWidth = Number(previewPlan?.pieceWidth) || Number(result.mainCut.pieceWidth) || 50;
+    const mainPieceHeight = Number(previewPlan?.pieceHeight) || Number(result.mainCut.pieceLength) || 90;
     const accordionWidth = Number(result.accordionWidth) || 0;
     const hasAccordion = profile?.kind === 'backpack' && accordionWidth > 0;
     const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
@@ -470,7 +470,8 @@ function CutPreview({ profile, result, onDownload }) {
       ? Number(result.totalCapacity)
       : Number(fallbackPlan?.capacity) || 0;
     const quantityWithinCapacity = Number(result.quantity) > 0 && Number(result.quantity) <= physicalCapacity;
-    if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan || !quantityWithinCapacity) {
+    const previewPlan = fallbackPlan || result.cutPlans?.find((plan) => Number(plan?.capacity) > 0);
+    if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan || !quantityWithinCapacity || !previewPlan) {
       setPreviewUrl('');
       return undefined;
     }
@@ -690,7 +691,7 @@ function CutPreview({ profile, result, onDownload }) {
     const materialPlanDrawHeight = wasteBoxH * (maxMaterialHeightCm / tableWidthCm);
     const mainAreaY = wasteBoxY + (wasteBoxH - materialPlanDrawHeight);
     const verticalCentimeterScale = materialPlanDrawHeight / maxMaterialHeightCm;
-    const firstCutPlan = result.tablePlan || result.cutPlans?.[0];
+    const firstCutPlan = previewPlan || result.tablePlan || result.cutPlans?.[0];
     const cutWidthCm = Number(firstCutPlan?.pieceWidth) || Number(result.productWidth) || mainPieceWidth;
     const cutHeightCm = Number(firstCutPlan?.pieceHeight) || Number(result.productHeight) || mainPieceHeight;
     const mainAreaHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
