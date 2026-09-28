@@ -233,40 +233,64 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.addImage(url, 'PNG', margin, 27, imageWidth, imageHeight);
 
         let y = 27 + imageHeight + 10;
+        const cardWidth = 84;
+        const cardHeight = 15;
+        const cardGap = 4;
+        const drawInfoCard = (x, label, value) => {
+          pdf.setFillColor(245, 247, 250);
+          pdf.setDrawColor(210, 214, 220);
+          pdf.roundedRect(x, y, cardWidth, cardHeight, 2.5, 2.5, 'FD');
+          pdf.setTextColor(70, 76, 84);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(7.5);
+          pdf.text(label, x + 4, y + 5.5);
+          pdf.setTextColor(20, 24, 30);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9.5);
+          pdf.text(value, x + 4, y + 11.5);
+        };
+        pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
+        pdf.setFontSize(12);
         pdf.text('Especificações', margin, y);
-        y += 7;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
+        y += 6;
         [
-          [`Quantidade neste corte: ${formatNumber(planQuantity, 0)} unidade(s)`, `Capacidade física: ${formatNumber(plan.capacity || 0, 0)} unidade(s)`],
-          [`Peça posicionada: ${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`, `Orientação: ${plan.rotated ? 'rotacionada em 90°' : 'original'}`],
-          [`Por fileira: ${formatNumber(piecesPerRow, 0)} unidade(s)`, `Fileiras: ${formatNumber(rows, 0)}`],
-          [`Área útil: 262 × ${formatNumber(plan.width || 0, 0)} cm`, `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`],
-        ].forEach(([left, right]) => {
-          pdf.text(left, margin, y);
-          pdf.text(right, 108, y);
-          y += 6;
+          ['Quantidade neste corte', `${formatNumber(planQuantity, 0)} unidade(s)`],
+          ['Capacidade física', `${formatNumber(plan.capacity || 0, 0)} unidade(s)`],
+          ['Peça posicionada', `${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`],
+          ['Orientação', plan.rotated ? 'Rotacionada em 90°' : 'Original'],
+          ['Por fileira', `${formatNumber(piecesPerRow, 0)} unidade(s)`],
+          ['Fileiras', `${formatNumber(rows, 0)}`],
+          ['Área útil', `262 × ${formatNumber(plan.width || 0, 0)} cm`],
+          ['Material informado', `${formatNumber(result.materialWidth || 0, 0)} cm`],
+        ].forEach(([label, value], index) => {
+          const column = index % 2;
+          if (column === 0 && index > 0) y += cardHeight + cardGap;
+          drawInfoCard(margin + column * (cardWidth + cardGap), label, value);
         });
+        y += cardHeight + 9;
 
         const leftoverArea = Number(plan.placedAreaLeftover) || Number(plan.residualEdgeArea) || Math.max(0, (Number(plan.usableLength) || 262) * (Number(plan.width) || 0) - ((Number(plan.capacity) || 0) * pieceWidth * pieceHeight));
         const emptyPositions = Number(plan.emptyPositions) || 0;
+        pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        pdf.text('Sobras do corte', margin, y + 2);
-        y += 9;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
+        pdf.setFontSize(12);
+        pdf.text('Sobras do corte', margin, y);
+        y += 6;
         [
-          [`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`],
-          [`Área de sobra: ${formatNumber(leftoverArea, 0)} cm²`, `Posições vazias: ${formatNumber(emptyPositions, 0)}`],
-        ].forEach(([left, right]) => {
-          pdf.text(left, margin, y);
-          pdf.text(right, 108, y);
-          y += 6;
+          ['Sobra no comprimento', `${formatNumber(lengthLeftover, 0)} cm`],
+          ['Sobra na largura', `${formatNumber(widthLeftover, 0)} cm`],
+          ['Área de sobra', `${formatNumber(leftoverArea, 0)} cm²`],
+          ['Posições vazias', `${formatNumber(emptyPositions, 0)}`],
+        ].forEach(([label, value], index) => {
+          const column = index % 2;
+          if (column === 0 && index > 0) y += cardHeight + cardGap;
+          drawInfoCard(margin + column * (cardWidth + cardGap), label, value);
         });
-        if (result.hasAccordion) {
+        y += cardHeight + 5;
+        pdf.setTextColor(90, 90, 90);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);        if (result.hasAccordion) {
           pdf.setFont('helvetica', 'bold');
           pdf.text('Sanfona lateral', margin, y + 2);
           pdf.setFont('helvetica', 'normal');
