@@ -695,23 +695,23 @@ function CutPreview({ profile, result, onDownload }) {
     const materialPlanDrawHeight = wasteBoxH * (maxMaterialHeightCm / tableWidthCm);
     const mainAreaY = wasteBoxY + (wasteBoxH - materialPlanDrawHeight);
     const verticalCentimeterScale = materialPlanDrawHeight / maxMaterialHeightCm;
-    const cutHeightCm = Number(result.productHeight) || mainPieceHeight;
+    const firstCutPlan = result.tablePlan || result.cutPlans?.[0];
+    const cutWidthCm = Number(firstCutPlan?.pieceWidth) || Number(result.productWidth) || mainPieceWidth;
+    const cutHeightCm = Number(firstCutPlan?.pieceHeight) || Number(result.productHeight) || mainPieceHeight;
     const mainAreaHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
     const materialPlanBottom = mainAreaY + materialPlanDrawHeight;
-    const cutWidthCm = Number(result.productWidth) || mainPieceWidth;
-    const firstCutPlan = result.tablePlan || result.cutPlans?.[0];
     const mainGap = 0;
     const centimeterScale = cutAreaWidth / usableTableLengthCm;
     const mainStartX = cutAreaX;
     const mainPieceDrawWidth = cutWidthCm * centimeterScale;
     const mainPiecesToDraw = previewQuantity;
-    const mainLabel = `${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm`;
+    const mainLabel = `${formatNumber(cutWidthCm, 0)} x ${formatNumber(cutHeightCm, 0)} cm`;
     const rowsToDraw = firstCutPlan?.rowLayouts || [];
     let currentRowY = mainAreaY;
     let remainingPiecesToDraw = mainPiecesToDraw;
     rowsToDraw.forEach((layout) => {
-      const pieceWidthCm = layout.rotated ? cutHeightCm : cutWidthCm;
-      const pieceHeightCm = layout.rotated ? cutWidthCm : cutHeightCm;
+      const pieceWidthCm = cutWidthCm;
+      const pieceHeightCm = cutHeightCm;
       const pieceDrawWidth = pieceWidthCm * centimeterScale;
       const pieceDrawHeight = pieceHeightCm * verticalCentimeterScale;
       const label = layout.rotated ? `${mainLabel} (girada)` : mainLabel;
@@ -997,8 +997,8 @@ function CutPreview({ profile, result, onDownload }) {
       duplicateContext.fillRect(0, cardY, panelWidth, panelHeight - cardY);
       const secondPlanCardsQuantity = secondPlanQuantity;
       drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext, planAccumulatedLeftoverArea);
-      const secondRows = Math.max(0, secondPlan.verticalRows);
-      const secondPiecesPerRow = Math.max(0, secondPlan.wholePiecesPerRow);
+      const secondRows = Math.max(0, secondPlan.mainRows || secondPlan.verticalRows);
+      const secondPiecesPerRow = Math.max(0, secondPlan.piecesPerRow || secondPlan.wholePiecesPerRow);
       const secondPiecesToDraw = Math.min(secondPlanQuantity, secondRows * secondPiecesPerRow);
       for (let index = 0; index < secondPiecesToDraw; index += 1) {
         const row = Math.floor(index / secondPiecesPerRow);
@@ -1046,7 +1046,7 @@ function CutPreview({ profile, result, onDownload }) {
           accordionX += accordionDrawWidth + accordionGap;
         }
       }
-      const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * mainAreaHeight));
+      const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * (Number(secondPlan?.pieceHeight) || cutHeightCm) * verticalCentimeterScale));
       if (unusedHeight > 0) {
         duplicateContext.fillStyle = 'rgba(156, 163, 175, 0.5)';
         duplicateContext.fillRect(cutAreaX, mainAreaY + (secondRows * mainAreaHeight), cutAreaWidth, unusedHeight);
@@ -1284,6 +1284,37 @@ function CutPreview({ profile, result, onDownload }) {
       </div>
     </div>
   );
+}
+
+function drawAccordionFlow(context, { count, drawWidth, drawHeight, firstX, firstY, startX, rightLimit, bottomLimit, label }) {
+  const safeCount = Math.max(0, Math.floor(Number(count) || 0));
+  const width = Math.max(0, Number(drawWidth) || 0);
+  const height = Math.max(0, Number(drawHeight) || 0);
+  const gap = 0;
+  if (!safeCount || width <= 0 || height <= 0) return;
+
+  let x = Number(firstX) || startX;
+  let y = Number(firstY) || 0;
+
+  for (let index = 0; index < safeCount; index += 1) {
+    if (x + width > rightLimit + 0.01) {
+      x = startX;
+      y += height + gap;
+    }
+
+    if (y + height > bottomLimit + 0.01) {
+      break;
+    }
+
+    context.fillStyle = '#22c55e';
+    context.fillRect(x, y, width, height);
+    context.strokeStyle = '#15803d';
+    context.lineWidth = 1.5;
+    context.strokeRect(x, y, width, height);
+    drawResponsivePieceLabel(context, x, y, width, height, label, '#052e16');
+
+    x += width + gap;
+  }
 }
 
 function drawAccordionSide(context, x, y, height, accordionWidth, mirrored) {
