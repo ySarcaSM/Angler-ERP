@@ -46,9 +46,6 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
   const usableWidth = Math.min(Math.max(0, Number(materialWidth) || 0), 150);
   const safeAccordionWidth = Math.max(0, Number(accordionWidth) || 0);
 
-  // O plano considera a mochila e, quando houver sanfona, as duas sanfonas
-  // de cada mochila. A sanfona não deve invalidar uma peça só porque a
-  // capacidade máxima teórica do plano exigiria uma disposição diferente.
   const orientations = [
     { pieceWidth: Number(pieceWidth) || 0, pieceHeight: Number(pieceHeight) || 0, rotated: false },
     { pieceWidth: Number(pieceHeight) || 0, pieceHeight: Number(pieceWidth) || 0, rotated: true },
@@ -61,61 +58,41 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
   );
 
   const plans = orientations.map((option) => {
-    const piecesPerRow = Math.floor(usableLength / option.pieceWidth);
+    // A sanfona lateral é uma faixa vertical da mesma altura da peça principal.
+    // As duas faixas de cada mochila ficam junto da peça no mesmo avanço do
+    // comprimento. Assim, 25 cm + 2 × 2 cm = 29 cm por mochila, por exemplo.
+    const occupiedWidthPerUnit = option.pieceWidth + (safeAccordionWidth * 2);
+    const piecesPerRow = Math.floor(usableLength / Math.max(1, occupiedWidthPerUnit));
     const totalRows = Math.floor(usableWidth / option.pieceHeight);
-    const mainCapacity = piecesPerRow * totalRows;
-
-    let capacity = mainCapacity;
-    let mainRowsForCapacity = totalRows;
-    let accordionRows = 0;
-    let accordionPiecesPerRow = 0;
-    let accordionFits = safeAccordionWidth <= 0;
-
-    if (safeAccordionWidth > 0 && mainCapacity > 0) {
-      accordionPiecesPerRow = Math.floor(usableLength / safeAccordionWidth);
-
-      // Cada mochila precisa de exatamente duas sanfonas. Procuramos a maior
-      // quantidade de mochilas para a qual existe uma divisão inteira entre
-      // fileiras da mochila e fileiras das sanfonas.
-      if (accordionPiecesPerRow > 0) {
-        for (let candidate = mainCapacity; candidate >= 1; candidate -= 1) {
-          const mainRows = Math.ceil(candidate / piecesPerRow);
-          const requiredAccordionRows = Math.ceil((candidate * 2) / accordionPiecesPerRow);
-
-          if (mainRows + requiredAccordionRows <= totalRows) {
-            capacity = candidate;
-            mainRowsForCapacity = mainRows;
-            accordionRows = requiredAccordionRows;
-            accordionFits = true;
-            break;
-          }
-        }
-      }
-    }
-
-    const lengthLeftover = usableLength - (piecesPerRow * option.pieceWidth);
-    const widthLeftover = usableWidth - (totalRows * option.pieceHeight);
+    const capacity = piecesPerRow * totalRows;
+    const mainPiecesPerRow = Math.floor(usableLength / option.pieceWidth);
+    const accordionPiecesPerRow = safeAccordionWidth > 0
+      ? Math.floor(usableLength / safeAccordionWidth)
+      : 0;
+    const accordionFits = safeAccordionWidth <= 0 || capacity > 0;
 
     return {
       width: usableWidth,
       usableLength,
       piecesPerRow,
       wholePiecesPerRow: piecesPerRow,
+      mainPiecesPerRow,
       rows: totalRows,
       verticalRows: totalRows,
-      rowLayouts: Array.from({ length: mainRowsForCapacity }, () => ({ piecesPerRow })),
+      rowLayouts: Array.from({ length: totalRows }, () => ({ piecesPerRow })),
       capacity,
-      lengthLeftover,
-      widthLeftover,
+      lengthLeftover: usableLength - (piecesPerRow * occupiedWidthPerUnit),
+      widthLeftover: usableWidth - (totalRows * option.pieceHeight),
       pieceWidth: option.pieceWidth,
       pieceHeight: option.pieceHeight,
       rotated: option.rotated,
       accordionFits,
       accordionPiecesPerRow,
-      accordionRows,
+      accordionRows: safeAccordionWidth > 0 ? totalRows : 0,
       accordionCount: capacity * 2,
-      mainRows: mainRowsForCapacity,
-      totalOccupiedRows: mainRowsForCapacity + accordionRows,
+      mainRows: totalRows,
+      totalOccupiedRows: totalRows,
+      occupiedWidthPerUnit,
     };
   });
 
@@ -130,6 +107,7 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
     usableLength,
     piecesPerRow: 0,
     wholePiecesPerRow: 0,
+    mainPiecesPerRow: 0,
     rows: 0,
     verticalRows: 0,
     rowLayouts: [],
@@ -145,9 +123,9 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
     accordionCount: 0,
     mainRows: 0,
     totalOccupiedRows: 0,
+    occupiedWidthPerUnit: 0,
   };
 }
-
 
 const MATERIAL_PREVIEW = {
   backpack: { label: 'Material da mochila', tone: 'bg-amber-400', softTone: 'bg-amber-400/10', border: 'border-amber-400/40' },
