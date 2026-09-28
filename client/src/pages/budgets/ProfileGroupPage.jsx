@@ -230,7 +230,7 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, 22);
-        const compactImageHeight = Math.min(imageHeight, 70);
+        const compactImageHeight = Math.min(imageHeight, 58);
         pdf.addImage(url, 'PNG', margin, 27, imageWidth, compactImageHeight);
 
         let y = 27 + compactImageHeight + 7;
@@ -274,65 +274,47 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         const leftoverArea = Number(plan.placedAreaLeftover) || Number(plan.residualEdgeArea) || Math.max(0, (Number(plan.usableLength) || 262) * (Number(plan.width) || 0) - ((Number(plan.capacity) || 0) * pieceWidth * pieceHeight));
         const emptyPositions = Number(plan.emptyPositions) || 0;
 
-        // Relatório textual imediatamente abaixo das especificações.
-        pdf.setTextColor(15, 23, 42);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(10);
-        pdf.text('APROVEITAMENTO', margin, y);
-        pdf.text('CONSUMO DE TNT', 82, y);
-        pdf.text('DICAS', 150, y);
-        y += 5;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7.5);
-        const reportLines = [
-          [
-            `Grade máxima: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(plan?.capacity || 0, 0)} mochilas`,
-            `Comprimento do plano: ${formatNumber((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity, 0)} cm`,
-            `Plano com ${formatNumber(planQuantity, 0)} unidade(s).`,
-          ],
-          [
-            `Acomodadas neste plano: ${formatNumber(planQuantity, 0)} mochila(s)`,
-            `Comprimento em metros: ${formatNumber(((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity) / 100, 2)} m`,
-            `Grade: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} posições.`,
-          ],
-          [
-            `Espaço vago: ${formatNumber(emptyPositions, 0)} posição(ões)`,
-            `Largura do material: ${formatNumber(plan?.width || result.materialWidth || 0, 0)} cm`,
-            `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm.`,
-          ],
-          [
-            `Área de sobra: ${formatNumber(leftoverArea, 0)} cm²`,
-            `Quantidade: ${formatNumber(planQuantity, 0)} unidade(s)`,
-            `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm.`,
-          ],
-        ];
-        reportLines.forEach((row) => {
-          pdf.text(row[0], margin, y);
-          pdf.text(row[1], 82, y);
-          pdf.text(row[2], 150, y);
-          y += 4.5;
-        });
-        y += 4;
+        // Relatório compacto e explícito, imediatamente abaixo das especificações.
+        const reportTop = y;
+        const reportWidth = pageWidth - (margin * 2);
+        pdf.setFillColor(248, 250, 252);
+        pdf.setDrawColor(203, 213, 225);
+        pdf.roundedRect(margin, reportTop, reportWidth, 48, 2.5, 2.5, 'FD');
 
         pdf.setTextColor(15, 23, 42);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
-        pdf.text('Resumo das sobras', margin, y);
-        y += 7;
-        pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(10);
-        pdf.text(`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, margin, y);
-        pdf.text(`Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`, 108, y);
-        y += 7;
-        pdf.text(`Área total de sobra: ${formatNumber(leftoverArea, 0)} cm²`, margin, y);
-        pdf.text(`Posições vazias: ${formatNumber(emptyPositions, 0)}`, 108, y);
-        y += 14;
-        if (result.hasAccordion) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.text('Sanfona lateral', margin, y + 2);
-          pdf.setFont('helvetica', 'normal');
-          pdf.text(`${formatNumber(result.accordionWidth, 0)} cm — ${result.accordionFits ? 'acomodada na sobra disponível' : 'não acomoda na sobra disponível'}`, margin + 34, y + 2);
-        }
+        pdf.text('APROVEITAMENTO', margin + 4, reportTop + 7);
+        pdf.text('CONSUMO DE TNT', margin + 67, reportTop + 7);
+        pdf.text('DICAS', margin + 133, reportTop + 7);
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.2);
+        const reportColumns = [
+          [
+            `Grade máxima: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(plan?.capacity || 0, 0)} mochilas`,
+            `Acomodadas: ${formatNumber(planQuantity, 0)} unidade(s)`,
+            `Espaço vago: ${formatNumber(emptyPositions, 0)} posição(ões)`,
+            `Área de sobra: ${formatNumber(leftoverArea, 0)} cm²`,
+          ],
+          [
+            `Comprimento do plano: ${formatNumber((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity, 0)} cm`,
+            `Consumo: ${formatNumber(((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity) / 100, 2)} m`,
+            `Largura do material: ${formatNumber(plan?.width || result.materialWidth || 0, 0)} cm`,
+            `Quantidade: ${formatNumber(planQuantity, 0)} unidade(s)`,
+          ],
+          [
+            `Plano com ${formatNumber(planQuantity, 0)} unidade(s)`,
+            `Grade: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)}`,
+            `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`,
+            `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`,
+          ],
+        ];
+        reportColumns.forEach((column, columnIndex) => {
+          const x = [margin + 4, margin + 67, margin + 133][columnIndex];
+          column.forEach((line, lineIndex) => pdf.text(line, x, reportTop + 14 + (lineIndex * 7)));
+        });
+        y = reportTop + 54;
 
         pdf.setFontSize(8);
         pdf.setTextColor(90, 90, 90);
