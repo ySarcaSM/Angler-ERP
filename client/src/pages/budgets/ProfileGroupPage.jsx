@@ -743,7 +743,7 @@ function CutPreview({ profile, result, onDownload }) {
       const accordionStartX = mainStartX;
       let accordionX = accordionStartX;
       let accordionY = currentRowY;
-      const accordionGap = Math.max(2, centimeterScale * 0.8);
+      // A capacidade física já considera as fileiras das sanfonas.\n      // Não adicionamos espaçamento vertical para não fazer o preview\n      // ultrapassar a área útil quando há muitas mochilas.\n      const accordionGap = 0;
 
       for (let index = 0; index < accordionCount; index += 1) {
         if (accordionX + accordionDrawWidth > cutAreaRight) {
