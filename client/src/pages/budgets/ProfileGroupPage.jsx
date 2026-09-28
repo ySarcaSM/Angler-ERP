@@ -41,23 +41,32 @@ function calculateCut(materialWidth, pieceWidth, pieceLength, quantity, allowRot
 
 // Acomodação física: cada eixo é arredondado para baixo antes de multiplicar.
 // Frações e rotações não formam uma nova peça ou fileira válida.
-function calculateTablePlan(materialWidth, pieceWidth, pieceHeight) {
+function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWidth = 0) {
   const usableLength = 262; // 300 cm da mesa, menos 19 cm de cada lateral
   const usableWidth = Math.min(Math.max(0, Number(materialWidth) || 0), 150);
+  const mainWidth = Number(pieceWidth) || 0;
+  const mainHeight = Number(pieceHeight) || 0;
+  const accordion = Math.max(0, Number(accordionWidth) || 0);
+  const hasAccordion = accordion > 0;
 
+  // Uma mochila é um conjunto físico: 1 corpo + 2 sanfonas.
+  // As duas sanfonas têm a mesma altura do corpo e ocupam a largura
+  // de ajuste informada. Para manter o par associado à mochila no
+  // plano, as três peças são tratadas como uma única unidade de corte.
   const orientations = [
-    { pieceWidth: Number(pieceWidth) || 0, pieceHeight: Number(pieceHeight) || 0, rotated: false },
-    { pieceWidth: Number(pieceHeight) || 0, pieceHeight: Number(pieceWidth) || 0, rotated: true },
+    { pieceWidth: mainWidth, pieceHeight: mainHeight, rotated: false },
+    ...(hasAccordion ? [] : [{ pieceWidth: mainHeight, pieceHeight: mainWidth, rotated: true }]),
   ].filter((option, index, list) =>
     option.pieceWidth > 0 &&
     option.pieceHeight > 0 &&
-    option.pieceWidth <= usableLength &&
+    option.pieceWidth + (2 * accordion) <= usableLength &&
     option.pieceHeight <= usableWidth &&
     (index === 0 || option.pieceWidth !== list[0].pieceWidth || option.pieceHeight !== list[0].pieceHeight)
   );
 
   const plans = orientations.map((option) => {
-    const piecesPerRow = Math.floor(usableLength / option.pieceWidth);
+    const groupLength = option.pieceWidth + (2 * accordion);
+    const piecesPerRow = Math.floor(usableLength / groupLength);
     const totalRows = Math.floor(usableWidth / option.pieceHeight);
     const capacity = piecesPerRow * totalRows;
 
@@ -68,12 +77,16 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight) {
       wholePiecesPerRow: piecesPerRow,
       rows: totalRows,
       verticalRows: totalRows,
-      rowLayouts: Array.from({ length: totalRows }, () => ({ piecesPerRow })),
+      rowLayouts: Array.from({ length: totalRows }, () => ({ piecesPerRow, rotated: option.rotated })),
       capacity,
-      lengthLeftover: usableLength - (piecesPerRow * option.pieceWidth),
+      lengthLeftover: usableLength - (piecesPerRow * groupLength),
       widthLeftover: usableWidth - (totalRows * option.pieceHeight),
       pieceWidth: option.pieceWidth,
       pieceHeight: option.pieceHeight,
+      groupLength,
+      groupHeight: option.pieceHeight,
+      accordionWidth: accordion,
+      accordionCountPerUnit: hasAccordion ? 2 : 0,
       rotated: option.rotated,
       mainRows: totalRows,
       totalOccupiedRows: totalRows,
@@ -97,8 +110,12 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight) {
     capacity: 0,
     lengthLeftover: usableLength,
     widthLeftover: usableWidth,
-    pieceWidth,
-    pieceHeight,
+    pieceWidth: mainWidth,
+    pieceHeight: mainHeight,
+    groupLength: mainWidth + (2 * accordion),
+    groupHeight: mainHeight,
+    accordionWidth: accordion,
+    accordionCountPerUnit: hasAccordion ? 2 : 0,
     rotated: false,
     mainRows: 0,
     totalOccupiedRows: 0,
@@ -437,6 +454,8 @@ function CutPreview({ profile, result, onDownload }) {
     const materialWidth = Number(result.materialWidth) || 140;
     const mainPieceWidth = Number(result.tablePlan?.pieceWidth) || Number(result.mainCut.pieceWidth) || 50;
     const mainPieceHeight = Number(result.tablePlan?.pieceHeight) || Number(result.mainCut.pieceLength) || 90;
+    const accordionWidth = Number(result.accordionWidth) || 0;
+    const hasAccordion = profile?.kind === 'backpack' && accordionWidth > 0;
     const sidePieceWidth = Number(result.sideCut.pieceWidth) || 10;
     const sidePieceHeight = Number(result.sideCut.pieceLength) || 90;
 
@@ -673,6 +692,8 @@ function CutPreview({ profile, result, onDownload }) {
     const centimeterScale = cutAreaWidth / usableTableLengthCm;
     const mainStartX = cutAreaX;
     const mainPieceDrawWidth = cutWidthCm * centimeterScale;
+    const accordionDrawWidth = hasAccordion ? accordionWidth * centimeterScale : 0;
+    const groupDrawWidth = mainPieceDrawWidth + (accordionDrawWidth * 2);
     const mainPiecesToDraw = previewQuantity;
     const mainLabel = `${formatNumber(cutWidthCm, 0)} x ${formatNumber(cutHeightCm, 0)} cm`;
     const rowsToDraw = firstCutPlan?.rowLayouts || [];
@@ -683,17 +704,33 @@ function CutPreview({ profile, result, onDownload }) {
       const pieceHeightCm = cutHeightCm;
       const pieceDrawWidth = pieceWidthCm * centimeterScale;
       const pieceDrawHeight = pieceHeightCm * verticalCentimeterScale;
+      const accordionDrawWidth = hasAccordion ? accordionWidth * centimeterScale : 0;
       const label = layout.rotated ? `${mainLabel} (girada)` : mainLabel;
       const piecesThisRow = Math.min(remainingPiecesToDraw, layout.piecesPerRow);
       if (piecesThisRow <= 0) return;
       for (let column = 0; column < piecesThisRow; column += 1) {
-        const pieceX = mainStartX + (column * (pieceDrawWidth + mainGap));
+        const groupX = mainStartX + (column * (pieceDrawWidth + (accordionDrawWidth * 2) + mainGap));
+        const accordionLabel = `Sanfona ${formatNumber(accordionWidth, 1)} cm`;
+
+        if (hasAccordion) {
+          [0, 1].forEach((accordionIndex) => {
+            const accordionX = groupX + (accordionIndex === 0 ? 0 : pieceDrawWidth + accordionDrawWidth);
+            context.fillStyle = '#facc15';
+            context.fillRect(accordionX, currentRowY, accordionDrawWidth, pieceDrawHeight);
+            context.strokeStyle = '#a16207';
+            context.lineWidth = 1.5;
+            context.strokeRect(accordionX, currentRowY, accordionDrawWidth, pieceDrawHeight);
+            drawResponsivePieceLabel(context, accordionX, currentRowY, accordionDrawWidth, pieceDrawHeight, accordionLabel, '#713f12');
+          });
+        }
+
+        const mainX = groupX + accordionDrawWidth;
         context.fillStyle = color.fill;
-        context.fillRect(pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight);
+        context.fillRect(mainX, currentRowY, pieceDrawWidth, pieceDrawHeight);
         context.strokeStyle = '#27506a';
         context.lineWidth = 1.5;
-        context.strokeRect(pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight);
-        drawResponsivePieceLabel(context, pieceX, currentRowY, pieceDrawWidth, pieceDrawHeight, label, color.dark);
+        context.strokeRect(mainX, currentRowY, pieceDrawWidth, pieceDrawHeight);
+        drawResponsivePieceLabel(context, mainX, currentRowY, pieceDrawWidth, pieceDrawHeight, label, color.dark);
       }
       remainingPiecesToDraw -= piecesThisRow;
       currentRowY += pieceDrawHeight;
@@ -702,7 +739,7 @@ function CutPreview({ profile, result, onDownload }) {
 
     // Marca no próprio tampo as duas sobras resultantes da grade completa.
     // Elas são calculadas depois de acomodar somente peças inteiras em cada eixo.
-    const gridDrawWidth = (firstCutPlan.placedColumns * mainPieceDrawWidth) + (Math.max(0, firstCutPlan.placedColumns - 1) * mainGap);
+    const gridDrawWidth = (firstCutPlan.placedColumns * groupDrawWidth) + (Math.max(0, firstCutPlan.placedColumns - 1) * mainGap);
     const gridDrawHeight = firstCutPlan.placedRows * mainAreaHeight;
     const lengthWasteX = mainStartX + gridDrawWidth;
     const lengthWasteWidth = Math.max(0, cutAreaRight - lengthWasteX);
@@ -826,11 +863,13 @@ function CutPreview({ profile, result, onDownload }) {
       const placedPieces = Math.min(Math.max(0, Number(planQuantity) || 0), capacity);
       const emptyPositions = Math.max(0, capacity - placedPieces);
       const pieceArea = (Number(plan?.pieceWidth) || 0) * (Number(plan?.pieceHeight) || 0);
-      const emptyArea = emptyPositions * pieceArea;
+      const emptyArea = emptyPositions * completeUnitArea;
       const totalPlanArea = (Number(plan?.usableLength) || 262) * (Number(plan?.width) || 0);
-      const placedAreaLeftover = Math.max(0, totalPlanArea - (placedPieces * pieceArea));
-      const residualEdgeArea = Math.max(0, totalPlanArea - (capacity * pieceArea));
-      const totalComprimentoCm = Math.max(0, mainPieceWidth * placedPieces);
+      const accordionAreaPerUnit = hasAccordion ? (result.accordionWidth * result.accordionWidth * 2) : 0;
+      const completeUnitArea = pieceArea + accordionAreaPerUnit;
+      const placedAreaLeftover = Math.max(0, totalPlanArea - (placedPieces * completeUnitArea));
+      const residualEdgeArea = Math.max(0, totalPlanArea - (capacity * completeUnitArea));
+      const totalComprimentoCm = Math.max(0, (mainPieceWidth + (result.accordionWidth * 2)) * placedPieces);
       const totalComprimentoM = totalComprimentoCm / 100;
       const drawCardTextForContext = (x, y, width, height, title, lines, fill, titleSize = 12, bodySize = 11) => {
         targetContext.fillStyle = fill;
@@ -847,6 +886,7 @@ function CutPreview({ profile, result, onDownload }) {
 
       drawCardTextForContext(cardStartX, cardY, cardWidth, cardHeight, `APROVEITAMENTO — PLANO INDIVIDUAL`, [
         `Grade máxima: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(capacity, 0)} mochilas`,
+        `Cada mochila: 1 corpo + ${formatNumber(result.accordionCountPerUnit || 0, 0)} sanfonas${hasAccordion ? ` de ${formatNumber(result.accordionWidth, 1)} cm × ${formatNumber(result.originalProductHeight, 1)} cm` : ''}`,
         `Acomodadas neste plano: ${formatNumber(placedPieces, 0)} mochila(s)`,
         `Espaço vago útil: ${formatNumber(emptyPositions, 0)} posição(ões) (${formatNumber(emptyArea, 0)} cm²)`,
         `Faixa residual: ${formatNumber(plan?.lengthLeftover || 0, 0)} cm no comprimento`,
@@ -1175,7 +1215,10 @@ function CutPreview({ profile, result, onDownload }) {
                 const mainAreaY = 108 + (365 - (365 * (150 / 159)));
                 const cutAreaWidth = 758;
                 const materialPlanDrawHeight = 344.34;
-                const pieceWidth = cutWidthCm * (cutAreaWidth / 262);
+                const accordionWidth = Number(result.accordionWidth) || 0;
+                const accordionDrawWidth = accordionWidth > 0 ? accordionWidth * (cutAreaWidth / 262) : 0;
+                const mainPieceDrawWidth = cutWidthCm * (cutAreaWidth / 262);
+                const pieceWidth = mainPieceDrawWidth + (accordionDrawWidth * 2);
                 const pieceHeight = cutHeightCm * (materialPlanDrawHeight / 150);
                 const pieceX = cutAreaX + (lastColumn * pieceWidth);
                 const pieceY = mainAreaY + (lastRow * pieceHeight);
@@ -1322,12 +1365,15 @@ export default function ProfileGroupPage() {
     const width = Number(form.width) || 0;
     const length = Number(form.length) || 0;
     const accordionWidth = profile?.kind === 'backpack' ? (Number(form.accordionWidth) || 0) : 0;
-    const sideWidth = Math.max(0, length + accordionWidth);
+    const sideWidth = Math.max(0, length);
     const quantity = Math.max(0, Math.floor(Number(form.quantity) || 0));
     const wasteFactor = 1 + ((Number(form.waste) || 0) / 100);
     // Cada unidade corresponde a um único corte de material.
     const accordionMaterialWidth = accordionWidth > 0 ? (accordionWidth * 2) : 0;
     const bodyArea = height * (width + length + accordionMaterialWidth);
+    const accordionCountPerUnit = profile?.kind === 'backpack' && accordionWidth > 0 ? 2 : 0;
+    const accordionPieceWidth = accordionWidth;
+    const accordionPieceHeight = height;
     const areaPerUnit = (bodyArea / 10000) * wasteFactor;
     const totalArea = areaPerUnit * quantity;
     const materialWidth = Math.max(Number(form.materialWidth) || 1, 1);
@@ -1342,13 +1388,13 @@ export default function ProfileGroupPage() {
     const accordionValid = length > 0 && accordionWidth >= 0;
     const usableMaterialWidth = usableCutLength;
     const mainCut = calculateCut(usableCutLength, width, height, quantity, false);
-    const sideCut = calculateCut(usableCutLength, sideWidth, height, quantity, false);
+    const sideCut = calculateCut(usableCutLength, sideWidth, height, quantity * 2, false);
     const materialPerBackpack = mainCut.pieceWidth || 0;
     const materialPlans = [];
     let remainingMaterialWidth = materialWidth;
     while (remainingMaterialWidth > 0) {
       const segmentWidth = Math.min(150, remainingMaterialWidth);
-      const plan = calculateTablePlan(segmentWidth, width, height);
+      const plan = calculateTablePlan(segmentWidth, width, height, accordionWidth);
       if (plan.capacity > 0) materialPlans.push(plan);
       remainingMaterialWidth -= segmentWidth;
     }
@@ -1375,8 +1421,8 @@ export default function ProfileGroupPage() {
     const remainingBackpacks = completeUnitsPerRow > 0 ? quantity % completeUnitsPerRow : quantity;
     const sharedLeftover = tablePlan.lengthLeftover;
     const linearMaterial = plansNeeded * tableLengthCm * wasteFactor;
-    const accordionUnitsRequired = profile?.kind === 'backpack' && accordionWidth > 0 ? quantity * 2 : 0;
-    const accordionMaterialArea = accordionUnitsRequired * accordionWidth * height;
+    const accordionUnitsRequired = accordionCountPerUnit * quantity;
+    const accordionMaterialArea = accordionUnitsRequired * accordionPieceWidth * accordionPieceHeight;
 
     const usesCord = profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord');
     const usesHandle = profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle');
@@ -1389,13 +1435,17 @@ export default function ProfileGroupPage() {
     const cordLength = (Number(form.cordQuantity) || 0) * cordLengthPerUnit;
     const handleMaterial = usesHandle ? handleLength * quantity / 100 : 0;
     const cordMaterial = usesCord ? cordLength * quantity / 100 : 0;
-    const accordionFits = true;
+    const accordionFits = profile?.kind !== 'backpack' || accordionWidth === 0 || (
+      accordionWidth > 0 &&
+      baseTablePlan.pieceWidth + (accordionWidth * 2) <= usableCutLength &&
+      height <= Math.min(materialWidth, maxMaterialHeight)
+    );
     const quantityWithinCapacity = quantity <= totalCapacity;
     const canCut = quantityValid && materialWidthValid && materialHeightValid && productWidthValid && totalCapacity > 0;
     const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
-    return { areaPerUnit, totalArea, linearMaterial, accordionMaterialArea, accordionUnitsRequired, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: materialPlans, plansToCut: materialPlans, totalCapacity, materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth > 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
+    return { areaPerUnit, totalArea, linearMaterial, accordionMaterialArea, accordionUnitsRequired, accordionCountPerUnit, accordionPieceWidth, accordionPieceHeight, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: materialPlans, plansToCut: materialPlans, totalCapacity, materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth > 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
       originalProductHeight: height, originalProductWidth: width, cordLength, cordQuantity: form.cordQuantity, handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
