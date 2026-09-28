@@ -1458,8 +1458,9 @@ export default function ProfileGroupPage() {
                 <label className="label">Quantidade de alças<select className="input mt-1" value={form.handleQuantity} onChange={(e) => update('handleQuantity', e.target.value)}><option value="0">0 alças</option><option value="1">1 alça</option><option value="2">2 alças</option></select></label>              </>}
               {(profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord')) && <>
                 <div className="col-span-2 md:col-span-4 rounded-xl border border-primary-400/20 bg-primary-400/5 px-4 py-3 text-sm text-dark-300">
-                  <strong className="text-dark-100">Cordão automático:</strong> {formatNumber(result.cordLength || 0, 1)} cm por cordão
+                  <strong className="text-dark-100">Cordão automático:</strong> {formatNumber((Number(result.cordLength) || 0) / Math.max(1, Number(result.cordQuantity) || 0), 1)} cm por cordão
                   <span className="ml-1 text-dark-500">(referência: 60 cm para 30 × 20 × 10 cm, ajustada pela altura informada)</span>
+                  <span className="ml-1 text-dark-300">· Total para {formatNumber(result.quantity || 0, 0)} mochila(s): {formatNumber((Number(result.cordLength) || 0) * (Number(result.quantity) || 0), 1)} cm</span>
                 </div>
                 <label className="label">Quantidade de cordões<select className="input mt-1" value={form.cordQuantity} onChange={(e) => update('cordQuantity', e.target.value)}><option value="0">0 cordões</option><option value="1">1 cordão</option><option value="2">2 cordões</option></select></label>
               </>}
