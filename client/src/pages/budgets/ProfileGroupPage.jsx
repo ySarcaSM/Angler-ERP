@@ -558,7 +558,7 @@ function CutPreview({ profile, result, onDownload }) {
       context.fillText('ORIENTAÇÃO ROTACIONADA — melhor aproveitamento da mesa', panelX + 18, panelY + 60);
     }
     context.font = '600 11px Arial';
-    context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)` : ''}`, panelX + 18, panelY + 46);
+    context.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(previewQuantity, 0)} un)${result.hasAccordion ? ` | Sanfonas: 2 × ${formatNumber(result.accordionWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm por mochila (${formatNumber(previewQuantity * 2, 0)} un)` : ''}`, panelX + 18, panelY + 46);
 
     const wasteBlockOffset = 74 + 10;
     const pieceSpacingOffset = 14;
@@ -882,61 +882,6 @@ function CutPreview({ profile, result, onDownload }) {
         context.fillText(label, startX + ((mainPieceDrawWidth - labelWidth) / 2), dimensionY - 4);
       }
     }
-    const mainPiecesDrawnWidth = cutAreaWidth;
-
-    const sideStartX = mainStartX + mainPiecesDrawnWidth + mainGap;
-    const availableSideWidth = cutAreaRight - sideStartX;
-    let sidePiecesToDraw = 0;
-    if (result.hasAccordion && availableSideWidth > 0) {
-      const sideGap = 3;
-      const sidePieceDrawWidth = sidePieceWidth * centimeterScale;
-      const sidePieceDrawHeight = Math.min(sidePieceHeight * verticalCentimeterScale, materialPlanBottom - mainAreaY);
-      const maxSidePiecesInPlan = Math.floor((availableSideWidth + sideGap) / (sidePieceDrawWidth + sideGap));
-      sidePiecesToDraw = Math.max(0, Math.min(quantity, maxSidePiecesInPlan));
-      const sideLabel = `${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm`;
-      for (let index = 0; index < sidePiecesToDraw; index += 1) {
-        const pieceX = sideStartX + (index * (sidePieceDrawWidth + sideGap));
-        context.fillStyle = '#8edb91';
-        context.fillRect(pieceX, mainAreaY, sidePieceDrawWidth, sidePieceDrawHeight);
-        context.strokeStyle = '#3b7c45';
-        context.lineWidth = 1;
-        context.strokeRect(pieceX, mainAreaY, sidePieceDrawWidth, sidePieceDrawHeight);
-        context.save();
-        context.translate(pieceX + (sidePieceDrawWidth / 2), mainAreaY + (sidePieceDrawHeight / 2));
-        context.rotate(-Math.PI / 2);
-        context.fillStyle = '#16371c';
-        context.font = '700 9px Arial';
-        const sideLabelWidth = context.measureText(sideLabel).width;
-        context.fillText(sideLabel, -(sideLabelWidth / 2), 3);
-        context.restore();
-
-        const sideMeasureY = mainAreaY - 9;
-        const sideMeasureLabel = `${formatNumber(sidePieceWidth, 0)} cm`;
-        context.strokeStyle = '#111827';
-        context.lineWidth = 1;
-        context.beginPath();
-        context.moveTo(pieceX, sideMeasureY);
-        context.lineTo(pieceX + sidePieceDrawWidth, sideMeasureY);
-        context.moveTo(pieceX, sideMeasureY - 3);
-        context.lineTo(pieceX, sideMeasureY + 3);
-        context.moveTo(pieceX + sidePieceDrawWidth, sideMeasureY - 3);
-        context.lineTo(pieceX + sidePieceDrawWidth, sideMeasureY + 3);
-        context.stroke();
-        context.fillStyle = '#111827';
-        context.font = '700 8px Arial';
-        const sideMeasureLabelWidth = context.measureText(sideMeasureLabel).width;
-        context.fillText(sideMeasureLabel, pieceX + ((sidePieceDrawWidth - sideMeasureLabelWidth) / 2), sideMeasureY - 4);
-
-        context.strokeStyle = '#3b7c45';
-        context.setLineDash([3, 3]);
-        context.beginPath();
-        context.moveTo(pieceX + (sidePieceDrawWidth / 2), mainAreaY);
-        context.lineTo(pieceX + (sidePieceDrawWidth / 2), mainAreaY + sidePieceDrawHeight);
-        context.stroke();
-        context.setLineDash([]);
-      }
-    }
-
     const cardY = 520;
     const cardGap = 22;
     const cardWidth = (panelWidth - 120 - (cardGap * 2)) / 3;
@@ -952,7 +897,7 @@ function CutPreview({ profile, result, onDownload }) {
       const totalPlanArea = (Number(plan?.usableLength) || 262) * (Number(plan?.width) || 0);
       const placedAreaLeftover = Math.max(0, totalPlanArea - (placedPieces * pieceArea));
       const residualEdgeArea = Math.max(0, totalPlanArea - (capacity * pieceArea));
-      const totalComprimentoCm = Math.max(0, (mainPieceWidth + (result.hasAccordion ? sidePieceWidth : 0)) * placedPieces);
+      const totalComprimentoCm = Math.max(0, (mainPieceWidth + (result.hasAccordion ? (result.accordionWidth * 2) : 0)) * placedPieces);
       const totalComprimentoM = totalComprimentoCm / 100;
       const drawCardTextForContext = (x, y, width, height, title, lines, fill, titleSize = 12, bodySize = 11) => {
         targetContext.fillStyle = fill;
@@ -1035,7 +980,7 @@ function CutPreview({ profile, result, onDownload }) {
       const planAccumulatedLeftoverArea = accumulatedLeftoverArea + secondPlanLeftoverArea;
       duplicateContext.fillText(`PLANO DE CORTE ${secondPlanIndex + 2} - ${formatNumber(secondPlanQuantity, 0)} MOCHILAS (LARGURA: ${formatNumber(secondPlan.width, 0)} cm)`, 18, 30);
       duplicateContext.font = '600 11px Arial';
-      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)${result.hasAccordion ? ` | Sanfona: ${formatNumber(sidePieceWidth, 0)} x ${formatNumber(sidePieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)` : ''}`, 18, 52);
+      duplicateContext.fillText(`Peça principal: ${formatNumber(mainPieceWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm (${formatNumber(secondPlanQuantity, 0)} un)${result.hasAccordion ? ` | Sanfonas: 2 × ${formatNumber(result.accordionWidth, 0)} x ${formatNumber(mainPieceHeight, 0)} cm por mochila (${formatNumber(secondPlanQuantity * 2, 0)} un)` : ''}`, 18, 52);
 
       // O segundo plano não é uma cópia do primeiro: limpa o desenho anterior
       // e posiciona somente as fileiras que cabem na largura restante.
@@ -1063,6 +1008,40 @@ function CutPreview({ profile, result, onDownload }) {
         duplicateContext.lineWidth = 1.5;
         duplicateContext.strokeRect(pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight);
         drawResponsivePieceLabel(duplicateContext, pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight, mainLabel, color.dark);
+      }
+
+      if (result.hasAccordion && secondPlanQuantity > 0) {
+        const accordionWidthCm = Number(result.accordionWidth) || 0;
+        const accordionDrawWidth = accordionWidthCm * centimeterScale;
+        const accordionDrawHeight = Math.min(secondPieceHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
+        const accordionPiecesPerRow = Math.max(1, secondPlan.accordionPiecesPerRow || Math.floor(usableTableLengthCm / Math.max(accordionWidthCm, 0.01)));
+        const accordionCount = secondPlanQuantity * 2;
+        const accordionStartX = mainStartX;
+        let accordionX = accordionStartX;
+        let accordionY = mainAreaY + (secondRows * mainAreaHeight);
+        const accordionGap = Math.max(2, centimeterScale * 0.8);
+        for (let index = 0; index < accordionCount; index += 1) {
+          if (index > 0 && index % accordionPiecesPerRow === 0) {
+            accordionX = accordionStartX;
+            accordionY += accordionDrawHeight + accordionGap;
+          }
+          if (accordionY + accordionDrawHeight > materialPlanBottom) break;
+          duplicateContext.fillStyle = '#86efac';
+          duplicateContext.fillRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
+          duplicateContext.strokeStyle = '#166534';
+          duplicateContext.lineWidth = 1.5;
+          duplicateContext.strokeRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
+          drawResponsivePieceLabel(
+            duplicateContext,
+            accordionX,
+            accordionY,
+            accordionDrawWidth,
+            accordionDrawHeight,
+            `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
+            '#14532d'
+          );
+          accordionX += accordionDrawWidth + accordionGap;
+        }
       }
       const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * mainAreaHeight));
       if (unusedHeight > 0) {
