@@ -903,11 +903,24 @@ function CutPreview({ profile, result, onDownload }) {
         ...(accumulatedLeftoverArea !== null ? [`Sobra acumulada dos cortes: ${formatNumber(accumulatedLeftoverArea, 0)} cm²`] : []),
       ], '#dfeaf5');
 
-      drawCardTextForContext(cardStartX + cardWidth + cardGap, cardY, cardWidth, cardHeight, 'CONSUMO DE TNT — PLANO', [
+      const accessoryLines = result.accessoryType === 'handle'
+        ? [
+            `Alça: ${formatNumber((Number(result.handleLength) || 0) / Math.max(1, Number(result.handleQuantity) || 0), 1)} cm por alça`,
+            `Quantidade de alças: ${formatNumber(result.handleQuantity || 0, 0)} por unidade`,
+            `Total de alça no lote: ${formatNumber(result.handleLength || 0, 1)} cm`,
+          ]
+        : [
+            `Cordão: ${formatNumber((Number(result.cordLength) || 0) / Math.max(1, Number(result.cordQuantity) || 0), 1)} cm por cordão`,
+            `Quantidade de cordões: ${formatNumber(result.cordQuantity || 0, 0)} por unidade`,
+            `Total de cordão no lote: ${formatNumber(result.cordLength || 0, 1)} cm`,
+          ];
+
+      drawCardTextForContext(cardStartX + cardWidth + cardGap, cardY, cardWidth, cardHeight, 'CONSUMO E ACESSÓRIO — PLANO', [
         `Comprimento do plano: ${formatNumber(totalComprimentoCm, 0)} cm`,
         `Comprimento em metros lineares: ${formatNumber(totalComprimentoM, 2)} m`,
         `Largura do material: ${formatNumber(plan?.width || materialWidth, 0)} cm`,
         `Quantidade neste plano: ${formatNumber(placedPieces, 0)} unidade(s)`,
+        ...accessoryLines,
       ], '#f5dfe8');
 
       drawCardTextForContext(cardStartX + (cardWidth + cardGap) * 2, cardY, cardWidth, cardHeight, 'DICAS — PLANO', [
