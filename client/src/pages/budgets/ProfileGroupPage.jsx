@@ -41,10 +41,9 @@ function calculateCut(materialWidth, pieceWidth, pieceLength, quantity, allowRot
 
 // Acomodação física: cada eixo é arredondado para baixo antes de multiplicar.
 // Frações e rotações não formam uma nova peça ou fileira válida.
-function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWidth = 0) {
+function calculateTablePlan(materialWidth, pieceWidth, pieceHeight) {
   const usableLength = 262; // 300 cm da mesa, menos 19 cm de cada lateral
   const usableWidth = Math.min(Math.max(0, Number(materialWidth) || 0), 150);
-  const safeAccordionWidth = Math.max(0, Number(accordionWidth) || 0);
 
   const orientations = [
     { pieceWidth: Number(pieceWidth) || 0, pieceHeight: Number(pieceHeight) || 0, rotated: false },
@@ -58,41 +57,26 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
   );
 
   const plans = orientations.map((option) => {
-    // A sanfona lateral é uma faixa vertical da mesma altura da peça principal.
-    // As duas faixas de cada mochila ficam junto da peça no mesmo avanço do
-    // comprimento. Assim, 25 cm + 2 × 2 cm = 29 cm por mochila, por exemplo.
-    const occupiedWidthPerUnit = option.pieceWidth + (safeAccordionWidth * 2);
-    const piecesPerRow = Math.floor(usableLength / Math.max(1, occupiedWidthPerUnit));
+    const piecesPerRow = Math.floor(usableLength / option.pieceWidth);
     const totalRows = Math.floor(usableWidth / option.pieceHeight);
     const capacity = piecesPerRow * totalRows;
-    const mainPiecesPerRow = Math.floor(usableLength / option.pieceWidth);
-    const accordionPiecesPerRow = safeAccordionWidth > 0
-      ? Math.floor(usableLength / safeAccordionWidth)
-      : 0;
-    const accordionFits = safeAccordionWidth <= 0 || capacity > 0;
 
     return {
       width: usableWidth,
       usableLength,
       piecesPerRow,
       wholePiecesPerRow: piecesPerRow,
-      mainPiecesPerRow,
       rows: totalRows,
       verticalRows: totalRows,
       rowLayouts: Array.from({ length: totalRows }, () => ({ piecesPerRow })),
       capacity,
-      lengthLeftover: usableLength - (piecesPerRow * occupiedWidthPerUnit),
+      lengthLeftover: usableLength - (piecesPerRow * option.pieceWidth),
       widthLeftover: usableWidth - (totalRows * option.pieceHeight),
       pieceWidth: option.pieceWidth,
       pieceHeight: option.pieceHeight,
       rotated: option.rotated,
-      accordionFits,
-      accordionPiecesPerRow,
-      accordionRows: safeAccordionWidth > 0 ? totalRows : 0,
-      accordionCount: capacity * 2,
       mainRows: totalRows,
       totalOccupiedRows: totalRows,
-      occupiedWidthPerUnit,
     };
   });
 
@@ -107,7 +91,6 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
     usableLength,
     piecesPerRow: 0,
     wholePiecesPerRow: 0,
-    mainPiecesPerRow: 0,
     rows: 0,
     verticalRows: 0,
     rowLayouts: [],
@@ -117,13 +100,8 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
     pieceWidth,
     pieceHeight,
     rotated: false,
-    accordionFits: false,
-    accordionPiecesPerRow: 0,
-    accordionRows: 0,
-    accordionCount: 0,
     mainRows: 0,
     totalOccupiedRows: 0,
-    occupiedWidthPerUnit: 0,
   };
 }
 
@@ -1373,9 +1351,9 @@ export default function ProfileGroupPage() {
     const cordLength = (Number(form.cordQuantity) || 0) * cordLengthPerUnit;
     const handleMaterial = usesHandle ? handleLength * quantity / 100 : 0;
     const cordMaterial = usesCord ? cordLength * quantity / 100 : 0;
-    const accordionFits = tablePlan.accordionFits;
+    const accordionFits = true;
     const quantityWithinCapacity = quantity <= totalCapacity;
-    const canCut = quantityValid && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && totalCapacity > 0;
+    const canCut = quantityValid && materialWidthValid && materialHeightValid && productWidthValid && totalCapacity > 0;
     const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
