@@ -230,9 +230,10 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
         pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, 22);
-        pdf.addImage(url, 'PNG', margin, 27, imageWidth, imageHeight);
+        const compactImageHeight = Math.min(imageHeight, 92);
+        pdf.addImage(url, 'PNG', margin, 27, imageWidth, compactImageHeight);
 
-        let y = 27 + imageHeight + 10;
+        let y = 27 + compactImageHeight + 7;
         const cardWidth = 84;
         const cardHeight = 15;
         const cardGap = 4;
@@ -291,18 +292,8 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.setTextColor(90, 90, 90);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8);
-        pdf.addPage();
-        y = 18;
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(17);
-        pdf.text('Relatório do corte — Plano ' + (index + 1), margin, y);
-        y += 8;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
-        pdf.text('Perfil: ' + (profile?.name || 'Medição') + ' | Material: ' + material.label, margin, y);
-        y += 9;
-
+        // Relatório continua na mesma página, logo abaixo das especificações.
+        y += 4;
         // Página 2: especificações no topo e relatório exatamente abaixo.
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'bold');
