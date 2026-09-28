@@ -9,7 +9,7 @@ import { formatBRL } from '../../utils/format';
 import { useAuth } from '../../context/useAuth';
 import { logAudit } from '../../services/firebase/settings';
 
-const DEFAULT_FORM = { profileSlug: '', height: 30, width: 25, length: 10, accordionWidth: 0, quantity: 100, materialWidth: 150, waste: 10, accessoryType: 'cord', handleLength: 60, handleQuantity: 2, cordLength: 140, cordQuantity: 1 };
+const DEFAULT_FORM = { profileSlug: '', height: 30, width: 25, length: 10, accordionWidth: 0, quantity: 100, materialWidth: 150, waste: 10, accessoryType: 'cord', handleQuantity: 2, cordQuantity: 1 };
 const DEFAULT_BUDGET = { materialCostPerMeter: 0, accessoryCostPerMeter: 0, laborCostPerUnit: 0, unitPrice: 0 };
 
 function formatNumber(value, digits = 2) {
@@ -1385,8 +1385,10 @@ export default function ProfileGroupPage() {
     const linearMaterial = plansNeeded * tableLengthCm * wasteFactor;
     const usesCord = profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord');
     const usesHandle = profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle');
-    const handleMaterial = usesHandle ? (Number(form.handleLength) || 0) * (Number(form.handleQuantity) || 0) * quantity / 100 : 0;
-    const cordMaterial = usesCord ? (Number(form.cordLength) || 0) * (Number(form.cordQuantity) || 0) * quantity / 100 : 0;
+    const handleLength = (Number(form.handleQuantity) || 0) === 1 ? 35 : (Number(form.handleQuantity) || 0) === 2 ? 70 : 0;
+    const cordLength = (Number(form.cordQuantity) || 0) === 1 ? 60 : (Number(form.cordQuantity) || 0) === 2 ? 120 : 0;
+    const handleMaterial = usesHandle ? handleLength * quantity / 100 : 0;
+    const cordMaterial = usesCord ? cordLength * quantity / 100 : 0;
     const accordionFits = tablePlan.accordionFits;
     const quantityWithinCapacity = quantity <= totalCapacity;
     const canCut = quantityValid && quantityWithinCapacity && materialWidthValid && materialHeightValid && productWidthValid && accordionValid && accordionFits && totalCapacity > 0;
@@ -1394,7 +1396,7 @@ export default function ProfileGroupPage() {
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
     return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: materialPlans, plansToCut: materialPlans, totalCapacity, materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
-      originalProductHeight: height, originalProductWidth: width, cordLength: form.cordLength, cordQuantity: form.cordQuantity, handleLength: form.handleLength, handleQuantity: form.handleQuantity };
+      originalProductHeight: height, originalProductWidth: width, cordLength, cordQuantity: form.cordQuantity, handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
   const budgetResult = useMemo(() => {
@@ -1429,10 +1431,8 @@ export default function ProfileGroupPage() {
               {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
               {profile?.kind === 'backpack' && <label className="label">Acabamento<select className="input mt-1" value={form.accessoryType} onChange={(e) => update('accessoryType', e.target.value)}><option value="cord">Cordão</option><option value="handle">Alça</option></select></label>}
               {(profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle')) && <>
-                <label className="label">Comprimento da alça (cm)<input type="number" min="0" className="input mt-1" value={form.handleLength} onChange={(e) => update('handleLength', e.target.value)} /></label>
                 <label className="label">Quantidade de alças<select className="input mt-1" value={form.handleQuantity} onChange={(e) => update('handleQuantity', e.target.value)}><option value="0">0 alças</option><option value="1">1 alça</option><option value="2">2 alças</option></select></label>              </>}
               {(profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord')) && <>
-                <label className="label">Comprimento do cordão (cm)<input type="number" min="0" className="input mt-1" value={form.cordLength} onChange={(e) => update('cordLength', e.target.value)} /></label>
                 <label className="label">Quantidade de cordões<select className="input mt-1" value={form.cordQuantity} onChange={(e) => update('cordQuantity', e.target.value)}><option value="0">0 cordões</option><option value="1">1 cordão</option><option value="2">2 cordões</option></select></label>
               </>}
             </div>
