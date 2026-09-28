@@ -57,25 +57,55 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
 
   const plans = orientations.map((option) => {
     const piecesPerRow = Math.floor(usableLength / option.pieceWidth);
-    const rows = Math.floor(usableWidth / option.pieceHeight);
+    const totalRows = Math.floor(usableWidth / option.pieceHeight);
     const lengthLeftover = usableLength - (piecesPerRow * option.pieceWidth);
-    const widthLeftover = usableWidth - (rows * option.pieceHeight);
+    const widthLeftover = usableWidth - (totalRows * option.pieceHeight);
+    const accordionPiecesPerRow = accordionWidth > 0 ? Math.floor(usableLength / accordionWidth) : 0;
+
+    let capacity = piecesPerRow * totalRows;
+    let accordionRows = 0;
+    let mainRowsForCapacity = totalRows;
+
+    if (accordionWidth > 0) {
+      capacity = 0;
+      for (let candidate = piecesPerRow * totalRows; candidate >= 1; candidate -= 1) {
+        const mainRows = Math.ceil(candidate / Math.max(1, piecesPerRow));
+        const requiredAccordionRows = accordionPiecesPerRow > 0
+          ? Math.ceil((candidate * 2) / accordionPiecesPerRow)
+          : Number.POSITIVE_INFINITY;
+        if (mainRows + requiredAccordionRows <= totalRows) {
+          capacity = candidate;
+          mainRowsForCapacity = mainRows;
+          accordionRows = requiredAccordionRows;
+          break;
+        }
+      }
+    }
+
+    const accordionFits = accordionWidth <= 0
+      ? true
+      : accordionPiecesPerRow > 0 && capacity > 0 && (mainRowsForCapacity + accordionRows <= totalRows);
 
     return {
       width: usableWidth,
       usableLength,
       piecesPerRow,
       wholePiecesPerRow: piecesPerRow,
-      rows,
-      verticalRows: rows,
-      rowLayouts: Array.from({ length: rows }, () => ({ piecesPerRow })),
-      capacity: piecesPerRow * rows,
+      rows: totalRows,
+      verticalRows: totalRows,
+      rowLayouts: Array.from({ length: mainRowsForCapacity }, () => ({ piecesPerRow })),
+      capacity,
       lengthLeftover,
       widthLeftover,
       pieceWidth: option.pieceWidth,
       pieceHeight: option.pieceHeight,
       rotated: option.rotated,
-      accordionFits: accordionWidth <= 0 || accordionWidth <= Math.max(lengthLeftover, widthLeftover),
+      accordionFits,
+      accordionPiecesPerRow,
+      accordionRows,
+      accordionCount: capacity * 2,
+      mainRows: mainRowsForCapacity,
+      totalOccupiedRows: mainRowsForCapacity + accordionRows,
     };
   });
 
@@ -100,6 +130,11 @@ function calculateTablePlan(materialWidth, pieceWidth, pieceHeight, accordionWid
     pieceHeight,
     rotated: false,
     accordionFits: false,
+    accordionPiecesPerRow: 0,
+    accordionRows: 0,
+    accordionCount: 0,
+    mainRows: 0,
+    totalOccupiedRows: 0,
   };
 }
 
@@ -701,6 +736,7 @@ function CutPreview({ profile, result, onDownload }) {
       const accordionCount = mainPiecesToDraw * 2;
       const accordionDrawWidth = accordionWidthCm * centimeterScale;
       const accordionDrawHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
+      const accordionPiecesPerRow = Math.max(1, firstCutPlan?.accordionPiecesPerRow || Math.floor(usableTableLengthCm / Math.max(accordionWidthCm, 0.01)));
       const accordionStartX = mainStartX;
       let accordionX = accordionStartX;
       let accordionY = currentRowY;
@@ -1388,7 +1424,8 @@ export default function ProfileGroupPage() {
     const quantity = Math.max(0, Math.floor(Number(form.quantity) || 0));
     const wasteFactor = 1 + ((Number(form.waste) || 0) / 100);
     // Cada unidade corresponde a um único corte de material.
-    const bodyArea = height * (width + sideWidth);
+    const accordionMaterialWidth = accordionWidth > 0 ? (accordionWidth * 2) : 0;
+    const bodyArea = height * (width + length + accordionMaterialWidth);
     const areaPerUnit = (bodyArea / 10000) * wasteFactor;
     const totalArea = areaPerUnit * quantity;
     const materialWidth = Math.max(Number(form.materialWidth) || 1, 1);
@@ -1400,7 +1437,7 @@ export default function ProfileGroupPage() {
     const materialWidthValid = materialWidth > 0;
     const materialHeightValid = height > 0 && width > 0 && (height <= materialWidth || width <= materialWidth);
     const productWidthValid = width > 0 && height > 0 && (width <= usableCutLength || height <= usableCutLength);
-    const accordionValid = length > 0;
+    const accordionValid = length > 0 && accordionWidth >= 0;
     const usableMaterialWidth = usableCutLength;
     const mainCut = calculateCut(usableCutLength, width, height, quantity, false);
     const sideCut = calculateCut(usableCutLength, sideWidth, height, quantity, false);
@@ -1436,6 +1473,9 @@ export default function ProfileGroupPage() {
     const remainingBackpacks = completeUnitsPerRow > 0 ? quantity % completeUnitsPerRow : quantity;
     const sharedLeftover = tablePlan.lengthLeftover;
     const linearMaterial = plansNeeded * tableLengthCm * wasteFactor;
+    const accordionUnitsRequired = profile?.kind === 'backpack' && accordionWidth > 0 ? quantity * 2 : 0;
+    const accordionMaterialArea = accordionUnitsRequired * accordionWidth * height;
+
     const usesCord = profile?.kind === 'drawstring' || (profile?.kind === 'backpack' && form.accessoryType === 'cord');
     const usesHandle = profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle');
     // Medidas de referência para uma sacola 30 × 20 × 10 cm.
@@ -1453,7 +1493,7 @@ export default function ProfileGroupPage() {
     const validCompleteUnitsPerRow = completeUnitsPerRow;
     const rowsNeeded = canCut ? plansNeeded : 0;
     const accessoryType = profile?.kind === 'backpack' ? form.accessoryType : profile?.kind === 'drawstring' ? 'cord' : 'handle';
-    return { areaPerUnit, totalArea, linearMaterial, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: materialPlans, plansToCut: materialPlans, totalCapacity, materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth !== 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
+    return { areaPerUnit, totalArea, linearMaterial, accordionMaterialArea, accordionUnitsRequired, handleMaterial, cordMaterial, mainCut, sideCut, tablePlan, cutPlans: materialPlans, plansToCut: materialPlans, totalCapacity, materialWidth, usableMaterialWidth, materialPerBackpack, sharedLeftover, completeUnitsPerRow: validCompleteUnitsPerRow, remainingBackpacks, plansNeeded, rowsNeeded, quantity, quantityValid, quantityWithinCapacity, accessoryType, hasAccordion: accordionWidth > 0, accordionWidth, sideWidth, accordionValid, accordionFits, materialWidthValid, materialHeightValid, productWidthValid, canCut, maxMaterialHeight, productHeight: baseTablePlan.pieceHeight, productWidth: baseTablePlan.pieceWidth, productLength: length,
       originalProductHeight: height, originalProductWidth: width, cordLength, cordQuantity: form.cordQuantity, handleLength, handleQuantity: form.handleQuantity };
   }, [form, profile]);
 
@@ -1486,7 +1526,7 @@ export default function ProfileGroupPage() {
               {[['height', 'Altura (cm)'], ['width', 'Largura (cm)'], ['length', 'Comprimento (cm)'], ['quantity', 'Quantidade']].map(([field, label]) => <label key={field} className="label">{label}<input type="number" min="0" max={field === 'quantity' ? (result.totalCapacity || undefined) : undefined} className="input mt-1" value={form[field]} onChange={(e) => update(field, e.target.value)} /></label>)}
               <label className="label">Largura do material (cm)<input type="number" min="1" className="input mt-1" value={form.materialWidth} onChange={(e) => update('materialWidth', e.target.value)} /></label>
               <label className="label">Desperdício (%)<input type="number" min="0" className="input mt-1" value={form.waste} onChange={(e) => update('waste', e.target.value)} /></label>
-              {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
+              {profile?.kind === 'backpack' && <label className="label">Ajuste da sanfona lateral (cm)<input type="number" min="0" step="0.1" className="input mt-1" value={form.accordionWidth} onChange={(e) => update('accordionWidth', e.target.value)} placeholder="0 = sem ajuste" /></label>}
               {profile?.kind === 'backpack' && <label className="label">Acabamento<select className="input mt-1" value={form.accessoryType} onChange={(e) => update('accessoryType', e.target.value)}><option value="cord">Cordão</option><option value="handle">Alça</option></select></label>}
               {(profile?.kind === 'bag' || (profile?.kind === 'backpack' && form.accessoryType === 'handle')) && <>
                 <div className="col-span-2 md:col-span-4 rounded-xl border border-primary-400/20 bg-primary-400/5 px-4 py-3 text-sm text-dark-300">
