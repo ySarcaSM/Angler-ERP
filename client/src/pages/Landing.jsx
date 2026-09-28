@@ -18,7 +18,6 @@ import lucideLogo from '../assets/tech/lucide.jpg';
 import datefnsLogo from '../assets/tech/date-fns.png';
 import reactrouterLogo from '../assets/tech/react-router.png';
 import hottoastLogo from '../assets/tech/hot-toast.png';
-import erpImage from '../assets/erp.jpg';
 
 const STATS = [
   { value: '10+', label: 'Módulos integrados' },
@@ -279,40 +278,34 @@ export default function Landing() {
         </div>
       </div>
 
-      {/* ═══ HERO — Split: Text + Real Dashboard ═══ */}
+      {/* ═══ HERO — Full background ═══ */}
       <section className="lp-hero">
-        <div className="lp-hero-grid">
-          <div className="lp-hero-text">
-            <div className="lp-brand-block">
-              <div className="lp-brand-wrap">
-                <div className="lp-brand-hero">Angler</div>
-                <img src="../logo.png" alt="logo Angler" className="lp-brand-logo" />
-              </div>
-              <div className="lp-chip">
-                <span className="lp-chip-dot" />
-                Open Source &bull; Gratuito
-              </div>
-            </div>
-            <h1>
-              Seu ERP<br />
-              <span className="lp-gold-text">em minutos.</span>
-            </h1>
-            <p>
-              Dashboard, Vendas, Estoque, Financeiro, Compras e Relatórios — tudo integrado. Sem servidor, sem complicação, sem custo.
-            </p>
-            <div className="lp-hero-btns">
-              <Link to="/register" className="lp-btn lp-btn-gold">
-                Começar agora <ArrowRight size={18} />
-              </Link>
-              <Link to="/login" className="lp-btn lp-btn-ghost">
-                Já tenho conta
-              </Link>
+        <div className="lp-hero-bg" aria-hidden="true" />
+        <div className="lp-hero-overlay" aria-hidden="true" />
+        <div className="lp-hero-content">
+          <div className="lp-brand-block">
+            <div className="lp-brand-wrap">
+              <div className="lp-brand-hero">Angler</div>
+              <img src="/logo.png" alt="logo Angler" className="lp-brand-logo" />
             </div>
           </div>
 
-          {/* ── ERP Image Mockup ── */}
-          <div className="lp-hero-visual">
-            <img src={erpImage} alt="Dashboard do ERP Angler" className="lp-erp-image" />
+          <h1>
+            Seu ERP<br />
+            <span className="lp-gold-text">em minutos.</span>
+          </h1>
+
+          <p>
+            Dashboard, Vendas, Estoque, Financeiro, Compras e Relatórios — tudo integrado.
+          </p>
+
+          <div className="lp-hero-btns">
+            <Link to="/register" className="lp-btn lp-btn-gold">
+              Começar agora <ArrowRight size={18} />
+            </Link>
+            <Link to="/login" className="lp-btn lp-btn-ghost">
+              Já tenho conta
+            </Link>
           </div>
         </div>
       </section>
