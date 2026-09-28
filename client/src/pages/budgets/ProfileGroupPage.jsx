@@ -1013,7 +1013,7 @@ function CutPreview({ profile, result, onDownload }) {
       if (result.hasAccordion && secondPlanQuantity > 0) {
         const accordionWidthCm = Number(result.accordionWidth) || 0;
         const accordionDrawWidth = accordionWidthCm * centimeterScale;
-        const accordionDrawHeight = Math.min(secondPieceHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
+        const accordionDrawHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
         const accordionPiecesPerRow = Math.max(1, secondPlan.accordionPiecesPerRow || Math.floor(usableTableLengthCm / Math.max(accordionWidthCm, 0.01)));
         const accordionCount = secondPlanQuantity * 2;
         const accordionStartX = mainStartX;
