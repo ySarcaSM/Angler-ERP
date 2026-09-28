@@ -274,70 +274,46 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         const leftoverArea = Number(plan.placedAreaLeftover) || Number(plan.residualEdgeArea) || Math.max(0, (Number(plan.usableLength) || 262) * (Number(plan.width) || 0) - ((Number(plan.capacity) || 0) * pieceWidth * pieceHeight));
         const emptyPositions = Number(plan.emptyPositions) || 0;
 
-        // Relatório fica imediatamente abaixo das especificações, na mesma página do plano.
-        const reportColumnWidth = (pageWidth - (margin * 2) - 12) / 3;
-        const reportColumnGap = 6;
-        const reportCardHeight = 48;
-        const drawReportSection = (x, title, lines) => {
-          pdf.setFillColor(248, 249, 251);
-          pdf.setDrawColor(190, 196, 204);
-          pdf.roundedRect(x, y, reportColumnWidth, reportCardHeight, 3, 3, 'FD');
-          pdf.setTextColor(15, 23, 42);
-          pdf.setFont('helvetica', 'bold');
-          pdf.setFontSize(9);
-          pdf.text(title, x + 4, y + 7);
-          pdf.setDrawColor(205, 210, 216);
-          pdf.line(x + 4, y + 10, x + reportColumnWidth - 4, y + 10);
-          pdf.setTextColor(35, 40, 48);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(7);
-          let lineY = y + 16;
-          lines.forEach((line) => {
-            const wrapped = pdf.splitTextToSize(line, reportColumnWidth - 8);
-            wrapped.forEach((textLine) => {
-              pdf.text(textLine, x + 4, lineY);
-              lineY += 3.5;
-            });
-            lineY += 1.5;
-          });
-        };
-
-        drawReportSection(margin, 'APROVEITAMENTO', [
-          `Grade máxima: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(plan?.capacity || 0, 0)} mochilas`,
-          `Acomodadas neste plano: ${formatNumber(planQuantity, 0)} mochila(s)`,
-          `Espaço vago: ${formatNumber(emptyPositions, 0)} posição(ões) (${formatNumber(emptyPositions * pieceWidth * pieceHeight, 0)} cm²)`,
-          `Área de sobra: ${formatNumber(leftoverArea, 0)} cm²`,
-        ]);
-        drawReportSection(margin + reportColumnWidth + reportColumnGap, 'CONSUMO DE TNT', [
-          `Comprimento do plano: ${formatNumber((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity, 0)} cm`,
-          `Comprimento em metros: ${formatNumber(((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity) / 100, 2)} m`,
-          `Largura do material: ${formatNumber(plan?.width || result.materialWidth || 0, 0)} cm`,
-          `Quantidade: ${formatNumber(planQuantity, 0)} unidade(s)`,
-        ]);
-        drawReportSection(margin + ((reportColumnWidth + reportColumnGap) * 2), 'DICAS', [
-          `Plano com ${formatNumber(planQuantity, 0)} unidade(s).`,
-          `Grade: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)}.`,
-          `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm.`,
-          `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm.`,
-        ]);
-        y += reportCardHeight + 8;
-
-        pdf.setTextColor(0, 0, 0);
+        // Relatório textual imediatamente abaixo das especificações.
+        pdf.setTextColor(15, 23, 42);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
-        pdf.text('Sobras do corte', margin, y);
-        y += 6;
-        [
-          ['Sobra no comprimento', `${formatNumber(lengthLeftover, 0)} cm`],
-          ['Sobra na largura', `${formatNumber(widthLeftover, 0)} cm`],
-          ['Área de sobra', `${formatNumber(leftoverArea, 0)} cm²`],
-          ['Posições vazias', `${formatNumber(emptyPositions, 0)}`],
-        ].forEach(([label, value], index) => {
-          const column = index % 2;
-          if (column === 0 && index > 0) y += cardHeight + cardGap;
-          drawInfoCard(margin + column * (cardWidth + cardGap), label, value);
+        pdf.setFontSize(10);
+        pdf.text('APROVEITAMENTO', margin, y);
+        pdf.text('CONSUMO DE TNT', 82, y);
+        pdf.text('DICAS', 150, y);
+        y += 5;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        const reportLines = [
+          [
+            \`Grade máxima: \${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × \${formatNumber(plan?.verticalRows || 0, 0)} = \${formatNumber(plan?.capacity || 0, 0)} mochilas\`,
+            \`Comprimento do plano: \${formatNumber((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity, 0)} cm\`,
+            \`Plano com \${formatNumber(planQuantity, 0)} unidade(s).\`,
+          ],
+          [
+            \`Acomodadas neste plano: \${formatNumber(planQuantity, 0)} mochila(s)\`,
+            \`Comprimento em metros: \${formatNumber(((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity) / 100, 2)} m\`,
+            \`Grade: \${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × \${formatNumber(plan?.verticalRows || 0, 0)} posições.\`,
+          ],
+          [
+            \`Espaço vago: \${formatNumber(emptyPositions, 0)} posição(ões)\`,
+            \`Largura do material: \${formatNumber(plan?.width || result.materialWidth || 0, 0)} cm\`,
+            \`Sobra no comprimento: \${formatNumber(lengthLeftover, 0)} cm.\`,
+          ],
+          [
+            \`Área de sobra: \${formatNumber(leftoverArea, 0)} cm²\`,
+            \`Quantidade: \${formatNumber(planQuantity, 0)} unidade(s)\`,
+            \`Sobra na largura: \${formatNumber(widthLeftover, 0)} cm.\`,
+          ],
+        ];
+        reportLines.forEach((row) => {
+          pdf.text(row[0], margin, y);
+          pdf.text(row[1], 82, y);
+          pdf.text(row[2], 150, y);
+          y += 4.5;
         });
-        y += cardHeight + 6;
+        y += 4;
+
         pdf.setTextColor(15, 23, 42);
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(12);
