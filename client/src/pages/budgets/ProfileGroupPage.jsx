@@ -692,7 +692,7 @@ function CutPreview({ profile, result, onDownload }) {
     const centimeterScale = cutAreaWidth / usableTableLengthCm;
     const mainStartX = cutAreaX;
     const mainPieceDrawWidth = cutWidthCm * centimeterScale;
-    const accordionDrawWidth = hasAccordion ? accordionWidth * centimeterScale : 0;
+    const accordionDrawWidth = hasAccordion && accordionWidth > 0 ? accordionWidth * centimeterScale : 0;
     const groupDrawWidth = mainPieceDrawWidth + (accordionDrawWidth * 2);
     const mainPiecesToDraw = previewQuantity;
     const mainLabel = `${formatNumber(cutWidthCm, 0)} x ${formatNumber(cutHeightCm, 0)} cm`;
@@ -1435,7 +1435,7 @@ export default function ProfileGroupPage() {
     const cordLength = (Number(form.cordQuantity) || 0) * cordLengthPerUnit;
     const handleMaterial = usesHandle ? handleLength * quantity / 100 : 0;
     const cordMaterial = usesCord ? cordLength * quantity / 100 : 0;
-    const accordionFits = profile?.kind !== 'backpack' || accordionWidth === 0 || (
+    const accordionFits = profile?.kind !== 'backpack' || accordionWidth <= 0 || (
       accordionWidth > 0 &&
       baseTablePlan.pieceWidth + (accordionWidth * 2) <= usableCutLength &&
       height <= Math.min(materialWidth, maxMaterialHeight)
