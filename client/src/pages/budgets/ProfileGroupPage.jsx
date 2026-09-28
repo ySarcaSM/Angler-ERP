@@ -461,8 +461,15 @@ function CutPreview({ profile, result, onDownload }) {
 
     setSecondaryPreviewUrls([]);
 
-    const hasPhysicalPlan = Array.isArray(result.cutPlans) && result.cutPlans.some((plan) => Number(plan?.capacity) > 0);
-    const quantityWithinCapacity = Number(result.quantity) > 0 && Number(result.quantity) <= Number(result.totalCapacity || 0);
+    // O preview deve usar a mesma capacidade exibida no card de "Capacidade de corte".
+    // Em alguns estados do formulário, cutPlans pode estar vazio enquanto tablePlan já
+    // possui uma capacidade física válida. Nesse caso, o preview não deve ser bloqueado.
+    const fallbackPlan = result.tablePlan && Number(result.tablePlan.capacity) > 0 ? result.tablePlan : null;
+    const hasPhysicalPlan = (Array.isArray(result.cutPlans) && result.cutPlans.some((plan) => Number(plan?.capacity) > 0)) || Boolean(fallbackPlan);
+    const physicalCapacity = Number(result.totalCapacity) > 0
+      ? Number(result.totalCapacity)
+      : Number(fallbackPlan?.capacity) || 0;
+    const quantityWithinCapacity = Number(result.quantity) > 0 && Number(result.quantity) <= physicalCapacity;
     if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan || !quantityWithinCapacity) {
       setPreviewUrl('');
       return undefined;
