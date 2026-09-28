@@ -906,13 +906,15 @@ function CutPreview({ profile, result, onDownload }) {
       const accessoryLines = result.accessoryType === 'handle'
         ? [
             `Alça: ${formatNumber((Number(result.handleLength) || 0) / Math.max(1, Number(result.handleQuantity) || 0), 1)} cm por alça`,
-            `Quantidade de alças: ${formatNumber(result.handleQuantity || 0, 0)} por unidade`,
-            `Total de alça no lote: ${formatNumber(result.handleLength || 0, 1)} cm`,
+            `Quantidade de alças: ${formatNumber(result.handleQuantity || 0, 0)} por mochila`,
+            `Total de alças no plano: ${formatNumber((Number(result.handleQuantity) || 0) * placedPieces, 0)} unidade(s)`,
+            `Comprimento total de alça: ${formatNumber((Number(result.handleLength) || 0) * placedPieces, 1)} cm`,
           ]
         : [
             `Cordão: ${formatNumber((Number(result.cordLength) || 0) / Math.max(1, Number(result.cordQuantity) || 0), 1)} cm por cordão`,
-            `Quantidade de cordões: ${formatNumber(result.cordQuantity || 0, 0)} por unidade`,
-            `Total de cordão no lote: ${formatNumber(result.cordLength || 0, 1)} cm`,
+            `Quantidade de cordões: ${formatNumber(result.cordQuantity || 0, 0)} por mochila`,
+            `Total de cordões no plano: ${formatNumber((Number(result.cordQuantity) || 0) * placedPieces, 0)} unidade(s)`,
+            `Comprimento total de cordão: ${formatNumber((Number(result.cordLength) || 0) * placedPieces, 1)} cm`,
           ];
 
       drawCardTextForContext(cardStartX + cardWidth + cardGap, cardY, cardWidth, cardHeight, 'CONSUMO E ACESSÓRIO — PLANO', [
