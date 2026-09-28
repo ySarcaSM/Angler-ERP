@@ -286,24 +286,24 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         pdf.setFontSize(7.5);
         const reportLines = [
           [
-            \`Grade máxima: \${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × \${formatNumber(plan?.verticalRows || 0, 0)} = \${formatNumber(plan?.capacity || 0, 0)} mochilas\`,
-            \`Comprimento do plano: \${formatNumber((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity, 0)} cm\`,
-            \`Plano com \${formatNumber(planQuantity, 0)} unidade(s).\`,
+            `Grade máxima: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(plan?.capacity || 0, 0)} mochilas`,
+            `Comprimento do plano: ${formatNumber((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity, 0)} cm`,
+            `Plano com ${formatNumber(planQuantity, 0)} unidade(s).`,
           ],
           [
-            \`Acomodadas neste plano: \${formatNumber(planQuantity, 0)} mochila(s)\`,
-            \`Comprimento em metros: \${formatNumber(((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity) / 100, 2)} m\`,
-            \`Grade: \${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × \${formatNumber(plan?.verticalRows || 0, 0)} posições.\`,
+            `Acomodadas neste plano: ${formatNumber(planQuantity, 0)} mochila(s)`,
+            `Comprimento em metros: ${formatNumber(((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity) / 100, 2)} m`,
+            `Grade: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} posições.`,
           ],
           [
-            \`Espaço vago: \${formatNumber(emptyPositions, 0)} posição(ões)\`,
-            \`Largura do material: \${formatNumber(plan?.width || result.materialWidth || 0, 0)} cm\`,
-            \`Sobra no comprimento: \${formatNumber(lengthLeftover, 0)} cm.\`,
+            `Espaço vago: ${formatNumber(emptyPositions, 0)} posição(ões)`,
+            `Largura do material: ${formatNumber(plan?.width || result.materialWidth || 0, 0)} cm`,
+            `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm.`,
           ],
           [
-            \`Área de sobra: \${formatNumber(leftoverArea, 0)} cm²\`,
-            \`Quantidade: \${formatNumber(planQuantity, 0)} unidade(s)\`,
-            \`Sobra na largura: \${formatNumber(widthLeftover, 0)} cm.\`,
+            `Área de sobra: ${formatNumber(leftoverArea, 0)} cm²`,
+            `Quantidade: ${formatNumber(planQuantity, 0)} unidade(s)`,
+            `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm.`,
           ],
         ];
         reportLines.forEach((row) => {
