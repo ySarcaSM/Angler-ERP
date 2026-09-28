@@ -1050,8 +1050,6 @@ function CutPreview({ profile, result, onDownload }) {
       const secondPlacedPieces = Math.min(secondPlanQuantity, secondPlan.capacity);
       const secondPlacedColumns = secondPlacedPieces > 0 ? Math.min(secondPlan.wholePiecesPerRow, secondPlacedPieces) : 0;
       const secondPlacedRows = secondPlan.wholePiecesPerRow > 0 ? Math.ceil(secondPlacedPieces / secondPlan.wholePiecesPerRow) : 0;
-      const secondPieceWidthCm = Number(secondPlan.pieceWidth) || cutWidthCm;
-      const secondPieceHeightCm = Number(secondPlan.pieceHeight) || cutHeightCm;
       const secondPieceDrawWidth = secondPieceWidthCm * centimeterScale;
       const secondPieceDrawHeight = secondPieceHeightCm * verticalCentimeterScale;
       const secondGridDrawWidth = secondPlacedColumns * secondPieceDrawWidth;
