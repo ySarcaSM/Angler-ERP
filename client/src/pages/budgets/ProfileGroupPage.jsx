@@ -290,7 +290,44 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         y += cardHeight + 5;
         pdf.setTextColor(90, 90, 90);
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);        if (result.hasAccordion) {
+        pdf.setFontSize(8);
+        y += 4;
+        const reportColumnWidth = (pageWidth - (margin * 2) - 12) / 3;
+        const reportColumnGap = 6;
+        const drawReportSection = (x, title, lines) => {
+          pdf.setFillColor(248, 249, 251);
+          pdf.setDrawColor(205, 210, 216);
+          pdf.roundedRect(x, y, reportColumnWidth, 30, 2, 2, 'FD');
+          pdf.setTextColor(20, 24, 30);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(8.5);
+          pdf.text(title, x + 3, y + 5);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(7);
+          lines.forEach((line, index) => pdf.text(line, x + 3, y + 10 + (index * 5.5)));
+        };
+
+        drawReportSection(margin, 'APROVEITAMENTO', [
+          `Grade máxima: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(plan?.capacity || 0, 0)} mochilas`,
+          `Acomodadas neste plano: ${formatNumber(planQuantity, 0)} mochila(s)`,
+          `Espaço vago útil: ${formatNumber(emptyPositions, 0)} posição(ões) (${formatNumber(emptyPositions * pieceWidth * pieceHeight, 0)} cm²)`,
+          `Área total de sobra: ${formatNumber(leftoverArea, 0)} cm²`,
+        ]);
+        drawReportSection(margin + reportColumnWidth + reportColumnGap, 'CONSUMO DE TNT', [
+          `Comprimento do plano: ${formatNumber((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity, 0)} cm`,
+          `Comprimento em metros: ${formatNumber(((pieceWidth + (result.hasAccordion ? Number(result.accordionWidth) || 0 : 0)) * planQuantity) / 100, 2)} m`,
+          `Largura do material: ${formatNumber(plan?.width || result.materialWidth || 0, 0)} cm`,
+          `Quantidade neste plano: ${formatNumber(planQuantity, 0)} unidade(s)`,
+        ]);
+        drawReportSection(margin + ((reportColumnWidth + reportColumnGap) * 2), 'DICAS', [
+          `Plano com ${formatNumber(planQuantity, 0)} unidade(s) de ${formatNumber(plan?.width || 0, 0)} cm de largura.`,
+          `Grade: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(plan?.capacity || 0, 0)} posições.`,
+          `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm.`,
+          `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm.`,
+        ]);
+        y += 34;
+
+        if (result.hasAccordion) {
           pdf.setFont('helvetica', 'bold');
           pdf.text('Sanfona lateral', margin, y + 2);
           pdf.setFont('helvetica', 'normal');
