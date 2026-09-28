@@ -442,7 +442,8 @@ function CutPreview({ profile, result, onDownload }) {
     setSecondaryPreviewUrls([]);
 
     const hasPhysicalPlan = Array.isArray(result.cutPlans) && result.cutPlans.some((plan) => Number(plan?.capacity) > 0);
-    if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan) {
+    const quantityWithinCapacity = Number(result.quantity) > 0 && Number(result.quantity) <= Number(result.totalCapacity || 0);
+    if (!result.quantityValid || !result.materialHeightValid || !hasPhysicalPlan || !quantityWithinCapacity) {
       setPreviewUrl('');
       return undefined;
     }
