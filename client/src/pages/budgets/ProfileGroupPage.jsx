@@ -244,13 +244,28 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
           [`Peça posicionada: ${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`, `Orientação: ${plan.rotated ? 'rotacionada em 90°' : 'original'}`],
           [`Por fileira: ${formatNumber(piecesPerRow, 0)} unidade(s)`, `Fileiras: ${formatNumber(rows, 0)}`],
           [`Área útil: 262 × ${formatNumber(plan.width || 0, 0)} cm`, `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`],
-          [`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`],
         ].forEach(([left, right]) => {
           pdf.text(left, margin, y);
           pdf.text(right, 108, y);
           y += 6;
         });
 
+        const leftoverArea = Number(plan.placedAreaLeftover) || Number(plan.residualEdgeArea) || Math.max(0, (Number(plan.usableLength) || 262) * (Number(plan.width) || 0) - ((Number(plan.capacity) || 0) * pieceWidth * pieceHeight));
+        const emptyPositions = Number(plan.emptyPositions) || 0;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.text('Sobras do corte', margin, y + 2);
+        y += 9;
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        [
+          [`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`],
+          [`Área de sobra: ${formatNumber(leftoverArea, 0)} cm²`, `Posições vazias: ${formatNumber(emptyPositions, 0)}`],
+        ].forEach(([left, right]) => {
+          pdf.text(left, margin, y);
+          pdf.text(right, 108, y);
+          y += 6;
+        });
         if (result.hasAccordion) {
           pdf.setFont('helvetica', 'bold');
           pdf.text('Sanfona lateral', margin, y + 2);
