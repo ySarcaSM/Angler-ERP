@@ -999,51 +999,43 @@ function CutPreview({ profile, result, onDownload }) {
       drawPlanCards(secondPlan, secondPlanCardsQuantity, duplicateContext, planAccumulatedLeftoverArea);
       const secondRows = Math.max(0, secondPlan.mainRows || secondPlan.verticalRows);
       const secondPiecesPerRow = Math.max(0, secondPlan.piecesPerRow || secondPlan.wholePiecesPerRow);
+      const secondPieceWidthCm = Number(secondPlan?.pieceWidth) || cutWidthCm;
+      const secondPieceHeightCm = Number(secondPlan?.pieceHeight) || cutHeightCm;
+      const secondMainPieceDrawWidth = secondPieceWidthCm * centimeterScale;
+      const secondMainAreaHeight = Math.min(secondPieceHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
+      const secondMainLabel = `${formatNumber(secondPieceWidthCm, 0)} x ${formatNumber(secondPieceHeightCm, 0)} cm`;
       const secondPiecesToDraw = Math.min(secondPlanQuantity, secondRows * secondPiecesPerRow);
+      let secondLastPieceEndX = mainStartX;
+      let secondLastPieceRowY = mainAreaY;
       for (let index = 0; index < secondPiecesToDraw; index += 1) {
-        const row = Math.floor(index / secondPiecesPerRow);
-        const column = index % secondPiecesPerRow;
-        const pieceX = mainStartX + (column * (mainPieceDrawWidth + mainGap));
-        const pieceY = mainAreaY + (row * mainAreaHeight);
+        const row = secondPiecesPerRow > 0 ? Math.floor(index / secondPiecesPerRow) : 0;
+        const column = secondPiecesPerRow > 0 ? index % secondPiecesPerRow : 0;
+        const pieceX = mainStartX + (column * (secondMainPieceDrawWidth + mainGap));
+        const pieceY = mainAreaY + (row * secondMainAreaHeight);
         duplicateContext.fillStyle = color.fill;
-        duplicateContext.fillRect(pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight);
+        duplicateContext.fillRect(pieceX, pieceY, secondMainPieceDrawWidth, secondMainAreaHeight);
         duplicateContext.strokeStyle = '#27506a';
         duplicateContext.lineWidth = 1.5;
-        duplicateContext.strokeRect(pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight);
-        drawResponsivePieceLabel(duplicateContext, pieceX, pieceY, mainPieceDrawWidth, mainAreaHeight, mainLabel, color.dark);
+        duplicateContext.strokeRect(pieceX, pieceY, secondMainPieceDrawWidth, secondMainAreaHeight);
+        drawResponsivePieceLabel(duplicateContext, pieceX, pieceY, secondMainPieceDrawWidth, secondMainAreaHeight, secondMainLabel, color.dark);
+        secondLastPieceEndX = pieceX + secondMainPieceDrawWidth + mainGap;
+        secondLastPieceRowY = pieceY;
       }
 
-      if (result.hasAccordion && secondPlanQuantity > 0) {
+      if (result.hasAccordion && secondPiecesToDraw > 0) {
         const accordionWidthCm = Number(result.accordionWidth) || 0;
-        const accordionDrawWidth = accordionWidthCm * centimeterScale;
-        const accordionDrawHeight = Math.min(cutHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
-        const accordionPiecesPerRow = Math.max(1, secondPlan.accordionPiecesPerRow || Math.floor(usableTableLengthCm / Math.max(accordionWidthCm, 0.01)));
-        const accordionCount = secondPlanQuantity * 2;
-        const accordionStartX = mainStartX;
-        let accordionX = accordionStartX;
-        let accordionY = mainAreaY + (secondRows * mainAreaHeight);
-        const accordionGap = Math.max(2, centimeterScale * 0.8);
-        for (let index = 0; index < accordionCount; index += 1) {
-          if (index > 0 && index % accordionPiecesPerRow === 0) {
-            accordionX = accordionStartX;
-            accordionY += accordionDrawHeight + accordionGap;
-          }
-          if (accordionY + accordionDrawHeight > materialPlanBottom) break;
-          duplicateContext.fillStyle = '#22c55e';
-          duplicateContext.fillRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
-          duplicateContext.strokeStyle = '#15803d';
-          duplicateContext.lineWidth = 1.5;
-          duplicateContext.strokeRect(accordionX, accordionY, accordionDrawWidth, accordionDrawHeight);
-          drawResponsivePieceLabel(
-            duplicateContext,
-            accordionX,
-            accordionY,
-            accordionDrawWidth,
-            accordionDrawHeight,
-            `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
-            '#052e16'
-          );
-          accordionX += accordionDrawWidth + accordionGap;
+        if (accordionWidthCm > 0) {
+          drawAccordionFlow(duplicateContext, {
+            count: secondPiecesToDraw * 2,
+            drawWidth: accordionWidthCm * centimeterScale,
+            drawHeight: Math.min(secondPieceHeightCm * verticalCentimeterScale, materialPlanDrawHeight),
+            firstX: secondLastPieceEndX,
+            firstY: secondLastPieceRowY,
+            startX: mainStartX,
+            rightLimit: cutAreaRight,
+            bottomLimit: materialPlanBottom,
+            label: `Sanfona ${formatNumber(accordionWidthCm, 0)} cm`,
+          });
         }
       }
       const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * (Number(secondPlan?.pieceHeight) || cutHeightCm) * verticalCentimeterScale));
