@@ -1399,7 +1399,7 @@ export default function ProfileGroupPage() {
       remainingMaterialWidth -= segmentWidth;
     }
     const totalCapacity = materialPlans.reduce((sum, plan) => sum + plan.capacity, 0);
-    const baseTablePlan = materialPlans[0] || calculateTablePlan(Math.min(materialWidth, 150), width, height);
+    const baseTablePlan = materialPlans[0] || calculateTablePlan(Math.min(materialWidth, 150), width, height, accordionWidth);
     const placedPieces = Math.min(quantity, totalCapacity);
     const placedInFirstPlan = Math.min(placedPieces, baseTablePlan.capacity);
     const placedRows = baseTablePlan.piecesPerRow > 0 ? Math.ceil(placedInFirstPlan / baseTablePlan.piecesPerRow) : 0;
@@ -1409,12 +1409,12 @@ export default function ProfileGroupPage() {
       placedPieces: placedInFirstPlan,
       placedRows,
       placedColumns,
-      placedLengthLeftover: baseTablePlan.usableLength - (placedColumns * baseTablePlan.pieceWidth),
+      placedLengthLeftover: baseTablePlan.usableLength - (placedColumns * (baseTablePlan.groupLength || baseTablePlan.pieceWidth)),
       placedWidthLeftover: baseTablePlan.width - (placedRows * baseTablePlan.pieceHeight),
-      placedAreaLeftover: (baseTablePlan.usableLength * baseTablePlan.width) - (placedInFirstPlan * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
+      placedAreaLeftover: (baseTablePlan.usableLength * baseTablePlan.width) - (placedInFirstPlan * ((baseTablePlan.pieceWidth * baseTablePlan.pieceHeight) + ((baseTablePlan.accordionWidth || 0) * baseTablePlan.pieceHeight * (baseTablePlan.accordionCountPerUnit || 0)))),
       emptyPositions: Math.max(0, baseTablePlan.capacity - placedInFirstPlan),
-      emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedInFirstPlan) * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight,
-      residualEdgeArea: (baseTablePlan.usableLength * baseTablePlan.width) - (baseTablePlan.capacity * baseTablePlan.pieceWidth * baseTablePlan.pieceHeight),
+      emptyPositionArea: Math.max(0, baseTablePlan.capacity - placedInFirstPlan) * ((baseTablePlan.pieceWidth * baseTablePlan.pieceHeight) + ((baseTablePlan.accordionWidth || 0) * baseTablePlan.pieceHeight * (baseTablePlan.accordionCountPerUnit || 0))),
+      residualEdgeArea: (baseTablePlan.usableLength * baseTablePlan.width) - (baseTablePlan.capacity * ((baseTablePlan.pieceWidth * baseTablePlan.pieceHeight) + ((baseTablePlan.accordionWidth || 0) * baseTablePlan.pieceHeight * (baseTablePlan.accordionCountPerUnit || 0)))),
     };
     const completeUnitsPerRow = totalCapacity;
     const plansNeeded = materialPlans.length;
