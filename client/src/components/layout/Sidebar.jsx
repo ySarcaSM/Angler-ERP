@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
+  Home, LayoutDashboard, Users, Package, ShoppingCart, Truck, Mic,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
   FileText, MapPin, ClipboardList, Bell, Bot, Ruler, Calculator, FileSignature, Blocks, ChevronLeft, ChevronRight, ShieldAlert,
 } from 'lucide-react';
@@ -12,6 +12,7 @@ const NAV_SECTIONS = [
     { to: '/', icon: Home, label: 'Home', end: true },
     { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/assistant', icon: Bot, label: 'Assistente de IA', moduleKey: 'assistant' },
+    { to: '/app/ia-audio', icon: Mic, label: 'IA por áudio' },
   ] },
   { label: 'Gestão', items: [
     { to: '/app/clients', icon: Users, label: 'Clientes', moduleKey: 'clients' },
