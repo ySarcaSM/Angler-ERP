@@ -1,13 +1,17 @@
-import { createDoc, listDocs } from './firestore.js';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../../config/firebase';
+import { createDoc } from './firestore.js';
 
 export async function listWeeklyReports(companyId) {
-  const result = await listDocs('weeklyReports', {
-    filters: [{ field: 'companyId', op: '==', value: companyId }],
-    sortBy: 'startDate',
-    sortDir: 'desc',
-    pageSize: 6,
-  });
-  return result.data;
+  const snapshot = await getDocs(query(
+    collection(db, 'weeklyReports'),
+    where('companyId', '==', companyId),
+  ));
+
+  return snapshot.docs
+    .map((item) => ({ id: item.id, ...item.data() }))
+    .sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')))
+    .slice(0, 6);
 }
 
 export async function createWeeklyReport(companyId, data) {
