@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Search, CheckCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { listPurchases, receivePurchase, createPurchase } from '../../services/firebase/purchases';
@@ -12,6 +13,8 @@ import toast from 'react-hot-toast';
 import { logAudit } from '../../services/firebase/settings';
 
 export default function PurchaseList() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { company, user, userData } = useAuth();
   const isOperator = userData?.role === 'operator';
   const isViewer = userData?.role === 'viewer';
@@ -23,6 +26,8 @@ export default function PurchaseList() {
   const [modal, setModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ supplierId: '', supplierName: '', items: [{ productId: '', productName: '', quantity: 1, unitCost: 0 }] });
+
+  useEffect(() => { if (location.pathname === '/app/purchases/new') { setForm({ supplierId: '', supplierName: '', items: [{ productId: '', productName: '', quantity: 1, unitCost: 0 }] }); setModal(true); } }, [location.pathname]);
 
   const load = useCallback(async () => {
     if (!company?.id) return;
@@ -77,7 +82,7 @@ export default function PurchaseList() {
       }, user);
       await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Compra', entityId: createdPurchase.id, description: `${userData?.name || 'Usuário'} criou a compra #${createdPurchase.number || createdPurchase.id}.`, details: { supplierName: supplier?.name, total: createdPurchase.total, itemCount: form.items.length } });
       toast.success('Compra criada!');
-      setModal(false);
+      setModal(false); if (location.pathname === '/app/purchases/new') navigate('/app/purchases');
       setForm({ supplierId: '', supplierName: '', items: [{ productId: '', productName: '', quantity: 1, unitCost: 0 }] });
       load();
     } catch (error) { toast.error(error.message); }
@@ -100,13 +105,13 @@ export default function PurchaseList() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Compras" subtitle={`${data.length} compras`} action={!isViewer && <button onClick={() => setModal(true)} className="btn-primary"><Plus size={18} /> Nova Compra</button>} />
+      <PageHeader title="Compras" subtitle={`${data.length} compras`} action={!isViewer && <button onClick={() => navigate('/app/purchases/new')} className="btn-primary"><Plus size={18} /> Nova Compra</button>} />
       <div className="card">
         <div className="card-header"><div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 max-w-sm"><Search size={16} className="text-dark-500" /><input type="text" placeholder="Buscar..." className="bg-transparent text-sm outline-none w-full" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
         <DataTable columns={columns} data={data} loading={loading} />
       </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Nova Compra" size="lg" backdropClassName="bg-transparent">
+      <Modal open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/purchases/new') navigate('/app/purchases'); }} title="Nova Compra" size="lg" backdropClassName="bg-transparent">
         <form onSubmit={handleCreate} className="space-y-5">
           <div><label className="label">Fornecedor *</label><select className="input" value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })} required><option value="">Selecione...</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></div>
           <div className="space-y-3">
