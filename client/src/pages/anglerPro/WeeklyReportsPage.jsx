@@ -169,11 +169,13 @@ export default function WeeklyReportsPage() {
     pdf.text(`Receitas: ${formatBRL(report.income || 0)}`, 20, 88);
     pdf.text(`Despesas: ${formatBRL(report.expense || 0)}`, 20, 96);
     pdf.text(`Resultado: ${formatBRL(report.profit || 0)}`, 20, 104);
-    if (bestDay) pdf.text(`Melhor dia de vendas: ${bestDay.label} (${formatBRL(bestDay.salesTotal || 0)})`, 20, 112);
+    pdf.text(`A receber: ${formatBRL(report.pendingIncome || 0)}`, 20, 112);
+    pdf.text(`A pagar: ${formatBRL(report.pendingExpense || 0)}`, 20, 120);
+    if (bestDay) pdf.text(`Melhor dia de vendas: ${bestDay.label} (${formatBRL(bestDay.salesTotal || 0)})`, 20, 128);
 
     const labels = daily.map((day) => day.label);
-    drawBars(20, 128, 170, 55, daily.map((day) => day.salesTotal), labels, 'Faturamento por dia');
-    drawLine(20, 202, 170, 55, daily.map((day) => day.profit), labels, 'Resultado por dia');
+    drawBars(20, 140, 170, 48, daily.map((day) => day.salesTotal), labels, 'Faturamento por dia');
+    drawLine(20, 201, 170, 48, daily.map((day) => day.profit), labels, 'Resultado por dia');
     drawFooter(1);
 
     pdf.addPage();
@@ -208,6 +210,16 @@ export default function WeeklyReportsPage() {
     pdf.text(`Ticket médio: ${formatBRL(averageTicket)}`, 20, y + 18);
     pdf.text(`Margem sobre receitas: ${margin.toFixed(1)}%`, 20, y + 26);
     pdf.text(`Quantidade de relatórios armazenados: ${reports.length}/5`, 20, y + 34);
+    pdf.setFontSize(10);
+    pdf.text('Orçamentos', 20, y + 48);
+    pdf.setFontSize(9);
+    pdf.text(`Total: ${report.budgetCount || 0} • Aprovados: ${report.approvedBudgetCount || 0}`, 20, y + 58);
+    pdf.text(`Valor aprovado: ${formatBRL(report.approvedBudgetTotal || 0)} • Em aberto: ${formatBRL(report.openBudgetTotal || 0)}`, 20, y + 66);
+    pdf.setFontSize(10);
+    pdf.text('Resumo financeiro', 20, y + 80);
+    pdf.setFontSize(9);
+    pdf.text(`Receitas pagas: ${formatBRL(report.income || 0)} • Despesas pagas: ${formatBRL(report.expense || 0)}`, 20, y + 90);
+    pdf.text(`Saldo realizado: ${formatBRL(report.profit || 0)} • A receber: ${formatBRL(report.pendingIncome || 0)} • A pagar: ${formatBRL(report.pendingExpense || 0)}`, 20, y + 98);
     drawFooter(2);
     pdf.save(`relatorio-semanal-${report.startDate || 'periodo'}.pdf`);
   };
