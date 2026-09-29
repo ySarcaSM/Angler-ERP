@@ -55,6 +55,12 @@ export default function Topbar({ onMenuToggle }) {
     { words: ['medicao', 'medicoes'], path: '/app/budgets/profiles' },
     { words: ['formula', 'formulas'], path: '/app/budgets/formulas' },
     { words: ['orcamento', 'orcamentos'], path: '/app/budgets' },
+    { words: ['configuracao', 'configuracoes', 'config'], path: '/app/settings' },
+    { words: ['modulo', 'modulos'], path: '/app/modules' },
+    { words: ['usuario', 'usuarios'], path: '/app/users' },
+    { words: ['requisicao', 'requisicoes'], path: '/app/requests' },
+    { words: ['log', 'logs'], path: '/app/logs' },
+    { words: ['notificacao', 'notificacoes'], path: '/app/notifications' },
   ];
 
   const navigateToTarget = (path, value) => {
