@@ -137,6 +137,9 @@ export default function CustomReportsPage() {
         label: day.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
         salesCount: daySales.length,
         salesTotal: daySales.reduce((sum, item) => sum + Number(item.total || 0), 0),
+        averageTicket: daySales.length
+          ? daySales.reduce((sum, item) => sum + Number(item.total || 0), 0) / daySales.length
+          : 0,
         income: dayIncome,
         expense: dayExpense,
         profit: dayIncome - dayExpense,
@@ -383,6 +386,11 @@ export default function CustomReportsPage() {
             if (chartDays.length === data.daily.length && chart.period === 'global') return data[metric.key] || 0;
             if (metric.key === 'salesCount') return chartDays.reduce((sum, day) => sum + day.salesCount, 0);
             if (metric.key === 'salesTotal') return chartDays.reduce((sum, day) => sum + day.salesTotal, 0);
+            if (metric.key === 'averageTicket') {
+              const total = chartDays.reduce((sum, day) => sum + day.salesTotal, 0);
+              const count = chartDays.reduce((sum, day) => sum + day.salesCount, 0);
+              return count ? total / count : 0;
+            }
             if (metric.key === 'income') return chartDays.reduce((sum, day) => sum + day.income, 0);
             if (metric.key === 'expense') return chartDays.reduce((sum, day) => sum + day.expense, 0);
             if (metric.key === 'profit') return chartDays.reduce((sum, day) => sum + day.profit, 0);
@@ -392,7 +400,10 @@ export default function CustomReportsPage() {
         } else {
           const series = chartMetrics.map((metric) => ({
             metric,
-            values: chartDays.map((day) => day[metric.key] || 0),
+            values: chartDays.map((day) => {
+              if (metric.key === 'averageTicket') return day.averageTicket || 0;
+              return day[metric.key] || 0;
+            }),
           }));
           if (chart.type === 'line') {
             drawLines(margin, chartTop, contentWidth, 150, series, labels, titleWithPeriod);
