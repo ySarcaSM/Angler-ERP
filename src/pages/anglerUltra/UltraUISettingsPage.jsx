@@ -25,7 +25,6 @@ export default function UltraUISettingsPage() {
     }).finally(() => setLoading(false));
   }, [company?.id]);
 
-
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
     if (!canEdit) return;
@@ -40,6 +39,24 @@ export default function UltraUISettingsPage() {
     } finally { setSaving(false); }
   };
   const reset = () => setForm(savedSettings);
+
+  const previewStyle = {
+    fontFamily: form.fontFamily,
+    fontSize: form.fontSize,
+    borderRadius: form.borderRadius,
+    boxShadow: form.cardShadow === 'none'
+      ? 'none'
+      : form.cardShadow === 'soft'
+        ? '0 2px 12px rgba(0,0,0,.18)'
+        : '0 4px 24px rgba(0,0,0,.3)',
+    padding: form.density === 'compact' ? '1rem' : '1.25rem',
+  };
+
+  const previewButtonStyle = {
+    borderRadius: form.borderRadius,
+    color: '#fff',
+    transition: 'filter .15s ease',
+  };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" /></div>;
 
@@ -59,7 +76,7 @@ export default function UltraUISettingsPage() {
         <label><span className="label">Densidade</span><select className="input" value={form.density} onChange={(e)=>set('density',e.target.value)} disabled={!canEdit}><option value="comfortable">Confortável</option><option value="compact">Compacta</option></select></label>
         <label><span className="label">Sombras dos cards</span><select className="input" value={form.cardShadow} onChange={(e)=>set('cardShadow',e.target.value)} disabled={!canEdit}><option value="none">Sem sombra</option><option value="soft">Suave</option><option value="medium">Média</option></select></label>
       </section>
-      <section className="card p-6"><h2 className="font-semibold text-dark-100 mb-4">Prévia</h2><div className="rounded-xl border border-dark-700 p-5 space-y-4"><div><div className="text-lg font-bold text-dark-100">Exemplo de interface</div><p className="text-sm text-dark-400">As alterações ficam em edição até você clicar em salvar.</p></div><div className="flex flex-wrap gap-2"><button className="btn-primary">Botão principal</button><button className="btn-secondary">Secundário</button><button className="btn-danger">Excluir</button></div></div></section>
+      <section className="card p-6"><h2 className="font-semibold text-dark-100 mb-4">Prévia</h2><div className="rounded-xl border border-dark-700 space-y-4" style={previewStyle}><div><div className="text-lg font-bold text-dark-100" style={{ color: form.accentColor }}>Exemplo de interface</div><p className="text-sm text-dark-400">Esta prévia acompanha as alterações enquanto você edita. Elas só são aplicadas ao restante do /app após salvar.</p></div><div className="flex flex-wrap gap-2"><button className="btn-primary" style={{ ...previewButtonStyle, background: form.primaryButtonColor }}>Botão principal</button><button className="btn-secondary" style={{ ...previewButtonStyle, background: form.secondaryButtonColor }}>Secundário</button><button className="btn-danger" style={{ ...previewButtonStyle, background: form.dangerButtonColor }}>Excluir</button></div></div></section>
     </div>
     <div className="flex justify-end gap-3"><button type="button" className="btn-secondary" onClick={reset}><RotateCcw size={17}/>Restaurar padrão</button><button type="button" className="btn-primary" onClick={save} disabled={!canEdit || saving}><Save size={17}/>{saving ? 'Salvando...' : 'Salvar configurações'}</button></div>
   </div>;
