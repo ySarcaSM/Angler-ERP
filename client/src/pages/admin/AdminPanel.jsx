@@ -12,6 +12,7 @@ import {
   enableUser,
   deleteUserFull,
   listContactMessages,
+  deleteContactMessage,
 } from '../../services/firebase/admin';
 import DeleteConfirmModal from '../../components/admin/DeleteConfirmModal';
 import toast from 'react-hot-toast';
@@ -172,6 +173,27 @@ export default function AdminPanel() {
     }
   };
 
+  const handleDeleteContactMessage = async (message) => {
+    if (!message?.id) return;
+
+    const confirmed = window.confirm(
+      'Deseja excluir permanentemente a mensagem "' + (message.title || 'Sem título') + '"?'
+    );
+    if (!confirmed) return;
+
+    setActionLoading('message-' + message.id);
+    try {
+      await deleteContactMessage(message.id);
+      setContactMessages((current) => current.filter((item) => item.id !== message.id));
+      toast.success('Mensagem excluída com sucesso.');
+    } catch (err) {
+      console.error('Erro ao excluir mensagem de contato:', err);
+      toast.error('Erro ao excluir mensagem: ' + err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -304,6 +326,7 @@ export default function AdminPanel() {
                     <th className="text-left px-5 py-3 text-xs font-medium text-dark-500 uppercase">E-mail</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-dark-500 uppercase">Descrição</th>
                     <th className="text-left px-5 py-3 text-xs font-medium text-dark-500 uppercase">Recebida em</th>
+                    <th className="text-right px-5 py-3 text-xs font-medium text-dark-500 uppercase">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dark-800">
@@ -320,6 +343,20 @@ export default function AdminPanel() {
                       </td>
                       <td className="px-5 py-4 text-sm text-dark-400 whitespace-nowrap">
                         {formatDate(message.createdAt)}
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        <button
+                          onClick={() => handleDeleteContactMessage(message)}
+                          disabled={actionLoading === 'message-' + message.id}
+                          className="inline-flex items-center justify-center p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Excluir mensagem permanentemente"
+                        >
+                          {actionLoading === 'message-' + message.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
                       </td>
                     </tr>
                   ))}
