@@ -26,7 +26,6 @@ export default function PurchaseList() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ supplierId: '', supplierName: '', items: [{ productId: '', productName: '', quantity: 1, unitCost: 0 }] });
 
-  useEffect(() => { if (location.pathname === '/app/purchases/new') { setForm({ supplierId: '', supplierName: '', items: [{ productId: '', productName: '', quantity: 1, unitCost: 0 }] }); setModal(true); } }, [location.pathname]);
 
   const load = useCallback(async () => {
     if (!company?.id) return;
@@ -81,7 +80,7 @@ export default function PurchaseList() {
       }, user);
       await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Compra', entityId: createdPurchase.id, description: `${userData?.name || 'Usuário'} criou a compra #${createdPurchase.number || createdPurchase.id}.`, details: { supplierName: supplier?.name, total: createdPurchase.total, itemCount: form.items.length } });
       toast.success('Compra criada!');
-      setModal(false); if (location.pathname === '/app/purchases/new') navigate('/app/purchases');
+      setModal(false);
       setForm({ supplierId: '', supplierName: '', items: [{ productId: '', productName: '', quantity: 1, unitCost: 0 }] });
       load();
     } catch (error) { toast.error(error.message); }
