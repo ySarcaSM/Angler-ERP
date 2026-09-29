@@ -78,8 +78,11 @@ function FormulaManager() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { navigate('/app/budgets/formulas/new'); };\n  const openNewForm = () => { setForm(EMPTY); setEditing(null); setModal(true); };
-  useEffect(() => { if (location.pathname === '/app/budgets/formulas/new') openNewForm(); }, [location.pathname]);\n\n  const openEdit = (formula) => { setForm({ ...EMPTY, ...formula }); setEditing(formula.id); setModal(true); };
+  const openNew = () => { navigate('/app/budgets/formulas/new'); };
+  const openNewForm = () => { setForm(EMPTY); setEditing(null); setModal(true); };
+  useEffect(() => { if (location.pathname === '/app/budgets/formulas/new') openNewForm(); }, [location.pathname]);
+
+  const openEdit = (formula) => { setForm({ ...EMPTY, ...formula }); setEditing(formula.id); setModal(true); };
   const duplicate = (formula) => { setForm({ ...EMPTY, ...formula, id: undefined, name: `${formula.name} (cópia)`, active: true }); setEditing(null); setModal(true); };
   const openCalculator = (formula) => { setCalculating(formula); setCalculationValues(Object.fromEntries((formula.variables || '').split(',').map((variable) => variable.trim()).filter(Boolean).map((variable) => [variable, '']))); setCalculationResult(null); setCalculationError(''); };
   const calculate = () => {
