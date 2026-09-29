@@ -89,17 +89,22 @@ export default function App() {
     <Route path="/app/*" element={<PrivateRoute><MultiCompanyRoute><Layout><Routes>
       <Route path="/" element={<OperatorHomeOrDashboard />} />
       <Route path="/clients/new" element={<ModuleRoute moduleKey="clients"><WriteRoute><ClientForm /></WriteRoute></ModuleRoute>} />
+      <Route path="/clients/:id/edit" element={<ModuleRoute moduleKey="clients"><WriteRoute><ClientForm /></WriteRoute></ModuleRoute>} />
       <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
       <Route path="/products/new" element={<ModuleRoute moduleKey="products"><WriteRoute><ProductForm /></WriteRoute></ModuleRoute>} />
+      <Route path="/products/:id/edit" element={<ModuleRoute moduleKey="products"><WriteRoute><ProductForm /></WriteRoute></ModuleRoute>} />
       <Route path="/products" element={<ModuleRoute moduleKey="products"><ProductList /></ModuleRoute>} />
       <Route path="/sales" element={<ModuleRoute moduleKey="sales"><SaleList /></ModuleRoute>} />
       <Route path="/sales/new" element={<ModuleRoute moduleKey="sales"><WriteRoute><SaleForm /></WriteRoute></ModuleRoute>} />
       <Route path="/sales/:id" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
       <Route path="/purchases/new" element={<ModuleRoute moduleKey="purchases"><WriteRoute><PurchaseForm /></WriteRoute></ModuleRoute>} />
+      <Route path="/purchases/:id/edit" element={<ModuleRoute moduleKey="purchases"><WriteRoute><PurchaseForm /></WriteRoute></ModuleRoute>} />
       <Route path="/purchases" element={<ModuleRoute moduleKey="purchases"><PurchaseList /></ModuleRoute>} />
       <Route path="/suppliers/new" element={<ModuleRoute moduleKey="suppliers"><WriteRoute><SupplierForm /></WriteRoute></ModuleRoute>} />
+      <Route path="/suppliers/:id/edit" element={<ModuleRoute moduleKey="suppliers"><WriteRoute><SupplierForm /></WriteRoute></ModuleRoute>} />
       <Route path="/suppliers" element={<ModuleRoute moduleKey="suppliers"><SupplierList /></ModuleRoute>} />
       <Route path="/locations/new" element={<ModuleRoute moduleKey="locations"><WriteRoute><LocationForm /></WriteRoute></ModuleRoute>} />
+      <Route path="/locations/:id/edit" element={<ModuleRoute moduleKey="locations"><WriteRoute><LocationForm /></WriteRoute></ModuleRoute>} />
       <Route path="/locations" element={<ModuleRoute moduleKey="locations"><LocationList /></ModuleRoute>} />
       <Route path="/financial" element={<ModuleRoute moduleKey="financial"><FinancialDashboard /></ModuleRoute>} />
       <Route path="/stock" element={<ModuleRoute moduleKey="stock"><StockDashboard /></ModuleRoute>} />
@@ -107,10 +112,12 @@ export default function App() {
       <Route path="/angler-pro/relatorios-semanais" element={<AnglerProRoute><WeeklyReportsPage /></AnglerProRoute>} />
       <Route path="/angler-pro/relatorios-customizaveis" element={<AnglerProRoute><CustomReportsPage /></AnglerProRoute>} />
       <Route path="/budgets/new" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetForm /></WriteRoute></ModuleRoute>} />
+      <Route path="/budgets/:id/edit" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />
       <Route path="/budgets/profiles" element={<ModuleRoute moduleKey="measurement"><ProfileGroupPage /></ModuleRoute>} />
       <Route path="/budgets/profiles/:groupSlug" element={<Navigate to="/app/budgets/profiles" replace />} />
       <Route path="/budgets/formulas/new" element={<ModuleRoute moduleKey="formulas"><WriteRoute><FormulaForm /></WriteRoute></ModuleRoute>} />
+      <Route path="/budgets/formulas/:id/edit" element={<ModuleRoute moduleKey="formulas"><WriteRoute><FormulaForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets/formulas" element={<ModuleRoute moduleKey="formulas"><FormulasPage /></ModuleRoute>} />
       <Route path="/settings" element={<OperatorBlockedRoute><SettingsPage /></OperatorBlockedRoute>} />
       <Route path="/modules" element={<OperatorBlockedRoute><ModulesPage /></OperatorBlockedRoute>} />
