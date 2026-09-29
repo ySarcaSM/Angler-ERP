@@ -13,7 +13,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 import {
-  doc, setDoc, getDoc, updateDoc, serverTimestamp, writeBatch, collection, query, where, getDocs,
+  doc, setDoc, getDoc, updateDoc, serverTimestamp, writeBatch, collection, query, where, getDocs, onSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from '../../config/firebase';
 
@@ -295,4 +295,21 @@ export async function getCompanyData(companyId) {
 // ─── Auth state listener ───
 export function onAuthChange(callback) {
   return onAuthStateChanged(auth, callback);
+}
+
+
+// ─── Company realtime listener ───
+export function subscribeCompanyData(companyId, callback, onError) {
+  if (!companyId) return () => {};
+  return onSnapshot(
+    doc(db, 'companies', companyId),
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
+      callback({ id: snapshot.id, ...snapshot.data() });
+    },
+    onError,
+  );
 }
