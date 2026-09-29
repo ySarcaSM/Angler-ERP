@@ -435,7 +435,6 @@ function CutPreview({ profile, result, onDownload }) {
   const [previewUrl, setPreviewUrl] = useState('');
   const [secondaryPreviewUrls, setSecondaryPreviewUrls] = useState([]);
   const [downloading, setDownloading] = useState(false);
-  const [hoveredLastPiece, setHoveredLastPiece] = useState(false);
 
   useEffect(() => {
     const canvas = document.createElement('canvas');
@@ -1000,13 +999,20 @@ function CutPreview({ profile, result, onDownload }) {
         ...accessoryLines,
       ], '#f5dfe8');
 
-      drawCardTextForContext(cardStartX + (cardWidth + cardGap) * 2, cardY, cardWidth, cardHeight, 'DICAS — PLANO', [
-        `Plano com ${formatNumber(placedPieces, 0)} unidade(s) de ${formatNumber(plan?.width || 0, 0)} cm de largura.`,
-        `Grade: ${formatNumber(plan?.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan?.verticalRows || 0, 0)} = ${formatNumber(capacity, 0)} posições.`,
-        `Sobra no comprimento: ${formatNumber(plan?.lengthLeftover || 0, 0)} cm.`,
-        `Sobra na largura: ${formatNumber(plan?.widthLeftover || 0, 0)} cm.`,
-      ], '#dff2df');
-    };
+      const usedLengthCm = Math.min(Number(plan?.usableLength) || 262, (Number(plan?.wholePiecesPerRow) || 0) * (Number(plan?.groupLength) || ((Number(plan?.pieceWidth) || 0) + (Number(result.accordionWidth) || 0) * 2)));
+      const usedWidthCm = Math.min(Number(plan?.width) || 0, (Number(plan?.verticalRows) || 0) * (Number(plan?.pieceHeight) || 0));
+      const lengthUtilization = (Number(plan?.usableLength) || 262) > 0 ? (usedLengthCm / (Number(plan?.usableLength) || 262)) * 100 : 0;
+      const widthUtilization = (Number(plan?.width) || 0) > 0 ? (usedWidthCm / (Number(plan?.width) || 0)) * 100 : 0;
+      const utilization = Math.max(lengthUtilization, widthUtilization);
+      const utilizationAxis = widthUtilization >= lengthUtilization ? 'largura' : 'altura';
+      const tips = [
+        `Corte as ${formatNumber(placedPieces, 0)} peças principais primeiro.`,
+        ...(hasAccordion ? [`Depois corte as ${formatNumber(placedPieces * (Number(result.accordionCountPerUnit) || 2), 0)} sanfonas.`] : []),
+        'Use régua longa e cortador circular ou faca bem afiada.',
+        'Mantenha as folhas bem alinhadas e use pregos/grampos.',
+        `Esse plano gera ${formatNumber(placedPieces, 0)} peças (${formatNumber(emptyPositions, 0)} de sobra).`,
+        `Aproveitamento de praticamente ${formatNumber(utilization, 0)}% da ${utilizationAxis}.`,
+      ], '#dff2df');   };
 
     drawPlanCards(firstCutPlan, previewQuantity);
 
@@ -1072,7 +1078,7 @@ function CutPreview({ profile, result, onDownload }) {
             duplicateContext.strokeStyle = '#15803d';
             duplicateContext.lineWidth = 1.5;
             duplicateContext.strokeRect(accordionX, pieceY, secondAccordionDrawWidth, secondMainAreaHeight);
-            drawResponsivePieceLabel(duplicateContext, accordionX, pieceY, secondAccordionDrawWidth, secondMainAreaHeight, `Sanfona ${formatNumber(accordionWidth, 1)} cm`, '#14532d');
+            drawResponsivePieceLabel(duplicateContext, accordionX, pieceY, secondAccordionDrawWidth, secondMainAreaHeight, `Sanfona ${formatNumber(accordionWidth, 1)} cm`, '#111827');
           });
         }
         const pieceX = groupX + secondAccordionDrawWidth;
@@ -1329,22 +1335,7 @@ function CutPreview({ profile, result, onDownload }) {
                 const pieceHeight = cutHeightCm * (materialPlanDrawHeight / 150);
                 const pieceX = cutAreaX + (lastColumn * pieceWidth);
                 const pieceY = mainAreaY + (lastRow * pieceHeight);
-                return previewQuantity > 0 ? (
-                  <div
-                    aria-hidden="true"
-                    className="absolute rounded-sm border-2 border-transparent transition-colors duration-100"
-                    style={{
-                      left: `${(pieceX / 1200) * 100}%`,
-                      top: `${(pieceY / 760) * 100}%`,
-                      width: `${(pieceWidth / 1200) * 100}%`,
-                      height: `${(pieceHeight / 760) * 100}%`,
-                      borderColor: hoveredLastPiece ? '#facc15' : 'transparent',
-                      pointerEvents: 'auto',
-                    }}
-                    onMouseEnter={() => setHoveredLastPiece(true)}
-                    onMouseLeave={() => setHoveredLastPiece(false)}
-                  />
-                ) : null;
+                return null;
               })()}
             </div>
           </div>
