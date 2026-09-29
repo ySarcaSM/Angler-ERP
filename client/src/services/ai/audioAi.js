@@ -6,7 +6,7 @@ const PROVIDERS = {
   },
   gemini: {
     label: 'Gemini',
-    model: 'gemini-3.6-flash',
+    model: 'gemini-3.5-flash-lite',
     storageKey: 'angler-ai-api-gemini',
   },
   claude: {
@@ -77,7 +77,7 @@ export async function listProviderModels(provider, apiKey) {
     });
   }
 
-  if (!response.ok) throw new Error(await parseError(response));
+  if (!response.ok) throw new Error(await parseError(response, provider));
   const data = await response.json();
   const models = provider === 'gemini'
     ? (data?.models || []).map((model) => ({
@@ -113,7 +113,7 @@ function extractOpenAiText(data) {
     .trim();
 }
 
-async function parseError(response) {
+async function parseError(response, provider = '') {
   let message = '';
   try {
     const data = await response.json();
@@ -121,7 +121,40 @@ async function parseError(response) {
   } catch {
     message = await response.text().catch(() => '');
   }
-  return message || `A API respondeu com erro HTTP ${response.status}.`;
+  const rawMessage = typeof message === 'string' ? message : JSON.stringify(message || '');
+  const lowerMessage = rawMessage.toLowerCase();
+  const providerName = PROVIDERS[provider]?.label || 'provedor de IA';
+
+  if (response.status === 400 && (lowerMessage.includes('model') || lowerMessage.includes('not found') || lowerMessage.includes('invalid argument'))) {
+    return `O modelo selecionado não está disponível no ${providerName}. Clique em "Carregar modelos" e escolha um modelo disponível.`;
+  }
+  if (response.status === 401 || response.status === 403 || lowerMessage.includes('api key') || lowerMessage.includes('invalid api key') || lowerMessage.includes('unauthenticated')) {
+    return `A API key do ${providerName} foi recusada. Confira a chave e tente novamente.`;
+  }
+  if (response.status === 404 && lowerMessage.includes('model')) {
+    return `O modelo selecionado não foi encontrado no ${providerName}. Carregue os modelos disponíveis e selecione outro.`;
+  }
+  if (response.status === 429 || lowerMessage.includes('quota') || lowerMessage.includes('rate limit') || lowerMessage.includes('resource exhausted')) {
+    return `O limite de uso do ${providerName} foi atingido. Aguarde um pouco ou confira sua cota/plano no provedor.`;
+  }
+  if (response.status >= 500) {
+    return `O ${providerName} está com uma indisponibilidade temporária. Tente novamente em alguns instantes.`;
+  }
+
+  return rawMessage || `Não foi possível concluir a solicitação ao ${providerName} (HTTP ${response.status}).`;
+}
+
+async function requestJson(url, options, provider) {
+  try {
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error(await parseError(response, provider));
+    return response.json();
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(`Não foi possível conectar ao ${PROVIDERS[provider]?.label || 'provedor de IA'}. Verifique sua internet e tente novamente.`);
+    }
+    throw error;
+  }
 }
 
 export async function askProvider(provider, apiKey, prompt, modelOverride = '') {
@@ -145,7 +178,7 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
         text: { verbosity: 'medium' },
       }),
     });
-    if (!response.ok) throw new Error(await parseError(response));
+    if (!response.ok) throw new Error(await parseError(response, provider));
     return extractOpenAiText(await response.json());
   }
 
@@ -160,7 +193,7 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
         contents: [{ parts: [{ text: prompt }] }],
       }),
     });
-    if (!response.ok) throw new Error(await parseError(response));
+    if (!response.ok) throw new Error(await parseError(response, provider));
     const data = await response.json();
     return data?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').filter(Boolean).join('\n').trim() || '';
   }
@@ -180,7 +213,7 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
         messages: [{ role: 'user', content: prompt }],
       }),
     });
-    if (!response.ok) throw new Error(await parseError(response));
+    if (!response.ok) throw new Error(await parseError(response, provider));
     const data = await response.json();
     return data?.content?.map((part) => part.text || '').filter(Boolean).join('\n').trim() || '';
   }
@@ -197,7 +230,7 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
         messages: [{ role: 'user', content: prompt }],
       }),
     });
-    if (!response.ok) throw new Error(await parseError(response));
+    if (!response.ok) throw new Error(await parseError(response, provider));
     const data = await response.json();
     return data?.choices?.[0]?.message?.content?.trim() || '';
   }
@@ -213,7 +246,7 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
       messages: [{ role: 'user', content: prompt }],
     }),
   });
-  if (!response.ok) throw new Error(await parseError(response));
+  if (!response.ok) throw new Error(await parseError(response, provider));
   const data = await response.json();
   return data?.choices?.[0]?.message?.content?.trim() || '';
 }

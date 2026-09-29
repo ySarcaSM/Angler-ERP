@@ -227,7 +227,7 @@ export default function AngelAssistant() {
           message: 'Não foi possível concluir sua última solicitação. Tente novamente em alguns instantes.',
         });
       }
-      toast.error(error.message || 'Não foi possível enviar a mensagem.');
+      toast.error(error.message || 'Não foi possível concluir a solicitação. Verifique a configuração da IA e tente novamente.');
     } finally {
       setSending(false);
     }
