@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, CheckCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { listPurchases, receivePurchase, createPurchase } from '../../services/firebase/purchases';
@@ -14,7 +14,6 @@ import { logAudit } from '../../services/firebase/settings';
 
 export default function PurchaseList() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { company, user, userData } = useAuth();
   const isOperator = userData?.role === 'operator';
   const isViewer = userData?.role === 'viewer';
@@ -111,7 +110,7 @@ export default function PurchaseList() {
         <DataTable columns={columns} data={data} loading={loading} />
       </div>
 
-      <Modal fullscreen={location.pathname === '/app/purchases/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/purchases/new') navigate('/app/purchases'); }} title="Nova Compra" size="lg" backdropClassName="bg-transparent">
+      <Modal open={modal} onClose={() => setModal(false)} title="Nova Compra" size="lg" backdropClassName="bg-transparent">
         <form onSubmit={handleCreate} className="space-y-5">
           <div><label className="label">Fornecedor *</label><select className="input" value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })} required><option value="">Selecione...</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></div>
           <div className="space-y-3">
