@@ -383,12 +383,15 @@ export default function AngelAssistant() {
               </div>
               <label className="text-sm font-medium text-dark-200 block mt-3">Modelo</label>
               {models.length ? <select value={providerModel} onChange={(event) => { setProviderModel(event.target.value); saveStoredModel(provider, event.target.value); setApiTested(false); }} className="input mt-2">{models.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select> : <input value={providerModel} onChange={(event) => { setProviderModel(event.target.value); setApiTested(false); }} className="input mt-2" placeholder={aiProviders[provider].model} />}
-              <div className="flex flex-wrap gap-2 mt-2">
-                <button type="button" className="btn-secondary" onClick={loadModels} disabled={loadingModels || loadingValidModel || testingApi}>{loadingModels ? 'Carregando...' : 'Carregar modelos'}</button>
-                <button type="button" className="btn-secondary" onClick={loadValidModel} disabled={loadingValidModel || loadingModels || testingApi}>{loadingValidModel ? 'Procurando modelo válido...' : 'Carregar modelo válido'}</button>\n                <button type="button" className="btn-secondary" onClick={testProviderApi} disabled={testingApi || loadingModels || loadingValidModel}>{testingApi ? 'Testando...' : 'Testar API'}</button>
-                {apiTested && <span className="inline-flex items-center text-xs text-emerald-400 px-2">✓ API funcionando</span>}
+              <div className="mt-3 rounded-xl border border-violet-400/20 bg-violet-500/[0.06] p-3">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <button type="button" className="btn-secondary !border-violet-400/30 !text-violet-200 hover:!bg-violet-500/10" onClick={loadModels} disabled={loadingModels || loadingValidModel || testingApi}>{loadingModels ? 'Carregando...' : 'Carregar modelos'}</button>
+                  <button type="button" className="btn-secondary !border-violet-400/40 !text-violet-200 hover:!bg-violet-500/10" onClick={loadValidModel} disabled={loadingValidModel || loadingModels || testingApi}>{loadingValidModel ? 'Procurando modelo válido...' : 'Carregar modelo válido'}</button>
+                  <button type="button" className="btn-secondary !border-violet-400/30 !text-violet-200 hover:!bg-violet-500/10" onClick={testProviderApi} disabled={testingApi || loadingModels || loadingValidModel}>{testingApi ? 'Testando...' : 'Testar API'}</button>
+                  {apiTested && <span className="inline-flex items-center text-xs text-violet-200 rounded-lg bg-violet-400/10 border border-violet-400/20 px-2.5 py-1">✓ IA pronta</span>}
+                </div>
               </div>
-              <p className="text-xs text-dark-500 mt-2">AnglerPro pode usar OpenAI, Gemini, Claude, Grok ou DeepSeek.</p>
+              <p className="text-xs text-violet-300/70 mt-2">Recursos de IA do AnglerPro • OpenAI, Gemini, Claude, Grok e DeepSeek.</p>
             </> : <>
               <label className="text-sm font-medium text-dark-200" htmlFor="gemini-key">Chave da API Gemini</label>
               <div className="flex gap-2 mt-2">
