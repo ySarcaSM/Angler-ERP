@@ -1,4 +1,4 @@
-import { createDoc, updateDoc_, deleteDoc_, listDocs } from './firestore.js';
+import { createDoc, getDoc_, updateDoc_, deleteDoc_, listDocs } from './firestore.js';
 
 const COLLECTION = 'budgets';
 
@@ -17,6 +17,8 @@ export async function listBudgets(companyId, options = {}) {
     data: result.data.sort((first, second) => String(second.updatedAt || second.createdAt || '').localeCompare(String(first.updatedAt || first.createdAt || ''))),
   };
 }
+
+export async function getBudget(id) { return getDoc_(COLLECTION, id); }
 
 export async function createBudget(companyId, data) {
   return createDoc(COLLECTION, { ...data, companyId });
