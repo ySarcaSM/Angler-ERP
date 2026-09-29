@@ -35,6 +35,66 @@ export function getStoredApiKey(provider) {
   return localStorage.getItem(PROVIDERS[provider]?.storageKey || '') || '';
 }
 
+export function getStoredModel(provider) {
+  if (!provider || typeof window === 'undefined') return '';
+  return localStorage.getItem(`angler-ai-model-${provider}`) || '';
+}
+
+export function saveStoredModel(provider, model) {
+  if (!provider || typeof window === 'undefined') return;
+  const storageKey = `angler-ai-model-${provider}`;
+  if (model?.trim()) localStorage.setItem(storageKey, model.trim());
+  else localStorage.removeItem(storageKey);
+}
+
+export async function listProviderModels(provider, apiKey) {
+  if (!PROVIDERS[provider]) throw new Error('Provedor de IA inválido.');
+  if (!apiKey?.trim()) throw new Error(`Informe a API key do ${PROVIDERS[provider].label}.`);
+
+  const key = apiKey.trim();
+  const model = modelOverride?.trim() || getStoredModel(provider) || PROVIDERS[provider].model;
+  let response;
+
+  if (provider === 'gemini') {
+    response = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', {
+      headers: { 'x-goog-api-key': key },
+    });
+  } else if (provider === 'claude') {
+    response = await fetch('https://api.anthropic.com/v1/models?limit=1000', {
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+    });
+  } else {
+    const url = provider === 'openai'
+      ? 'https://api.openai.com/v1/models'
+      : provider === 'grok'
+        ? 'https://api.x.ai/v1/models'
+        : 'https://api.deepseek.com/models';
+    response = await fetch(url, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+  }
+
+  if (!response.ok) throw new Error(await parseError(response));
+  const data = await response.json();
+  const models = provider === 'gemini'
+    ? (data?.models || []).map((model) => ({
+        id: model.name?.replace(/^models\\//, ''),
+        name: model.displayName || model.name?.replace(/^models\\//, ''),
+      }))
+    : (data?.data || []).map((model) => ({
+        id: model.id,
+        name: model.display_name || model.displayName || model.id,
+      }));
+
+  return models
+    .filter((model) => model.id)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function saveStoredApiKey(provider, apiKey) {
   if (!provider || typeof window === 'undefined') return;
   const storageKey = PROVIDERS[provider]?.storageKey;
@@ -65,7 +125,7 @@ async function parseError(response) {
   return message || `A API respondeu com erro HTTP ${response.status}.`;
 }
 
-export async function askProvider(provider, apiKey, prompt) {
+export async function askProvider(provider, apiKey, prompt, modelOverride = '') {
   if (!PROVIDERS[provider]) throw new Error('Provedor de IA inválido.');
   if (!apiKey?.trim()) throw new Error(`Informe a API key do ${PROVIDERS[provider].label}.`);
   if (!prompt?.trim()) throw new Error('Nenhuma fala foi reconhecida.');
@@ -80,7 +140,7 @@ export async function askProvider(provider, apiKey, prompt) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: PROVIDERS.openai.model,
+        model,
         input: prompt,
         text: { verbosity: 'medium' },
       }),
@@ -90,7 +150,7 @@ export async function askProvider(provider, apiKey, prompt) {
   }
 
   if (provider === 'gemini') {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${PROVIDERS.gemini.model}:generateContent`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -115,7 +175,7 @@ export async function askProvider(provider, apiKey, prompt) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: PROVIDERS.claude.model,
+        model,
         max_tokens: 1200,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -133,7 +193,7 @@ export async function askProvider(provider, apiKey, prompt) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: PROVIDERS.grok.model,
+        model,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -149,7 +209,7 @@ export async function askProvider(provider, apiKey, prompt) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: PROVIDERS.deepseek.model,
+      model,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
