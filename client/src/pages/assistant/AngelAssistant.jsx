@@ -373,7 +373,7 @@ export default function AngelAssistant() {
           <div className="p-4 border-b border-dark-700/50 bg-dark-900/40">
             {isAnglerPro ? <>
               <label className="text-sm font-medium text-dark-200">Provedor de IA</label>
-              <select className="input mt-2" value={provider} onChange={(event) => setProvider(event.target.value)}>
+              <select className="input mt-2 !border-violet-400/30 focus:!border-violet-400 focus:!ring-violet-400/20" value={provider} onChange={(event) => setProvider(event.target.value)}>
                 {Object.entries(aiProviders).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}
               </select>
               <label className="text-sm font-medium text-dark-200 block mt-3">API key do {aiProviders[provider].label}</label>
@@ -382,7 +382,7 @@ export default function AngelAssistant() {
                 <button type="button" className="btn-secondary" onClick={saveProviderSettings}>Salvar</button>
               </div>
               <label className="text-sm font-medium text-dark-200 block mt-3">Modelo</label>
-              {models.length ? <select value={providerModel} onChange={(event) => { setProviderModel(event.target.value); saveStoredModel(provider, event.target.value); setApiTested(false); }} className="input mt-2">{models.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select> : <input value={providerModel} onChange={(event) => { setProviderModel(event.target.value); setApiTested(false); }} className="input mt-2" placeholder={aiProviders[provider].model} />}
+              {models.length ? <select value={providerModel} onChange={(event) => { setProviderModel(event.target.value); saveStoredModel(provider, event.target.value); setApiTested(false); }} className="input mt-2 !border-violet-400/30 focus:!border-violet-400 focus:!ring-violet-400/20">{models.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select> : <input value={providerModel} onChange={(event) => { setProviderModel(event.target.value); setApiTested(false); }} className="input mt-2 !border-violet-400/30 focus:!border-violet-400 focus:!ring-violet-400/20" placeholder={aiProviders[provider].model} />}
               <div className="mt-3 rounded-xl border border-violet-400/20 bg-violet-500/[0.06] p-3">
                 <div className="flex flex-wrap gap-2 items-center">
                   <button type="button" className="btn-secondary !border-violet-400/30 !text-violet-200 hover:!bg-violet-500/10" onClick={loadModels} disabled={loadingModels || loadingValidModel || testingApi}>{loadingModels ? 'Carregando...' : 'Carregar modelos'}</button>
@@ -453,7 +453,7 @@ export default function AngelAssistant() {
             </div>
             <form onSubmit={sendMessage} className="border-t border-dark-700/50 p-4 flex gap-3">
               <input value={message} onChange={(event) => setMessage(event.target.value)} className="input flex-1" placeholder="Pergunte algo sobre o Angler ERP..." disabled={sending} />
-              {isAnglerPro && <button type="button" onClick={toggleListening} disabled={sending} className={listening ? 'btn-secondary text-red-400 border-red-400/30' : 'btn-secondary'} aria-label={listening ? 'Parar gravação' : 'Falar com a Angel'} title={listening ? 'Parar gravação' : 'Falar com a Angel'}>{listening ? <MicOff size={18} /> : <Mic size={18} />}</button>}
+              {isAnglerPro && <button type="button" onClick={toggleListening} disabled={sending} className={listening ? 'btn-secondary !border-violet-400/50 !text-violet-200 !bg-violet-500/15' : 'btn-secondary !border-violet-400/30 !text-violet-200 hover:!bg-violet-500/10'} aria-label={listening ? 'Parar gravação' : 'Falar com a Angel'} title={listening ? 'Parar gravação' : 'Falar com a Angel'}>{listening ? <MicOff size={18} /> : <Mic size={18} />}</button>}
               <button type="submit" className="btn-primary" disabled={sending || !message.trim()} aria-label="Enviar mensagem"><Send size={18} /></button>
             </form>
           </section>
