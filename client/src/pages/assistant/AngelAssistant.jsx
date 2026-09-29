@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Bot, Edit2, KeyRound, MessageCircle, Plus, Send, Sparkles, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Bot, Edit2, KeyRound, MessageCircle, Mic, MicOff, Plus, Send, Sparkles, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import PageHeader from '../../components/ui/PageHeader';
@@ -10,6 +10,7 @@ import {
 import { askAngel, getGeminiApiKeyStatus, saveGeminiApiKey } from '../../services/gemini';
 import { getReadOnlyListAnswer, loadAngelReadContext } from '../../services/angelContext';
 import { addSystemNotification } from '../../utils/notifications';
+import { askProvider, getAiProviders, getStoredApiKey, getStoredModel, saveStoredApiKey, saveStoredModel } from '../../services/ai/audioAi';
 
 function renderMessageText(text) {
   return String(text || '').split(/(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g).map((part, index) => {
@@ -37,6 +38,12 @@ export default function AngelAssistant() {
   const [editingTitle, setEditingTitle] = useState('');
   const [changingChatId, setChangingChatId] = useState(null);
   const [clearingEmptyChats, setClearingEmptyChats] = useState(false);
+  const [provider, setProvider] = useState('gemini');
+  const [providerKey, setProviderKey] = useState('');
+  const [providerModel, setProviderModel] = useState('');
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef('');
 
   useEffect(() => {
     if (!company?.id || !user?.uid) return undefined;
@@ -57,6 +64,17 @@ export default function AngelAssistant() {
 
   const activeChat = useMemo(() => chats.find((chat) => chat.id === activeChatId), [chats, activeChatId]);
   const isFreePlan = ['free', 'trial'].includes(String(company?.plan || 'free').toLowerCase());
+  const isAnglerPro = String(company?.plan || '').toLowerCase() === 'anglerpro';
+  const aiProviders = getAiProviders();
+  const SpeechRecognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
+
+  useEffect(() => {
+    if (!isAnglerPro) return;
+    setProviderKey(getStoredApiKey(provider));
+    setProviderModel(getStoredModel(provider) || aiProviders[provider]?.model || '');
+  }, [provider, isAnglerPro]);
+
+  useEffect(() => () => recognitionRef.current?.stop(), []);
 
   const saveApiKey = async () => {
     if (!apiKey.trim()) {
@@ -148,13 +166,17 @@ export default function AngelAssistant() {
     }
   };
 
-  const sendMessage = async (event) => {
-    event.preventDefault();
-    const content = message.trim();
+  const sendMessage = async (event, voiceContent = '') => {
+    if (event) event.preventDefault();
+    const content = (voiceContent || message).trim();
     if (!content || sending) return;
-    if (!apiKeyConfigured) {
+    if (!isAnglerPro && !apiKeyConfigured) {
       toast.error('Informe sua chave da API Gemini antes de conversar com a Angel.');
       setKeyVisible(true);
+      return;
+    }
+    if (isAnglerPro && provider !== 'gemini' && !providerKey.trim()) {
+      toast.error('Informe a API do ' + aiProviders[provider].label + ' antes de conversar.');
       return;
     }
 
@@ -175,13 +197,21 @@ export default function AngelAssistant() {
       }
 
       const readContext = await loadAngelReadContext(company);
-      const answer = getReadOnlyListAnswer(content, readContext) || await askAngel({
-        companyId: company.id,
-        history: messages,
-        message: content,
-        plan: company.plan,
-        readContext,
-      });
+      const readOnlyAnswer = getReadOnlyListAnswer(content, readContext);
+      const answer = readOnlyAnswer || (isAnglerPro
+        ? await askProvider(
+            provider,
+            provider === 'gemini' ? (getStoredApiKey('gemini') || providerKey) : providerKey,
+            'Você é a Angel, assistente do Angler ERP. Responda em português, de forma clara e prática. Contexto do ERP: ' + JSON.stringify(readContext) + '\n\nHistórico recente: ' + JSON.stringify(messages.slice(-10).map((item) => ({ role: item.role, content: item.content }))) + '\n\nPedido do usuário: ' + content,
+            providerModel
+          )
+        : await askAngel({
+            companyId: company.id,
+            history: messages,
+            message: content,
+            plan: company.plan,
+            readContext,
+          }));
       await addAssistantMessage(chatId, { role: 'assistant', content: answer });
       await updateAssistantChat(chatId, {});
     } catch (error) {
@@ -197,6 +227,50 @@ export default function AngelAssistant() {
     }
   };
 
+  const saveProviderSettings = () => {
+    if (!isAnglerPro) return;
+    saveStoredApiKey(provider, providerKey);
+    saveStoredModel(provider, providerModel);
+    toast.success('Configuração do ' + aiProviders[provider].label + ' salva neste dispositivo.');
+  };
+
+  const toggleListening = () => {
+    if (!isAnglerPro || sending) return;
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    if (!SpeechRecognition) {
+      toast.error('Seu navegador não oferece reconhecimento de voz. Use Chrome ou Edge.');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    transcriptRef.current = '';
+    recognition.onresult = (event) => {
+      let finalText = transcriptRef.current;
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        if (event.results[i].isFinal) finalText += event.results[i][0].transcript + ' ';
+      }
+      transcriptRef.current = finalText;
+    };
+    recognition.onerror = (event) => {
+      setListening(false);
+      if (event.error !== 'aborted') toast.error('Não foi possível acessar o microfone ou reconhecer a fala.');
+    };
+    recognition.onend = () => {
+      setListening(false);
+      recognitionRef.current = null;
+      const text = transcriptRef.current.trim();
+      if (text) sendMessage(null, text);
+    };
+    recognitionRef.current = recognition;
+    setListening(true);
+    recognition.start();
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Angel Personal Assistant" subtitle="Sua assistente especializada no Angler ERP" />
@@ -207,17 +281,32 @@ export default function AngelAssistant() {
             <div className="w-10 h-10 rounded-xl bg-primary-400/10 flex items-center justify-center"><Sparkles size={20} className="text-primary-300" /></div>
             <div><div className="text-sm font-semibold text-dark-100">Angel está pronta para ajudar</div><div className="text-xs text-dark-500">{isFreePlan ? 'Plano Free: consulta de dados somente para leitura' : 'Respostas limitadas ao contexto do Angler ERP'}</div></div>
           </div>
-          <button type="button" onClick={() => setKeyVisible((value) => !value)} className="btn-secondary"><KeyRound size={16} /> Chave Gemini</button>
+          <button type="button" onClick={() => setKeyVisible((value) => !value)} className="btn-secondary"><KeyRound size={16} /> {isAnglerPro ? 'Provedor de IA' : 'Chave Gemini'}</button>
         </div>
 
         {keyVisible && (
           <div className="p-4 border-b border-dark-700/50 bg-dark-900/40">
-            <label className="text-sm font-medium text-dark-200" htmlFor="gemini-key">Chave da API Gemini</label>
-            <div className="flex gap-2 mt-2">
-              <input id="gemini-key" type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={apiKeyConfigured ? 'Chave configurada — informe outra para substituí-la' : 'AIza...'} className="input flex-1" autoComplete="off" />
-              <button type="button" className="btn-secondary" onClick={saveApiKey}>Salvar</button>
-            </div>
-            <p className="text-xs text-dark-500 mt-2">A chave fica somente neste navegador durante a sessão e é removida ao sair da conta.</p>
+            {isAnglerPro ? <>
+              <label className="text-sm font-medium text-dark-200">Provedor de IA</label>
+              <select className="input mt-2" value={provider} onChange={(event) => setProvider(event.target.value)}>
+                {Object.entries(aiProviders).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}
+              </select>
+              <label className="text-sm font-medium text-dark-200 block mt-3">API key do {aiProviders[provider].label}</label>
+              <div className="flex gap-2 mt-2">
+                <input type="password" value={providerKey} onChange={(event) => setProviderKey(event.target.value)} placeholder="Cole sua API key aqui" className="input flex-1" autoComplete="off" />
+                <button type="button" className="btn-secondary" onClick={saveProviderSettings}>Salvar</button>
+              </div>
+              <label className="text-sm font-medium text-dark-200 block mt-3">Modelo</label>
+              <input value={providerModel} onChange={(event) => setProviderModel(event.target.value)} className="input mt-2" placeholder={aiProviders[provider].model} />
+              <p className="text-xs text-dark-500 mt-2">AnglerPro pode usar OpenAI, Gemini, Claude, Grok ou DeepSeek.</p>
+            </> : <>
+              <label className="text-sm font-medium text-dark-200" htmlFor="gemini-key">Chave da API Gemini</label>
+              <div className="flex gap-2 mt-2">
+                <input id="gemini-key" type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={apiKeyConfigured ? 'Chave configurada — informe outra para substituí-la' : 'AIza...'} className="input flex-1" autoComplete="off" />
+                <button type="button" className="btn-secondary" onClick={saveApiKey}>Salvar</button>
+              </div>
+              <p className="text-xs text-dark-500 mt-2">A chave fica somente neste navegador durante a sessão e é removida ao sair da conta.</p>
+            </>}
           </div>
         )}
 
@@ -271,6 +360,7 @@ export default function AngelAssistant() {
             </div>
             <form onSubmit={sendMessage} className="border-t border-dark-700/50 p-4 flex gap-3">
               <input value={message} onChange={(event) => setMessage(event.target.value)} className="input flex-1" placeholder="Pergunte algo sobre o Angler ERP..." disabled={sending} />
+              {isAnglerPro && <button type="button" onClick={toggleListening} disabled={sending} className={listening ? 'btn-secondary text-red-400 border-red-400/30' : 'btn-secondary'} aria-label={listening ? 'Parar gravação' : 'Falar com a Angel'} title={listening ? 'Parar gravação' : 'Falar com a Angel'}>{listening ? <MicOff size={18} /> : <Mic size={18} />}</button>}
               <button type="submit" className="btn-primary" disabled={sending || !message.trim()} aria-label="Enviar mensagem"><Send size={18} /></button>
             </form>
           </section>
