@@ -156,7 +156,7 @@ function FormulaManager() {
           <label className="label">Unidade do resultado<input className="input mt-1" placeholder="m², cm, R$" value={form.unit} onChange={(event) => setForm({ ...form, unit: event.target.value })} /></label>
           <label className="label">Descrição<textarea className="input mt-1" rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
           <label className="flex items-center gap-3 text-sm text-dark-300"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /> Fórmula ativa e disponível para reutilização</label>
-          <div className="flex justify-end gap-3 border-t border-dark-800 pt-4"><button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Salvar fórmula'}</button></div>
+          <div className="flex justify-end gap-3 border-t border-dark-800 pt-4"><button type="button" className="btn-secondary" onClick={() => { setModal(false); if (location.pathname === '/app/budgets/formulas/new') navigate('/app/budgets/formulas'); }}>Cancelar</button><button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : 'Salvar fórmula'}</button></div>
         </form>
       </Modal>
       <Modal open={Boolean(calculating)} onClose={() => setCalculating(null)} title={`Calcular: ${calculating?.name || ''}`} size="md">
