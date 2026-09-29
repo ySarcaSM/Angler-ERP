@@ -33,6 +33,7 @@ const NAV_SECTIONS = [
   ] },
   { label: 'Angler Pro', planKey: 'anglerpro', items: [
     { to: '/app/angler-pro/relatorios-semanais', icon: FileText, label: 'Relatórios semanais' },
+    { to: '/app/angler-pro/relatorios-customizaveis', icon: BarChart3, label: 'Relatórios customizáveis' },
     { to: '/app/ia-audio', icon: Mic, label: 'IA por áudio' },
   ] },
   { label: 'Sistema', items: [
