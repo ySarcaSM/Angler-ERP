@@ -81,6 +81,30 @@ export async function createSale(companyId, data, user) {
   return { id: saleRef.id, ...sale };
 }
 
+export async function updateSale(id, data) {
+  const existing = await getSale(id);
+  if (!existing) throw new Error('Venda não encontrada');
+  if (['approved', 'cancelled'].includes(existing.status)) throw new Error('Apenas vendas em rascunho ou pendentes podem ser editadas.');
+  const items = (data.items || []).map((item) => ({
+    ...item,
+    quantity: Math.floor(Number(item.quantity) || 0),
+    unitPrice: Number(item.unitPrice) || 0,
+    total: (Math.floor(Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)) - (Number(item.discount) || 0),
+  }));
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  const discountPercent = Number(data.discount) || 0;
+  const discountAmount = subtotal * (discountPercent / 100);
+  const total = subtotal - discountAmount + (Number(data.shipping) || 0) + (Number(data.tax) || 0);
+  return updateDoc_(COLLECTION, id, {
+    ...data,
+    items,
+    subtotal,
+    discountPercent,
+    discountAmount,
+    total,
+  });
+}
+
 export async function approveSale(saleId, companyId) {
   const sale = await getSale(saleId);
   if (!sale) throw new Error('Venda não encontrada');
