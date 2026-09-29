@@ -208,6 +208,134 @@ export default function CustomReportsPage() {
         pdf.text(formatMetric(metric, metricValue(metric.key)), x + 4, y + 18);
       };
 
+      const CHART_COLORS = [
+        [59, 130, 246], [16, 185, 129], [245, 158, 11], [168, 85, 247],
+        [236, 72, 153], [14, 165, 233], [239, 68, 68], [20, 184, 166],
+      ];
+
+      const drawLegend = (x, yLegend, metrics) => {
+        let cursor = x;
+        pdf.setFontSize(7);
+        metrics.forEach((metric, index) => {
+          const color = CHART_COLORS[index % CHART_COLORS.length];
+          pdf.setFillColor(color[0], color[1], color[2]);
+          pdf.rect(cursor, yLegend - 4, 4, 4, 'F');
+          pdf.setTextColor(80, 80, 80);
+          pdf.text(metric.label, cursor + 6, yLegend);
+          cursor += 6 + pdf.getTextWidth(metric.label) + 10;
+        });
+      };
+
+      const drawBars = (x, top, w, h, series, labels, titleText) => {
+        const max = Math.max(...series.flatMap((item) => item.values.map(Number)), 1);
+        pdf.setFontSize(11);
+        pdf.setTextColor(35, 35, 35);
+        pdf.text(titleText, x, top);
+        const chartTop = top + 9;
+        const base = chartTop + h;
+        const groupW = w / Math.max(labels.length, 1);
+        const barGap = 1.5;
+        const barW = Math.max(2, Math.min(14, (groupW * 0.72) / Math.max(series.length, 1)));
+        pdf.setDrawColor(220, 220, 220);
+        pdf.line(x, base, x + w, base);
+        labels.forEach((label, index) => {
+          const totalW = barW * series.length + barGap * Math.max(series.length - 1, 0);
+          const groupX = x + index * groupW + (groupW - totalW) / 2;
+          series.forEach((item, seriesIndex) => {
+            const value = Math.max(0, Number(item.values[index] || 0));
+            const barH = (value / max) * (h - 12);
+            const color = CHART_COLORS[seriesIndex % CHART_COLORS.length];
+            pdf.setFillColor(color[0], color[1], color[2]);
+            pdf.roundedRect(groupX + seriesIndex * (barW + barGap), base - barH, barW, barH, 0.8, 0.8, 'F');
+          });
+          if (labels.length <= 16) {
+            pdf.setFontSize(6.5);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text(label, x + index * groupW + groupW / 2, base + 8, { align: 'center' });
+          }
+        });
+        drawLegend(x, base + 19, series.map((item) => item.metric));
+      };
+
+      const drawLines = (x, top, w, h, series, labels, titleText) => {
+        const allValues = series.flatMap((item) => item.values.map(Number));
+        const max = Math.max(...allValues, 1);
+        const min = Math.min(...allValues, 0);
+        const range = Math.max(max - min, 1);
+        const base = top + 9 + h;
+        pdf.setFontSize(11);
+        pdf.setTextColor(35, 35, 35);
+        pdf.text(titleText, x, top);
+        series.forEach((item, seriesIndex) => {
+          const color = CHART_COLORS[seriesIndex % CHART_COLORS.length];
+          pdf.setDrawColor(color[0], color[1], color[2]);
+          pdf.setFillColor(color[0], color[1], color[2]);
+          const points = item.values.map((value, index) => ({
+            x: x + (item.values.length <= 1 ? w / 2 : (index * w) / (item.values.length - 1)),
+            y: base - ((Number(value || 0) - min) / range) * (h - 12),
+          }));
+          pdf.setLineWidth(1);
+          for (let index = 1; index < points.length; index += 1) {
+            pdf.line(points[index - 1].x, points[index - 1].y, points[index].x, points[index].y);
+          }
+          points.forEach((point) => pdf.circle(point.x, point.y, 1.4, 'F'));
+        });
+        if (labels.length <= 16) {
+          labels.forEach((label, index) => {
+            const px = x + (labels.length <= 1 ? w / 2 : (index * w) / (labels.length - 1));
+            pdf.setFontSize(6.5);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text(label, px, base + 8, { align: 'center' });
+          });
+        }
+        pdf.setLineWidth(0.2);
+        drawLegend(x, base + 19, series.map((item) => item.metric));
+      };
+
+      const drawPie = (x, top, size, values, labels, titleText) => {
+        pdf.setFontSize(11);
+        pdf.setTextColor(35, 35, 35);
+        pdf.text(titleText, x, top);
+        const cx = x + size / 2;
+        const cy = top + 65;
+        const radius = 48;
+        const total = values.reduce((sum, value) => sum + Math.max(0, Number(value || 0)), 0);
+        if (!total) {
+          pdf.setFontSize(9);
+          pdf.setTextColor(120, 120, 120);
+          pdf.text('Sem dados para o gráfico.', cx, cy, { align: 'center' });
+          return;
+        }
+        let angle = -Math.PI / 2;
+        values.forEach((value, index) => {
+          const portion = Math.max(0, Number(value || 0)) / total;
+          const next = angle + portion * Math.PI * 2;
+          const points = [[cx, cy]];
+          const steps = Math.max(2, Math.ceil(Math.abs(next - angle) * 12));
+          for (let step = 0; step <= steps; step += 1) {
+            const current = angle + (next - angle) * (step / steps);
+            points.push([cx + Math.cos(current) * radius, cy + Math.sin(current) * radius]);
+          }
+          const color = CHART_COLORS[index % CHART_COLORS.length];
+          pdf.setFillColor(color[0], color[1], color[2]);
+          const vectors = points.slice(1).map((point, pointIndex) => [
+            point[0] - (pointIndex === 0 ? cx : points[pointIndex][0]),
+            point[1] - (pointIndex === 0 ? cy : points[pointIndex][1]),
+          ]);
+          pdf.lines(vectors, cx, cy, [1, 1], 'F', true);
+          angle = next;
+        });
+        pdf.setFontSize(8);
+        labels.forEach((label, index) => {
+          const ly = top + 18 + index * 9;
+          const color = CHART_COLORS[index % CHART_COLORS.length];
+          pdf.setFillColor(color[0], color[1], color[2]);
+          pdf.rect(x + size - 65, ly - 5, 4, 4, 'F');
+          pdf.setTextColor(80, 80, 80);
+          pdf.text(label, x + size - 59, ly - 1);
+        });
+      };
+
       // Página 1: capa e resumo dos indicadores.
       header();
       let y = 46;
