@@ -157,12 +157,29 @@ async function requestJson(url, options, provider) {
   }
 }
 
+function estimateInputSize(text) {
+  return Math.max(1, Math.ceil(String(text || '').trim().length / 4));
+}
+
+function getResponseLimit(text, provider) {
+  const size = estimateInputSize(text);
+  const base = size <= 700 ? 256 : size <= 1400 ? 384 : size <= 2400 ? 512 : 640;
+  return Math.min(base, provider === 'openai' || provider === 'claude' ? 512 : 640);
+}
+
+function compactInput(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  return normalized.length > 9600 ? normalized.slice(0, 9520).trimEnd() + ' [contexto reduzido]' : normalized;
+}
+
 export async function askProvider(provider, apiKey, prompt, modelOverride = '') {
   if (!PROVIDERS[provider]) throw new Error('Provedor de IA inválido.');
   if (!apiKey?.trim()) throw new Error(`Informe a API key do ${PROVIDERS[provider].label}.`);
   if (!prompt?.trim()) throw new Error('Nenhuma fala foi reconhecida.');
 
   const key = apiKey.trim();
+  const compactedPrompt = compactInput(prompt);
+  const responseLimit = getResponseLimit(compactedPrompt, provider);
   const model = modelOverride?.trim() || getStoredModel(provider) || PROVIDERS[provider].model;
 
   if (provider === 'openai') {
@@ -174,8 +191,9 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
       },
       body: JSON.stringify({
         model,
-        input: prompt,
-        text: { verbosity: 'medium' },
+        input: compactedPrompt,
+        text: { verbosity: 'low' },
+        max_output_tokens: responseLimit,
       }),
     });
     if (!response.ok) throw new Error(await parseError(response, provider));
@@ -190,7 +208,8 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
         'x-goog-api-key': key,
       },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts: [{ text: compactedPrompt }] }],
+        generationConfig: { maxOutputTokens: responseLimit },
       }),
     });
     if (!response.ok) throw new Error(await parseError(response, provider));
@@ -209,8 +228,8 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
       },
       body: JSON.stringify({
         model,
-        max_tokens: 1200,
-        messages: [{ role: 'user', content: prompt }],
+        max_tokens: responseLimit,
+        messages: [{ role: 'user', content: compactedPrompt }],
       }),
     });
     if (!response.ok) throw new Error(await parseError(response, provider));
