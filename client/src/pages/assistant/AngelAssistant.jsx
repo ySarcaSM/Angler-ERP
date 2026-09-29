@@ -10,7 +10,7 @@ import {
 import { askAngel, getGeminiApiKeyStatus, saveGeminiApiKey } from '../../services/gemini';
 import { getReadOnlyListAnswer, loadAngelReadContext } from '../../services/angelContext';
 import { addSystemNotification } from '../../utils/notifications';
-import { askProvider, getAiProviders, getStoredApiKey, getStoredModel, saveStoredApiKey, saveStoredModel } from '../../services/ai/audioAi';
+import { askProvider, getAiProviders, getStoredApiKey, getStoredModel, listProviderModels, saveStoredApiKey, saveStoredModel } from '../../services/ai/audioAi';
 
 function renderMessageText(text) {
   return String(text || '').split(/(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g).map((part, index) => {
@@ -42,6 +42,10 @@ export default function AngelAssistant() {
   const [providerKey, setProviderKey] = useState('');
   const [providerModel, setProviderModel] = useState('');
   const [listening, setListening] = useState(false);
+  const [models, setModels] = useState([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [testingApi, setTestingApi] = useState(false);
+  const [apiTested, setApiTested] = useState(false);
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
 
@@ -72,6 +76,8 @@ export default function AngelAssistant() {
     if (!isAnglerPro) return;
     setProviderKey(getStoredApiKey(provider));
     setProviderModel(getStoredModel(provider) || aiProviders[provider]?.model || '');
+    setModels([]);
+    setApiTested(false);
   }, [provider, isAnglerPro]);
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
@@ -227,6 +233,45 @@ export default function AngelAssistant() {
     }
   };
 
+  const loadModels = async () => {
+    if (!providerKey.trim()) {
+      toast.error('Informe a API key antes de carregar os modelos.');
+      return;
+    }
+    setLoadingModels(true);
+    try {
+      const items = await listProviderModels(provider, providerKey.trim());
+      setModels(items);
+      const selected = items.some((item) => item.id === providerModel) ? providerModel : (items[0]?.id || providerModel);
+      setProviderModel(selected);
+      saveStoredApiKey(provider, providerKey);
+      if (selected) saveStoredModel(provider, selected);
+      toast.success(items.length + ' modelo(s) carregado(s).');
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível carregar os modelos.');
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
+  const testProviderApi = async () => {
+    if (!providerKey.trim()) {
+      toast.error('Informe a API key antes de testar.');
+      return;
+    }
+    setTestingApi(true);
+    try {
+      await askProvider(provider, providerKey.trim(), 'Responda apenas: OK', providerModel);
+      setApiTested(true);
+      toast.success('API do ' + aiProviders[provider].label + ' funcionando.');
+    } catch (error) {
+      setApiTested(false);
+      toast.error(error.message || 'A API não respondeu corretamente.');
+    } finally {
+      setTestingApi(false);
+    }
+  };
+
   const saveProviderSettings = () => {
     if (!isAnglerPro) return;
     saveStoredApiKey(provider, providerKey);
@@ -297,7 +342,12 @@ export default function AngelAssistant() {
                 <button type="button" className="btn-secondary" onClick={saveProviderSettings}>Salvar</button>
               </div>
               <label className="text-sm font-medium text-dark-200 block mt-3">Modelo</label>
-              <input value={providerModel} onChange={(event) => setProviderModel(event.target.value)} className="input mt-2" placeholder={aiProviders[provider].model} />
+              {models.length ? <select value={providerModel} onChange={(event) => { setProviderModel(event.target.value); saveStoredModel(provider, event.target.value); setApiTested(false); }} className="input mt-2">{models.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select> : <input value={providerModel} onChange={(event) => { setProviderModel(event.target.value); setApiTested(false); }} className="input mt-2" placeholder={aiProviders[provider].model} />}
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button type="button" className="btn-secondary" onClick={loadModels} disabled={loadingModels || testingApi}>{loadingModels ? 'Carregando...' : 'Carregar modelos'}</button>
+                <button type="button" className="btn-secondary" onClick={testProviderApi} disabled={testingApi || loadingModels}>{testingApi ? 'Testando...' : 'Testar API'}</button>
+                {apiTested && <span className="inline-flex items-center text-xs text-emerald-400 px-2">✓ API funcionando</span>}
+              </div>
               <p className="text-xs text-dark-500 mt-2">AnglerPro pode usar OpenAI, Gemini, Claude, Grok ou DeepSeek.</p>
             </> : <>
               <label className="text-sm font-medium text-dark-200" htmlFor="gemini-key">Chave da API Gemini</label>
