@@ -1378,17 +1378,17 @@ function CutPreview({ profile, result, onDownload }) {
         if (index > 0) pdf.addPage();
 
         let y = 15;
-        const addSection = (title, lines) => {
+        const addSection = (title, lines, sectionFill = [247, 248, 250], titleColor = [17, 24, 39]) => {
           const lineHeight = 4.2;
           const titleGap = 6;
           const padding = 3;
           const wrapped = lines.flatMap((line) => pdf.splitTextToSize(String(line), contentWidth - padding * 2));
           const height = padding + titleGap + wrapped.length * lineHeight + padding;
           if (y + height > pageHeight - 13) return false;
-          pdf.setFillColor(247, 248, 250);
+          pdf.setFillColor(...sectionFill);
           pdf.setDrawColor(205, 210, 216);
           pdf.roundedRect(margin, y, contentWidth, height, 2, 2, 'FD');
-          pdf.setTextColor(17, 24, 39);
+          pdf.setTextColor(...titleColor);
           pdf.setFont('helvetica', 'bold');
           pdf.setFontSize(9);
           pdf.text(title, margin + padding, y + 5);
@@ -1425,7 +1425,7 @@ function CutPreview({ profile, result, onDownload }) {
             `Área total das sanfonas: ${formatNumber(accordionAreaPerUnit * planQuantity, 0)} cm²`,
           ] : []),
           `Área total de sobra: ${formatNumber(totalAreaLeftover, 0)} cm²`,
-        ]);
+        ], [225, 238, 252], [30, 64, 175]);
 
         addSection('CONSUMO E ACESSÓRIO — PLANO', [
           `Comprimento do plano: ${formatNumber(plan.usableLength || 262, 0)} cm`,
@@ -1438,9 +1438,9 @@ function CutPreview({ profile, result, onDownload }) {
             `Área total das sanfonas: ${formatNumber(accordionAreaPerUnit * planQuantity, 0)} cm²`,
           ] : []),
           ...accessoryLines,
-        ]);
+        ], [252, 231, 238], [157, 23, 77]);
 
-        addSection('DICAS — PLANO', tips);
+        addSection('DICAS — PLANO', tips, [226, 245, 230], [22, 101, 52]);
 
         addSection('ESPECIFICAÇÕES', [
           `Quantidade neste corte: ${formatNumber(planQuantity, 0)} unidade(s)`,
@@ -1453,7 +1453,7 @@ function CutPreview({ profile, result, onDownload }) {
           `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`,
           `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`,
           `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`,
-        ]);
+        ], [237, 232, 252], [91, 33, 182]);
 
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(6.5);
