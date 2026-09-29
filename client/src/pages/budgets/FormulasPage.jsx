@@ -147,7 +147,7 @@ function FormulaManager() {
           </div>
         )}
       </div>
-      <Modal open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/budgets/formulas/new') navigate('/app/budgets\/formulas'); }} title={editing ? 'Editar fórmula' : 'Nova fórmula'} size="lg">
+      <Modal fullscreen={location.pathname === '/app/budgets/formulas/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/budgets/formulas/new') navigate('/app/budgets\/formulas'); }} title={editing ? 'Editar fórmula' : 'Nova fórmula'} size="lg">
         <form className="space-y-4" onSubmit={save}>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2"><label className="label">Nome *<input className="input mt-1" required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label className="label">Categoria<select className="input mt-1" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option>Geral</option><option>Material</option><option>Produção</option><option>Preço</option><option>Medidas</option></select></label></div>
           <label className="label">Expressão matemática *<input className="input mt-1 font-mono" required placeholder="ex.: (altura * largura) / 10000" value={form.expression} onChange={(event) => setForm({ ...form, expression: event.target.value })} /></label>
