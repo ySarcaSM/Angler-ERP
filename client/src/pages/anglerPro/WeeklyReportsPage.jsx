@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, FileText, Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, Lock, FileDown } from 'lucide-react';
+import { CalendarDays, FileText, Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, Lock, FileDown, Trash2, WalletCards } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useAuth } from '../../context/useAuth';
 import { listSales } from '../../services/firebase/sales';
 import { listTransactions } from '../../services/firebase/financial';
-import { createWeeklyReport, listWeeklyReports } from '../../services/firebase/weeklyReports';
+import { createWeeklyReport, deleteWeeklyReport, listWeeklyReports } from '../../services/firebase/weeklyReports';
+import { listBudgets } from '../../services/firebase/budgets';
 import { timestampToDate } from '../../utils/format';
 import { formatBRL } from '../../utils/format';
 import toast from 'react-hot-toast';
@@ -218,10 +219,13 @@ export default function WeeklyReportsPage() {
     try {
       const start = selectedPeriod.start;
       const end = selectedPeriod.end;
-      const [salesRes, incomeRes, expenseRes] = await Promise.all([
+      const [salesRes, incomeRes, expenseRes, pendingIncomeRes, pendingExpenseRes, budgetsRes] = await Promise.all([
         listSales(company.id, { pageSize: 500 }),
         listTransactions(company.id, { type: 'income', status: 'paid', pageSize: 500 }),
         listTransactions(company.id, { type: 'expense', status: 'paid', pageSize: 500 }),
+        listTransactions(company.id, { type: 'income', status: 'pending', pageSize: 500 }),
+        listTransactions(company.id, { type: 'expense', status: 'pending', pageSize: 500 }),
+        listBudgets(company.id, { pageSize: 500 }),
       ]);
 
       const inPeriod = (value) => {
@@ -232,6 +236,13 @@ export default function WeeklyReportsPage() {
       const sales = salesRes.data.filter((sale) => sale.status !== 'cancelled' && inPeriod(sale.createdAt));
       const incomes = incomeRes.data.filter((item) => inPeriod(item.createdAt));
       const expenses = expenseRes.data.filter((item) => inPeriod(item.createdAt));
+      const pendingIncome = pendingIncomeRes.data.filter((item) => inPeriod(item.createdAt)).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const pendingExpense = pendingExpenseRes.data.filter((item) => inPeriod(item.createdAt)).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      const budgets = budgetsRes.data;
+      const approvedBudgets = budgets.filter((item) => item.status === 'approved');
+      const openBudgets = budgets.filter((item) => item.status !== 'approved' && item.status !== 'cancelled');
+      const approvedBudgetTotal = approvedBudgets.reduce((sum, item) => sum + Number(item.value || 0), 0);
+      const openBudgetTotal = openBudgets.reduce((sum, item) => sum + Number(item.value || 0), 0);
 
       const income = incomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
       const expense = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -273,6 +284,12 @@ export default function WeeklyReportsPage() {
         income,
         expense,
         profit: income - expense,
+        pendingIncome,
+        pendingExpense,
+        budgetCount: budgets.length,
+        approvedBudgetCount: approvedBudgets.length,
+        approvedBudgetTotal,
+        openBudgetTotal,
         generatedBy: user?.uid || null,
         generatedByName: userData?.name || user?.displayName || user?.email || 'Usuário',
       });
@@ -283,6 +300,17 @@ export default function WeeklyReportsPage() {
       toast.error(error.message || 'Não foi possível criar o relatório.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleDelete = async (report) => {
+    if (!window.confirm(`Excluir o relatório da semana de ${formatDate(getDate(report.startDate))} a ${formatDate(getDate(report.endDate))}?`)) return;
+    try {
+      await deleteWeeklyReport(report.id);
+      toast.success('Relatório excluído.');
+      await loadReports();
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível excluir o relatório.');
     }
   };
 
@@ -348,6 +376,9 @@ export default function WeeklyReportsPage() {
                       <button type="button" onClick={() => handleDownloadPdf(report)} className="btn-secondary !px-3 !py-2" title="Baixar PDF">
                         <FileDown size={16} /> PDF
                       </button>
+                      <button type="button" onClick={() => handleDelete(report)} className="btn-ghost btn-sm text-red-400" title="Excluir relatório">
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
@@ -355,6 +386,10 @@ export default function WeeklyReportsPage() {
                     <div className="rounded-xl bg-emerald-500/10 p-3"><div className="flex items-center gap-2 text-xs text-dark-500"><TrendingUp size={14} /> Receitas</div><div className="text-lg font-bold text-emerald-300 mt-1">{formatBRL(report.income || 0)}</div></div>
                     <div className="rounded-xl bg-red-500/10 p-3"><div className="flex items-center gap-2 text-xs text-dark-500"><TrendingDown size={14} /> Despesas</div><div className="text-lg font-bold text-red-300 mt-1">{formatBRL(report.expense || 0)}</div></div>
                     <div className="rounded-xl bg-purple-500/10 p-3"><div className="flex items-center gap-2 text-xs text-dark-500"><DollarSign size={14} /> Resultado</div><div className="text-lg font-bold text-purple-300 mt-1">{formatBRL(report.profit || 0)}</div></div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    <div className="rounded-xl bg-amber-500/10 p-3"><div className="flex items-center gap-2 text-xs text-dark-500"><WalletCards size={14} /> Financeiro</div><div className="text-sm font-semibold text-dark-200 mt-1">A receber: {formatBRL(report.pendingIncome || 0)}</div><div className="text-sm text-dark-400">A pagar: {formatBRL(report.pendingExpense || 0)}</div></div>
+                    <div className="rounded-xl bg-cyan-500/10 p-3"><div className="flex items-center gap-2 text-xs text-dark-500"><FileText size={14} /> Orçamentos</div><div className="text-sm font-semibold text-dark-200 mt-1">{report.budgetCount || 0} no total • {report.approvedBudgetCount || 0} aprovados</div><div className="text-sm text-dark-400">Aprovados: {formatBRL(report.approvedBudgetTotal || 0)} • Em aberto: {formatBRL(report.openBudgetTotal || 0)}</div></div>
                   </div>
                 </div>
               ))}
