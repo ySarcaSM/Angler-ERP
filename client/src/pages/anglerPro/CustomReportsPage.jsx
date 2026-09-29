@@ -31,23 +31,9 @@ const CHARTS = [
   { key: 'pie', label: 'Pizza', icon: PieChart },
 ];
 
-const CHART_DATA = [
-  { key: 'salesTotal', label: 'Faturamento por dia', money: true },
-  { key: 'profit', label: 'Resultado por dia', money: true },
-  { key: 'incomeExpense', label: 'Receitas x despesas', money: true },
-  { key: 'salesCount', label: 'Vendas por dia' },
-];
-
 function toLocalDate(value) {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day);
-}
-
-function toDateInputValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return year + '-' + month + '-' + day;
 }
 
 function formatDate(date) {
@@ -233,60 +219,88 @@ export default function CustomReportsPage() {
       });
       y += Math.ceil(selectedMetricObjects.length / columns) * 30 + 10;
 
-      const drawBars = (x, top, w, h, values, labels, titleText) => {
-        const max = Math.max(...values.map(Number), 1);
-        pdf.setFontSize(11);
-        pdf.setTextColor(35, 35, 35);
-        pdf.text(titleText, x, top);
-        const chartTop = top + 7;
-        const base = chartTop + h;
-        pdf.setDrawColor(220, 220, 220);
-        pdf.line(x, base, x + w, base);
-        const gap = 3;
-        const barW = Math.max(5, (w - gap * Math.max(values.length - 1, 0)) / Math.max(values.length, 1));
-        values.forEach((value, index) => {
-          const barH = (Number(value || 0) / max) * (h - 10);
-          const bx = x + index * (barW + gap);
-          pdf.setFillColor(59, 130, 246);
-          pdf.roundedRect(bx, base - barH, barW, barH, 1, 1, 'F');
-          if (values.length <= 16) {
-            pdf.setFontSize(6.5);
-            pdf.setTextColor(100, 100, 100);
-            pdf.text(labels[index], bx + barW / 2, base + 8, { align: 'center' });
-          }
+      const CHART_COLORS = [
+        [59, 130, 246], [16, 185, 129], [245, 158, 11], [168, 85, 247],
+        [236, 72, 153], [14, 165, 233], [239, 68, 68], [20, 184, 166],
+      ];
+
+      const drawLegend = (x, yLegend, metrics) => {
+        let cursor = x;
+        pdf.setFontSize(7);
+        metrics.forEach((metric, index) => {
+          const color = CHART_COLORS[index % CHART_COLORS.length];
+          pdf.setFillColor(color[0], color[1], color[2]);
+          pdf.rect(cursor, yLegend - 4, 4, 4, 'F');
+          pdf.setTextColor(80, 80, 80);
+          pdf.text(metric.label, cursor + 6, yLegend);
+          cursor += 6 + pdf.getTextWidth(metric.label) + 10;
         });
       };
 
-      const drawLine = (x, top, w, h, values, labels, titleText) => {
-        const numeric = values.map(Number);
-        const max = Math.max(...numeric, 1);
-        const min = Math.min(...numeric, 0);
-        const range = Math.max(max - min, 1);
-        const base = top + 7 + h;
-        const chartTop = top + 7;
+      const drawBars = (x, top, w, h, series, labels, titleText) => {
+        const max = Math.max(...series.flatMap((item) => item.values.map(Number)), 1);
         pdf.setFontSize(11);
         pdf.setTextColor(35, 35, 35);
         pdf.text(titleText, x, top);
-        const points = numeric.map((value, index) => ({
-          x: x + (numeric.length <= 1 ? w / 2 : (index * w) / (numeric.length - 1)),
-          y: base - ((value - min) / range) * (h - 10),
-        }));
-        pdf.setDrawColor(16, 185, 129);
-        pdf.setLineWidth(1.1);
-        for (let index = 1; index < points.length; index += 1) {
-          pdf.line(points[index - 1].x, points[index - 1].y, points[index].x, points[index].y);
-        }
-        points.forEach((point, index) => {
-          pdf.setFillColor(16, 185, 129);
-          pdf.circle(point.x, point.y, 1.6, 'F');
-          if (numeric.length <= 16) {
+        const chartTop = top + 9;
+        const base = chartTop + h;
+        const groupW = w / Math.max(labels.length, 1);
+        const barGap = 1.5;
+        const barW = Math.max(2, Math.min(14, (groupW * 0.72) / Math.max(series.length, 1)));
+        pdf.setDrawColor(220, 220, 220);
+        pdf.line(x, base, x + w, base);
+        labels.forEach((label, index) => {
+          const totalW = barW * series.length + barGap * Math.max(series.length - 1, 0);
+          const groupX = x + index * groupW + (groupW - totalW) / 2;
+          series.forEach((item, seriesIndex) => {
+            const value = Math.max(0, Number(item.values[index] || 0));
+            const barH = (value / max) * (h - 12);
+            const color = CHART_COLORS[seriesIndex % CHART_COLORS.length];
+            pdf.setFillColor(color[0], color[1], color[2]);
+            pdf.roundedRect(groupX + seriesIndex * (barW + barGap), base - barH, barW, barH, 0.8, 0.8, 'F');
+          });
+          if (labels.length <= 16) {
             pdf.setFontSize(6.5);
             pdf.setTextColor(100, 100, 100);
-            pdf.text(labels[index], point.x, base + 8, { align: 'center' });
+            pdf.text(label, x + index * groupW + groupW / 2, base + 8, { align: 'center' });
           }
         });
+        drawLegend(x, base + 19, series.map((item) => item.metric));
+      };
+
+      const drawLines = (x, top, w, h, series, labels, titleText) => {
+        const allValues = series.flatMap((item) => item.values.map(Number));
+        const max = Math.max(...allValues, 1);
+        const min = Math.min(...allValues, 0);
+        const range = Math.max(max - min, 1);
+        const base = top + 9 + h;
+        pdf.setFontSize(11);
+        pdf.setTextColor(35, 35, 35);
+        pdf.text(titleText, x, top);
+        series.forEach((item, seriesIndex) => {
+          const color = CHART_COLORS[seriesIndex % CHART_COLORS.length];
+          pdf.setDrawColor(color[0], color[1], color[2]);
+          pdf.setFillColor(color[0], color[1], color[2]);
+          const points = item.values.map((value, index) => ({
+            x: x + (item.values.length <= 1 ? w / 2 : (index * w) / (item.values.length - 1)),
+            y: base - ((Number(value || 0) - min) / range) * (h - 12),
+          }));
+          pdf.setLineWidth(1);
+          for (let index = 1; index < points.length; index += 1) {
+            pdf.line(points[index - 1].x, points[index - 1].y, points[index].x, points[index].y);
+          }
+          points.forEach((point) => pdf.circle(point.x, point.y, 1.4, 'F'));
+        });
+        if (labels.length <= 16) {
+          labels.forEach((label, index) => {
+            const px = x + (labels.length <= 1 ? w / 2 : (index * w) / (labels.length - 1));
+            pdf.setFontSize(6.5);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text(label, px, base + 8, { align: 'center' });
+          });
+        }
         pdf.setLineWidth(0.2);
-        void chartTop;
+        drawLegend(x, base + 19, series.map((item) => item.metric));
       };
 
       const drawPie = (x, top, size, values, labels, titleText) => {
@@ -294,7 +308,7 @@ export default function CustomReportsPage() {
         pdf.setTextColor(35, 35, 35);
         pdf.text(titleText, x, top);
         const cx = x + size / 2;
-        const cy = top + 40;
+        const cy = top + 48;
         const radius = 28;
         const total = values.reduce((sum, value) => sum + Math.max(0, Number(value || 0)), 0);
         if (!total) {
@@ -303,10 +317,6 @@ export default function CustomReportsPage() {
           pdf.text('Sem dados para o gráfico.', cx, cy, { align: 'center' });
           return;
         }
-        const fills = [
-          [59, 130, 246], [16, 185, 129], [245, 158, 11], [168, 85, 247],
-          [236, 72, 153], [14, 165, 233], [239, 68, 68],
-        ];
         let angle = -Math.PI / 2;
         values.forEach((value, index) => {
           const portion = Math.max(0, Number(value || 0)) / total;
@@ -317,8 +327,7 @@ export default function CustomReportsPage() {
             const current = angle + (next - angle) * (step / steps);
             points.push([cx + Math.cos(current) * radius, cy + Math.sin(current) * radius]);
           }
-          const flat = points.flat();
-          const color = fills[index % fills.length];
+          const color = CHART_COLORS[index % CHART_COLORS.length];
           pdf.setFillColor(color[0], color[1], color[2]);
           pdf.lines(points.slice(1).map((point, pointIndex) => [
             point[0] - (pointIndex === 0 ? cx : points[pointIndex][0]),
@@ -328,15 +337,14 @@ export default function CustomReportsPage() {
         });
         pdf.setFontSize(8);
         labels.forEach((label, index) => {
-          const ly = top + 10 + index * 9;
-          pdf.setFillColor(...fills[index % fills.length]);
-          pdf.rect(x + size - 55, ly - 5, 4, 4, 'F');
+          const ly = top + 18 + index * 9;
+          const color = CHART_COLORS[index % CHART_COLORS.length];
+          pdf.setFillColor(color[0], color[1], color[2]);
+          pdf.rect(x + size - 65, ly - 5, 4, 4, 'F');
           pdf.setTextColor(80, 80, 80);
-          pdf.text(label, x + size - 49, ly - 1);
+          pdf.text(label, x + size - 59, ly - 1);
         });
       };
-
-
 
       if (y > 145) {
         pdf.addPage();
@@ -348,12 +356,15 @@ export default function CustomReportsPage() {
         if (y > 205) { pdf.addPage(); header(); y = 48; }
         const chartMetrics = chart.metrics.map((key) => METRICS.find((metric) => metric.key === key)).filter(Boolean);
         if (!chartMetrics.length) return;
-        const values = chart.type === 'pie' ? chartMetrics.map((metric) => data.summary[metric.key]) : data.daily.map((day) => day[chartMetrics[0].key]);
         const labels = data.daily.map((day) => day.label);
-        if (chart.type === 'pie') drawPie(margin, y, contentWidth, values, chartMetrics.map((metric) => metric.label), chart.title);
-        else if (chart.type === 'line') drawLine(margin, y, contentWidth, 70, values, labels, chart.title);
-        else drawBars(margin, y, contentWidth, 70, values, labels, chart.title);
-        y += 88;
+        if (chart.type === 'pie') {
+          drawPie(margin, y, contentWidth, chartMetrics.map((metric) => data[metric.key]), chartMetrics.map((metric) => metric.label), chart.title);
+        } else {
+          const series = chartMetrics.map((metric) => ({ metric, values: data.daily.map((day) => day[metric.key] || 0) }));
+          if (chart.type === 'line') drawLines(margin, y, contentWidth, 70, series, labels, chart.title);
+          else drawBars(margin, y, contentWidth, 70, series, labels, chart.title);
+        }
+        y += chart.type === 'pie' ? 88 : 98;
       });
 
       if (includeTable) {
