@@ -52,7 +52,6 @@ export async function listProviderModels(provider, apiKey) {
   if (!apiKey?.trim()) throw new Error(`Informe a API key do ${PROVIDERS[provider].label}.`);
 
   const key = apiKey.trim();
-  const model = modelOverride?.trim() || getStoredModel(provider) || PROVIDERS[provider].model;
   let response;
 
   if (provider === 'gemini') {
@@ -82,7 +81,7 @@ export async function listProviderModels(provider, apiKey) {
   const data = await response.json();
   const models = provider === 'gemini'
     ? (data?.models || []).map((model) => ({
-        id: model.name?.replace(/^models\\//, ''),
+        id: model.name?.replace(/^models\//, ''),
         name: model.displayName || model.name?.replace(/^models\\//, ''),
       }))
     : (data?.data || []).map((model) => ({
@@ -131,6 +130,7 @@ export async function askProvider(provider, apiKey, prompt, modelOverride = '') 
   if (!prompt?.trim()) throw new Error('Nenhuma fala foi reconhecida.');
 
   const key = apiKey.trim();
+  const model = modelOverride?.trim() || getStoredModel(provider) || PROVIDERS[provider].model;
 
   if (provider === 'openai') {
     const response = await fetch('https://api.openai.com/v1/responses', {
