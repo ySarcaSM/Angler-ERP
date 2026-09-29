@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  BarChart3, CalendarDays, Check, ChevronDown, FileDown, FileText,
-  LineChart, PieChart, SlidersHorizontal, Sparkles, Table2,
+  BarChart3, Check, ChevronDown, FileDown, FileText, LineChart, PieChart, Plus, Settings2, SlidersHorizontal, Sparkles, Table2, Trash2,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useAuth } from '../../context/useAuth';
@@ -80,40 +79,25 @@ function buildDays(start, end) {
 
 export default function CustomReportsPage() {
   const { company } = useAuth();
-  const today = toDateInputValue(new Date());
-  const monthStart = toDateInputValue(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-
   const [title, setTitle] = useState('Relatório personalizado');
-  const [startDate, setStartDate] = useState(monthStart);
-  const [endDate, setEndDate] = useState(today);
-  const [selectedMetrics, setSelectedMetrics] = useState(['salesTotal', 'income', 'expense', 'profit']);
-  const [chartType, setChartType] = useState('bar');
-  const [chartData, setChartData] = useState('salesTotal');
+  const [charts, setCharts] = useState([
+    { id: 1, title: 'Desempenho financeiro', type: 'bar', metrics: ['income', 'expense', 'profit'] },
+    { id: 2, title: 'Vendas', type: 'line', metrics: ['salesTotal', 'salesCount'] },
+  ]);
   const [includeTable, setIncludeTable] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [preview, setPreview] = useState(null);
 
-  const selectedMetricObjects = useMemo(
-    () => METRICS.filter((metric) => selectedMetrics.includes(metric.key)),
-    [selectedMetrics],
-  );
+  const selectedMetricKeys = useMemo(() => [...new Set(charts.flatMap((chart) => chart.metrics))], [charts]);
+  const selectedMetricObjects = selectedMetricKeys.map((key) => METRICS.find((metric) => metric.key === key)).filter(Boolean);
 
-  const toggleMetric = (key) => {
-    setSelectedMetrics((current) => (
-      current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
-    ));
-  };
+  const addChart = () => setCharts((current) => [...current, { id: Date.now(), title: \`Gráfico \${current.length + 1}\`, type: 'bar', metrics: ['salesTotal'] }]);
+  const removeChart = (id) => setCharts((current) => current.length > 1 ? current.filter((chart) => chart.id !== id) : current);
+  const updateChart = (id, patch) => setCharts((current) => current.map((chart) => chart.id === id ? { ...chart, ...patch } : chart));
+  const toggleChartMetric = (chart, key) => updateChart(chart.id, { metrics: chart.metrics.includes(key) ? (chart.metrics.length > 1 ? chart.metrics.filter((item) => item !== key) : chart.metrics) : [...chart.metrics, key] });
 
   const generateData = async () => {
     if (!company?.id) throw new Error('Empresa não identificada.');
-    if (!startDate || !endDate || toLocalDate(startDate) > toLocalDate(endDate)) {
-      throw new Error('Informe um período válido.');
-    }
-    if (!selectedMetrics.length) throw new Error('Selecione pelo menos uma informação.');
-
-    const start = toLocalDate(startDate);
-    const end = toLocalDate(endDate);
-    end.setHours(23, 59, 59, 999);
 
     const [salesRes, paidIncomeRes, paidExpenseRes, pendingIncomeRes, pendingExpenseRes, budgetsRes] = await Promise.all([
       listSales(company.id, { pageSize: 500 }),
@@ -124,17 +108,12 @@ export default function CustomReportsPage() {
       listBudgets(company.id, { pageSize: 500 }),
     ]);
 
-    const inPeriod = (value) => {
-      const date = timestampToDate(value);
-      return date && date >= start && date <= end;
-    };
-
-    const sales = salesRes.data.filter((sale) => sale.status !== 'cancelled' && inPeriod(sale.createdAt));
-    const incomes = paidIncomeRes.data.filter((item) => inPeriod(item.createdAt));
-    const expenses = paidExpenseRes.data.filter((item) => inPeriod(item.createdAt));
-    const pendingIncomes = pendingIncomeRes.data.filter((item) => inPeriod(item.createdAt));
-    const pendingExpenses = pendingExpenseRes.data.filter((item) => inPeriod(item.createdAt));
-    const budgets = budgetsRes.data.filter((item) => inPeriod(item.createdAt || item.updatedAt));
+    const sales = salesRes.data.filter((sale) => sale.status !== 'cancelled');
+    const incomes = paidIncomeRes.data;
+    const expenses = paidExpenseRes.data;
+    const pendingIncomes = pendingIncomeRes.data;
+    const pendingExpenses = pendingExpenseRes.data;
+    const budgets = budgetsRes.data;
     const approvedBudgets = budgets.filter((item) => item.status === 'approved');
     const openBudgets = budgets.filter((item) => item.status !== 'approved' && item.status !== 'cancelled');
 
@@ -146,6 +125,9 @@ export default function CustomReportsPage() {
     const approvedBudgetTotal = approvedBudgets.reduce((sum, item) => sum + Number(item.value || 0), 0);
     const openBudgetTotal = openBudgets.reduce((sum, item) => sum + Number(item.value || 0), 0);
 
+    const dates = [...sales, ...incomes, ...expenses].map((item) => timestampToDate(item.createdAt)).filter(Boolean).sort((a, b) => a - b);
+    const start = dates[0] || new Date();
+    const end = dates[dates.length - 1] || new Date();
     const days = buildDays(start, end);
     const daily = days.map((day) => {
       const dayStart = new Date(day);
@@ -180,6 +162,7 @@ export default function CustomReportsPage() {
       title: title.trim() || 'Relatório personalizado',
       start,
       end,
+      charts,
       salesCount: sales.length,
       salesTotal,
       averageTicket: sales.length ? salesTotal / sales.length : 0,
@@ -353,11 +336,7 @@ export default function CustomReportsPage() {
         });
       };
 
-      const chartConfig = CHART_DATA.find((item) => item.key === chartData) || CHART_DATA[0];
-      const labels = data.daily.map((day) => day.label);
-      const values = chartData === 'incomeExpense'
-        ? data.daily.map((day) => day.income + day.expense)
-        : data.daily.map((day) => day[chartData]);
+
 
       if (y > 145) {
         pdf.addPage();
@@ -365,25 +344,17 @@ export default function CustomReportsPage() {
         y = 48;
       }
 
-      if (chartType === 'pie') {
-        let pieValues;
-        let pieLabels;
-        if (chartData === 'incomeExpense') {
-          pieValues = [data.income, data.expense];
-          pieLabels = ['Receitas', 'Despesas'];
-        } else {
-          const positiveDays = data.daily.filter((day) => Number(day[chartData]) > 0);
-          pieValues = positiveDays.map((day) => day[chartData]);
-          pieLabels = positiveDays.map((day) => day.label);
-        }
-        drawPie(margin, y, contentWidth, pieValues, pieLabels, chartConfig.label);
-      } else if (chartType === 'line') {
-        drawLine(margin, y, contentWidth, 70, values, labels, chartConfig.label);
-      } else {
-        drawBars(margin, y, contentWidth, 70, values, labels, chartConfig.label);
-      }
-
-      y += chartType === 'pie' ? 90 : 88;
+      charts.forEach((chart) => {
+        if (y > 205) { pdf.addPage(); header(); y = 48; }
+        const chartMetrics = chart.metrics.map((key) => METRICS.find((metric) => metric.key === key)).filter(Boolean);
+        if (!chartMetrics.length) return;
+        const values = chart.type === 'pie' ? chartMetrics.map((metric) => data.summary[metric.key]) : data.daily.map((day) => day[chartMetrics[0].key]);
+        const labels = data.daily.map((day) => day.label);
+        if (chart.type === 'pie') drawPie(margin, y, contentWidth, values, chartMetrics.map((metric) => metric.label), chart.title);
+        else if (chart.type === 'line') drawLine(margin, y, contentWidth, 70, values, labels, chart.title);
+        else drawBars(margin, y, contentWidth, 70, values, labels, chart.title);
+        y += 88;
+      });
 
       if (includeTable) {
         if (y > 235) {
@@ -454,43 +425,20 @@ export default function CustomReportsPage() {
       <div className="grid xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,.85fr)] gap-6">
         <div className="space-y-6">
           <div className="card">
-            <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">1. Período e identificação</h2></div>
-            <div className="card-body grid md:grid-cols-2 gap-4">
-              <label className="md:col-span-2">
-                <span className="block text-sm font-medium text-dark-300 mb-2">Título do relatório</span>
-                <input className="input w-full" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Ex.: Desempenho comercial" />
-              </label>
-              <label>
-                <span className="block text-sm font-medium text-dark-300 mb-2">Data inicial</span>
-                <div className="relative"><CalendarDays size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500" /><input type="date" className="input pl-10 w-full" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
-              </label>
-              <label>
-                <span className="block text-sm font-medium text-dark-300 mb-2">Data final</span>
-                <div className="relative"><CalendarDays size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500" /><input type="date" className="input pl-10 w-full" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div>
-              </label>
+            <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">Identificação</h2></div>
+            <div className="card-body">
+              <label><span className="block text-sm font-medium text-dark-300 mb-2">Título do relatório</span><input className="input w-full" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
             </div>
           </div>
 
           <div className="card">
-            <div className="card-header flex items-center justify-between">
-              <div><h2 className="text-sm font-semibold text-dark-200">2. Informações do relatório</h2><p className="text-xs text-dark-500 mt-1">Escolha exatamente os indicadores que aparecerão no PDF.</p></div>
-              <span className="text-xs text-primary-300">{selectedMetrics.length} selecionados</span>
-            </div>
+            <div className="card-header flex items-center justify-between"><div><h2 className="text-sm font-semibold text-dark-200">Painel de gráficos</h2><p className="text-xs text-dark-500 mt-1">Adicione vários gráficos e combine várias informações em cada um.</p></div><button type="button" onClick={addChart} className="btn-secondary text-xs"><Plus size={15}/> Adicionar gráfico</button></div>
             <div className="card-body space-y-5">
-              {['Vendas', 'Financeiro', 'Orçamentos'].map((group) => (
-                <div key={group}>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">{group}</div>
-                  <div className="grid sm:grid-cols-2 gap-2">
-                    {METRICS.filter((metric) => metric.group === group).map((metric) => {
-                      const active = selectedMetrics.includes(metric.key);
-                      return <button key={metric.key} type="button" onClick={() => toggleMetric(metric.key)} className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${active ? 'border-primary-400/40 bg-primary-400/10 text-primary-200' : 'border-dark-700/60 bg-dark-900/30 text-dark-400 hover:text-dark-200'}`}>
-                        <span className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 ${active ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-600'}`}>{active && <Check size={13} />}</span>
-                        <span className="text-sm">{metric.label}</span>
-                      </button>;
-                    })}
-                  </div>
-                </div>
-              ))}
+              {charts.map((chart, index) => <div key={chart.id} className="rounded-2xl border border-dark-700/60 bg-dark-900/30 p-4 space-y-4">
+                <div className="flex items-center gap-3"><span className="w-8 h-8 rounded-xl bg-primary-400/10 text-primary-300 flex items-center justify-center text-sm font-bold">{index + 1}</span><input className="input h-9 flex-1" value={chart.title} onChange={(event) => updateChart(chart.id, { title: event.target.value })}/><button type="button" onClick={() => removeChart(chart.id)} disabled={charts.length === 1} className="p-2 text-dark-500 hover:text-red-300 disabled:opacity-30"><Trash2 size={17}/></button></div>
+                <div><div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Estilo</div><div className="grid grid-cols-3 gap-2">{CHARTS.map((type) => { const Icon=type.icon; return <button key={type.key} type="button" onClick={() => updateChart(chart.id,{type:type.key})} className={`rounded-xl border p-3 flex flex-col items-center gap-1.5 text-xs ${chart.type===type.key?'border-primary-400/40 bg-primary-400/10 text-primary-200':'border-dark-700/60 text-dark-500'}`}><Icon size={19}/>{type.label}</button>; })}</div></div>
+                <div><div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Informações do gráfico</div><div className="grid sm:grid-cols-2 gap-2">{METRICS.map((metric) => { const active=chart.metrics.includes(metric.key); return <button key={metric.key} type="button" onClick={() => toggleChartMetric(chart,metric.key)} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs ${active?'border-primary-400/30 bg-primary-400/10 text-primary-200':'border-dark-700/50 text-dark-500'}`}><span className={`w-4 h-4 rounded border flex items-center justify-center ${active?'bg-primary-500 border-primary-500 text-white':'border-dark-600'}`}>{active&&<Check size={10}/>}</span>{metric.label}</button>; })}</div></div>
+              </div>)}
             </div>
           </div>
 
@@ -518,8 +466,11 @@ export default function CustomReportsPage() {
             </div>
           </div>
 
-          <button type="button" onClick={handleGenerate} disabled={generating} className="btn-primary w-full justify-center py-3 disabled:opacity-50 disabled:cursor-not-allowed">
+          <div className="card"> className="btn-primary w-full justify-center py-3 disabled:opacity-50 disabled:cursor-not-allowed">
             {generating ? <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <FileDown size={19} />}
+            {generating ? 'Gerando PDF...' : 'Gerar relatório em PDF'}
+          </div>
+          <button type="button" onClick={handleGenerate} disabled={generating} className="btn-primary w-full justify-center py-3.5 disabled:opacity-50">
             {generating ? 'Gerando PDF...' : 'Gerar relatório em PDF'}
           </button>
         </div>
@@ -530,17 +481,11 @@ export default function CustomReportsPage() {
             <div className="rounded-2xl bg-dark-900/60 border border-dark-700/50 p-4">
               <div className="flex items-center gap-2 text-xs text-dark-500"><FileText size={14} /> Documento</div>
               <div className="text-base font-semibold text-dark-100 mt-1">{title || 'Relatório personalizado'}</div>
-              <div className="text-xs text-dark-500 mt-1">{startDate ? formatDate(toLocalDate(startDate)) : '—'} até {endDate ? formatDate(toLocalDate(endDate)) : '—'}</div>
+              <div className="text-xs text-dark-500 mt-1">{charts.length} gráfico(s) configurado(s)</div>
             </div>
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Indicadores</div>
-              <div className="space-y-2">
-                {selectedMetricObjects.map((metric) => <div key={metric.key} className="flex items-center justify-between text-sm"><span className="text-dark-400">{metric.label}</span><span className="text-dark-200">{preview ? formatMetric(metric, preview[metric.key]) : 'será calculado'}</span></div>)}
-                {!selectedMetricObjects.length && <div className="text-sm text-amber-300">Nenhum indicador selecionado.</div>}
-              </div>
-            </div>
-            <div className="rounded-xl bg-primary-400/5 border border-primary-400/10 p-3 text-xs text-dark-400">
-              O PDF é montado com os dados reais da empresa no período escolhido. O gráfico e a tabela acompanham as opções selecionadas.
+              <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Gráficos</div><div className="space-y-2">{charts.map((chart,index)=><div key={chart.id} className="text-sm text-dark-300">{index+1}. {chart.title} — {chart.metrics.length} informação(ões)</div>)}</div><div className="rounded-xl bg-primary-400/5 border border-primary-400/10 p-3 text-xs text-dark-400">
+              O PDF é montado automaticamente com os dados disponíveis da empresa. O gráfico e a tabela acompanham as opções selecionadas.
             </div>
             {preview && <div className="flex items-center gap-2 text-xs text-emerald-300"><Check size={14} /> Dados calculados e prontos para exportação.</div>}
           </div>
