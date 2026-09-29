@@ -96,7 +96,7 @@ export default function App() {
       <Route path="/products" element={<ModuleRoute moduleKey="products"><ProductList /></ModuleRoute>} />
       <Route path="/sales" element={<ModuleRoute moduleKey="sales"><SaleList /></ModuleRoute>} />
       <Route path="/sales/new" element={<ModuleRoute moduleKey="sales"><WriteRoute><SaleForm /></WriteRoute></ModuleRoute>} />
-      <Route path="/sales/:id" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
+      <Route path="/sales/:id/edit" element={<ModuleRoute moduleKey="sales"><WriteRoute><SaleForm /></WriteRoute></ModuleRoute>} />
       <Route path="/purchases/new" element={<ModuleRoute moduleKey="purchases"><WriteRoute><PurchaseForm /></WriteRoute></ModuleRoute>} />
       <Route path="/purchases/:id/edit" element={<ModuleRoute moduleKey="purchases"><WriteRoute><PurchaseForm /></WriteRoute></ModuleRoute>} />
       <Route path="/purchases" element={<ModuleRoute moduleKey="purchases"><PurchaseList /></ModuleRoute>} />
