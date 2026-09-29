@@ -18,7 +18,7 @@ const DEFAULT_UI_SETTINGS = {
   dangerButtonColor: '#dc2626',
   accentColor: '#d4af37',
   fontFamily: 'Inter',
-  fontSize: '100%',
+  fontSize: '1',
   borderRadius: '12px',
   density: 'comfortable',
   cardShadow: 'medium',
@@ -36,11 +36,11 @@ export function applyUISettings(settings = {}) {
   root.style.setProperty('--ui-danger', ui.dangerButtonColor);
   root.style.setProperty('--ui-accent', ui.accentColor);
   root.style.setProperty('--ui-font-family', ui.fontFamily);
-  root.style.setProperty('--ui-font-size', ui.fontSize);
+  root.style.setProperty('--ui-font-scale', ui.fontSize === '90%' ? '0.85' : ui.fontSize === '100%' ? '1' : ui.fontSize === '110%' ? '1.15' : ui.fontSize === '120%' ? '1.3' : String(ui.fontSize || '1'));
   root.style.setProperty('--ui-radius', ui.borderRadius);
   root.dataset.anglerUi = 'true';
-  document.body.style.fontFamily = ui.fontFamily;
-  document.body.style.fontSize = ui.fontSize;
+  document.body.style.fontFamily = '';
+  document.body.style.fontSize = '';
 }
 
 // ─── Company ───

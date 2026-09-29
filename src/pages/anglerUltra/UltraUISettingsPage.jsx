@@ -42,7 +42,7 @@ export default function UltraUISettingsPage() {
 
   const previewStyle = {
     fontFamily: form.fontFamily,
-    fontSize: form.fontSize,
+    fontSize: `calc(16px * ${form.fontSize})`,
     borderRadius: form.borderRadius,
     boxShadow: form.cardShadow === 'none'
       ? 'none'
@@ -69,7 +69,7 @@ export default function UltraUISettingsPage() {
       </section>
       <section className="card p-6 space-y-5"><h2 className="font-semibold text-dark-100 flex items-center gap-2"><Type size={18} className="text-orange-400" />Tipografia</h2>
         <label><span className="label">Fonte</span><select className="input" value={form.fontFamily} onChange={(e)=>set('fontFamily',e.target.value)} disabled={!canEdit}>{FONT_OPTIONS.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-        <label><span className="label">Tamanho base</span><select className="input" value={form.fontSize} onChange={(e)=>set('fontSize',e.target.value)} disabled={!canEdit}><option value="90%">Pequeno</option><option value="100%">Normal</option><option value="110%">Grande</option><option value="120%">Muito grande</option></select></label>
+        <label><span className="label">Tamanho base</span><select className="input" value={form.fontSize} onChange={(e)=>set('fontSize',e.target.value)} disabled={!canEdit}><option value="0.85">Pequeno</option><option value="1">Normal</option><option value="1.15">Grande</option><option value="1.3">Muito grande</option></select></label>
       </section>
       <section className="card p-6 space-y-5"><h2 className="font-semibold text-dark-100 flex items-center gap-2"><LayoutGrid size={18} className="text-orange-400" />Aparência</h2>
         <label><span className="label">Arredondamento</span><select className="input" value={form.borderRadius} onChange={(e)=>set('borderRadius',e.target.value)} disabled={!canEdit}><option value="6px">Compacto</option><option value="10px">Suave</option><option value="12px">Padrão</option><option value="18px">Arredondado</option><option value="24px">Bem arredondado</option></select></label>
