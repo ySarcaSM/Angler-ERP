@@ -22,6 +22,7 @@ const DEFAULT_UI_SETTINGS = {
   borderRadius: '12px',
   density: 'comfortable',
   cardShadow: 'medium',
+  sidebarOrder: ['principal', 'management', 'financial', 'budgets', 'anglerpro', 'anglerultra', 'system'],
 };
 
 export function getDefaultUISettings() {

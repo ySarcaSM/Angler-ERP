@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Palette, Type, LayoutGrid, Save, RotateCcw, Sparkles } from 'lucide-react';
+import { Palette, Type, LayoutGrid, Save, RotateCcw, Sparkles, ArrowUp, ArrowDown, Lock } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { getCompany, updateCompany, getDefaultUISettings, applyUISettings } from '../../services/firebase/settings';
 import toast from 'react-hot-toast';
 
 const FONT_OPTIONS = [['Inter', 'Inter'], ['system-ui', 'Sistema'], ['Arial', 'Arial'], ['Verdana', 'Verdana'], ['Georgia', 'Georgia'], ['monospace', 'Monoespaçada']];
 const DEFAULT = getDefaultUISettings();
+const SIDEBAR_GROUPS = [
+  ['principal', 'Principal'],
+  ['management', 'Gestão'],
+  ['financial', 'Financeiro'],
+  ['budgets', 'Orçamentos'],
+  ['anglerpro', 'Angler Pro'],
+  ['anglerultra', 'Angler Ultra'],
+  ['system', 'Sistema'],
+];
 
 export default function UltraUISettingsPage() {
   const { company, userData } = useAuth();
@@ -38,7 +47,15 @@ export default function UltraUISettingsPage() {
       toast.error(error.message || 'Não foi possível salvar as configurações.');
     } finally { setSaving(false); }
   };
-  const reset = () => setForm({ ...DEFAULT });
+  const reset = () => setForm({ ...DEFAULT, sidebarOrder: [...DEFAULT.sidebarOrder] });
+  const moveGroup = (index, direction) => {
+    const order = [...(form.sidebarOrder || DEFAULT.sidebarOrder)];
+    const target = index + direction;
+    if (target < 0 || target >= order.length || order[target] === 'system' || order[index] === 'system') return;
+    [order[index], order[target]] = [order[target], order[index]];
+    set('sidebarOrder', order);
+  };
+  const sidebarOrder = [...(form.sidebarOrder || DEFAULT.sidebarOrder).filter((key) => key !== 'system'), 'system'];
 
   const normalizeFontScale = (value) => {
     const parsed = Number.parseFloat(value);
@@ -85,6 +102,7 @@ export default function UltraUISettingsPage() {
         <label><span className="label">Densidade</span><select className="input" value={form.density} onChange={(e)=>set('density',e.target.value)} disabled={!canEdit}><option value="comfortable">Confortável</option><option value="compact">Compacta</option></select></label>
         <label><span className="label">Sombras dos cards</span><select className="input" value={form.cardShadow} onChange={(e)=>set('cardShadow',e.target.value)} disabled={!canEdit}><option value="none">Sem sombra</option><option value="soft">Suave</option><option value="medium">Média</option></select></label>
       </section>
+      <section className="card p-6"><h2 className="font-semibold text-dark-100 mb-4">Ordem dos grupos</h2><p className="text-sm text-dark-500 mb-4">Defina a posição dos grupos na barra lateral. O grupo Sistema permanece sempre por último.</p><div className="space-y-2">{sidebarOrder.map((key, index) => { const item = SIDEBAR_GROUPS.find(([id]) => id === key); if (!item) return null; const isSystem = key === 'system'; return <div key={key} className="flex items-center justify-between gap-3 rounded-xl border border-dark-700 bg-dark-900/60 px-3 py-2"><div className="flex items-center gap-2 text-sm text-dark-200">{isSystem ? <Lock size={15} className="text-dark-500" /> : <span className="text-dark-500 text-xs w-5 text-center">{index + 1}</span>}<span>{item[1]}</span></div>{!isSystem && canEdit ? <div className="flex gap-1"><button type="button" className="btn-ghost p-2" onClick={() => moveGroup(index, -1)} disabled={index === 0} title="Mover para cima"><ArrowUp size={15} /></button><button type="button" className="btn-ghost p-2" onClick={() => moveGroup(index, 1)} disabled={index >= sidebarOrder.length - 2} title="Mover para baixo"><ArrowDown size={15} /></button></div> : isSystem ? <span className="text-xs text-dark-500">Sempre inferior</span> : null}</div>; })}</div></section>
       <section className="card p-6"><h2 className="font-semibold text-dark-100 mb-4">Prévia</h2><div className="rounded-xl border border-dark-700 space-y-4" style={previewStyle}><div><div className="text-lg font-bold text-dark-100" style={{ color: form.accentColor }}>Exemplo de interface</div><p className="text-sm text-dark-400">Esta prévia acompanha as alterações enquanto você edita. Elas só são aplicadas ao restante do /app após salvar.</p></div><div className="flex flex-wrap gap-2"><button className="btn-primary" style={{ ...previewButtonStyle, background: form.primaryButtonColor }}>Botão principal</button><button className="btn-secondary" style={{ ...previewButtonStyle, background: form.secondaryButtonColor }}>Secundário</button><button className="btn-danger" style={{ ...previewButtonStyle, background: form.dangerButtonColor }}>Excluir</button></div></div></section>
     </div>
     <div className="flex justify-end gap-3"><button type="button" className="btn-secondary" onClick={reset}><RotateCcw size={17}/>Voltar aos padrões</button><button type="button" className="btn-primary" onClick={save} disabled={!canEdit || saving}><Save size={17}/>{saving ? 'Salvando...' : 'Salvar configurações'}</button></div>

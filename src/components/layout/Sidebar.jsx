@@ -7,13 +7,15 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 
+const DEFAULT_SECTION_ORDER = ['principal', 'management', 'financial', 'budgets', 'anglerpro', 'anglerultra', 'system'];
+
 const NAV_SECTIONS = [
-  { label: 'Principal', items: [
+  { id: 'principal', label: 'Principal', items: [
     { to: '/', icon: Home, label: 'Home', end: true },
     { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/assistant', icon: Bot, label: 'Assistente de IA', proLabel: 'Angel Pro', moduleKey: 'assistant' },
   ] },
-  { label: 'Gestão', items: [
+  { id: 'management', label: 'Gestão', items: [
     { to: '/app/clients', icon: Users, label: 'Clientes', moduleKey: 'clients' },
     { to: '/app/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
     { to: '/app/sales', icon: ShoppingCart, label: 'Vendas', moduleKey: 'sales' },
@@ -21,24 +23,24 @@ const NAV_SECTIONS = [
     { to: '/app/suppliers', icon: FileText, label: 'Fornecedores', moduleKey: 'suppliers' },
     { to: '/app/locations', icon: MapPin, label: 'Localizações', moduleKey: 'locations' },
   ] },
-  { label: 'Financeiro', items: [
+  { id: 'financial', label: 'Financeiro', items: [
     { to: '/app/financial', icon: DollarSign, label: 'Financeiro', moduleKey: 'financial' },
     { to: '/app/stock', icon: Warehouse, label: 'Estoque', moduleKey: 'stock' },
     { to: '/app/reports', icon: BarChart3, label: 'Relatórios', moduleKey: 'reports' },
   ] },
-  { label: 'Orçamentos', items: [
+  { id: 'budgets', label: 'Orçamentos', items: [
     { to: '/app/budgets/profiles', icon: Ruler, label: 'Medição', moduleKey: 'measurement' },
     { to: '/app/budgets/formulas', icon: Calculator, label: 'Fórmulas', moduleKey: 'formulas' },
     { to: '/app/budgets', icon: FileSignature, label: 'Orçamentos', end: true, moduleKey: 'budgets' },
   ] },
-  { label: 'Angler Pro', planKey: 'anglerpro', items: [
+  { id: 'anglerpro', label: 'Angler Pro', planKey: 'anglerpro', items: [
     { to: '/app/angler-pro/relatorios-semanais', icon: FileText, label: 'Relatórios semanais' },
     { to: '/app/angler-pro/relatorios-customizaveis', icon: BarChart3, label: 'Relatórios customizáveis' },
   ] },
-  { label: 'Angler Ultra', planKey: 'anglerultra', items: [
+  { id: 'anglerultra', label: 'Angler Ultra', planKey: 'anglerultra', items: [
     { to: '/app/angler-ultra/ui', icon: Settings, label: 'Configurações de UI' },
   ] },
-  { label: 'Sistema', items: [
+  { id: 'system', label: 'Sistema', items: [
     { to: '/app/settings', icon: Settings, label: 'Configurações' },
     { to: '/app/modules', icon: Blocks, label: 'Módulos', viewerHidden: true },
     { to: '/app/users', icon: Users, label: 'Usuários', adminOrOwner: true },
@@ -50,6 +52,9 @@ const NAV_SECTIONS = [
 
 export default function Sidebar({ collapsed, onToggle }) {
   const { user, userData, company, logout, getEffectiveModules } = useAuth();
+  const configuredOrder = Array.isArray(company?.settings?.ui?.sidebarOrder) ? company.settings.ui.sidebarOrder : DEFAULT_SECTION_ORDER;
+  const sectionOrder = [...configuredOrder.filter((key) => key !== 'system'), ...DEFAULT_SECTION_ORDER.filter((key) => key !== 'system' && !configuredOrder.includes(key)), 'system'];
+  const orderedSections = sectionOrder.map((key) => NAV_SECTIONS.find((section) => section.id === key)).filter(Boolean);
 
   return (
     <aside className={`fixed left-0 top-0 h-screen bg-dark-900 border-r border-dark-700/50 flex flex-col z-40 transition-all duration-300 ${collapsed ? 'w-[72px]' : 'w-64'}`}>
@@ -58,7 +63,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       </div>
       <div className="gold-line" />
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {NAV_SECTIONS.map((section) => {
+        {orderedSections.map((section) => {
           if (section.planKey === 'anglerpro' && !['anglerpro', 'anglerultra'].includes(company?.plan)) return null;
           if (section.planKey === 'anglerultra' && company?.plan !== 'anglerultra') return null;
 
