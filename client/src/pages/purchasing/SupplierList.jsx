@@ -120,7 +120,7 @@ export default function SupplierList() {
         <div className="card-header"><div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 max-w-sm"><Search size={16} className="text-dark-500" /><input type="text" placeholder="Buscar..." className="bg-transparent text-sm outline-none w-full" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
       </div>
-      <Modal open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/suppliers/new') navigate('/app/suppliers'); }} title={editing ? 'Editar Fornecedor' : 'Novo Fornecedor'} size="lg" backdropClassName="bg-transparent">
+      <Modal fullscreen={location.pathname === '/app/suppliers/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/suppliers/new') navigate('/app/suppliers'); }} title={editing ? 'Editar Fornecedor' : 'Novo Fornecedor'} size="lg" backdropClassName="bg-transparent">
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="label">Nome *</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
