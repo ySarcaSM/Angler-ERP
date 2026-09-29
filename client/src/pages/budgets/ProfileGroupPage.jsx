@@ -921,7 +921,7 @@ function CutPreview({ profile, result, onDownload }) {
 
       // A cota vertical fica alinhada à primeira mochila/sanfona,
       // usando a altura real do retângulo desenhado.
-      const firstPieceX = mainStartX + mainPieceDrawWidth + (hasAccordion ? accordionDrawWidthForDimension : 0);
+      const firstPieceX = mainStartX + mainPieceDrawWidth + (hasAccordion ? accordionDrawWidth : 0);
       const firstPieceY = mainAreaY;
       drawVerticalDimension(context, firstPieceX + 8, firstPieceY, firstPieceY + (cutHeightCm * verticalCentimeterScale), `${formatNumber(cutHeightCm, 0)} cm`);
     }
