@@ -82,7 +82,7 @@ export async function listProviderModels(provider, apiKey) {
   const models = provider === 'gemini'
     ? (data?.models || []).map((model) => ({
         id: model.name?.replace(/^models\//, ''),
-        name: model.displayName || model.name?.replace(/^models\\//, ''),
+        name: model.displayName || model.name?.replace(/^models\//, ''),
       }))
     : (data?.data || []).map((model) => ({
         id: model.id,
