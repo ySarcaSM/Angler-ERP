@@ -12,16 +12,19 @@ export default function UltraUISettingsPage() {
   const [form, setForm] = useState(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savedSettings, setSavedSettings] = useState(DEFAULT);
   const canEdit = ['owner', 'admin'].includes(userData?.role);
 
   useEffect(() => {
     if (!company?.id) return;
-    getCompany(company.id).then((data) => setForm({ ...DEFAULT, ...(data?.settings?.ui || {}) })).finally(() => setLoading(false));
+    getCompany(company.id).then((data) => {
+      const saved = { ...DEFAULT, ...(data?.settings?.ui || {}) };
+      setSavedSettings(saved);
+      setForm(saved);
+      applyUISettings(saved);
+    }).finally(() => setLoading(false));
   }, [company?.id]);
 
-  useEffect(() => {
-    if (!loading) applyUISettings(form);
-  }, [form, loading]);
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
@@ -29,12 +32,14 @@ export default function UltraUISettingsPage() {
     setSaving(true);
     try {
       await updateCompany(company.id, { settings: { ...(company.settings || {}), ui: form } });
+      setSavedSettings(form);
+      applyUISettings(form);
       toast.success('Configurações de UI salvas!');
     } catch (error) {
       toast.error(error.message || 'Não foi possível salvar as configurações.');
     } finally { setSaving(false); }
   };
-  const reset = () => setForm(DEFAULT);
+  const reset = () => setForm(savedSettings);
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" /></div>;
 
@@ -54,7 +59,7 @@ export default function UltraUISettingsPage() {
         <label><span className="label">Densidade</span><select className="input" value={form.density} onChange={(e)=>set('density',e.target.value)} disabled={!canEdit}><option value="comfortable">Confortável</option><option value="compact">Compacta</option></select></label>
         <label><span className="label">Sombras dos cards</span><select className="input" value={form.cardShadow} onChange={(e)=>set('cardShadow',e.target.value)} disabled={!canEdit}><option value="none">Sem sombra</option><option value="soft">Suave</option><option value="medium">Média</option></select></label>
       </section>
-      <section className="card p-6"><h2 className="font-semibold text-dark-100 mb-4">Prévia</h2><div className="rounded-xl border border-dark-700 p-5 space-y-4"><div><div className="text-lg font-bold text-dark-100">Exemplo de interface</div><p className="text-sm text-dark-400">As alterações são aplicadas somente dentro do /app.</p></div><div className="flex flex-wrap gap-2"><button className="btn-primary">Botão principal</button><button className="btn-secondary">Secundário</button><button className="btn-danger">Excluir</button></div></div></section>
+      <section className="card p-6"><h2 className="font-semibold text-dark-100 mb-4">Prévia</h2><div className="rounded-xl border border-dark-700 p-5 space-y-4"><div><div className="text-lg font-bold text-dark-100">Exemplo de interface</div><p className="text-sm text-dark-400">As alterações ficam em edição até você clicar em salvar.</p></div><div className="flex flex-wrap gap-2"><button className="btn-primary">Botão principal</button><button className="btn-secondary">Secundário</button><button className="btn-danger">Excluir</button></div></div></section>
     </div>
     <div className="flex justify-end gap-3"><button type="button" className="btn-secondary" onClick={reset}><RotateCcw size={17}/>Restaurar padrão</button><button type="button" className="btn-primary" onClick={save} disabled={!canEdit || saving}><Save size={17}/>{saving ? 'Salvando...' : 'Salvar configurações'}</button></div>
   </div>;
