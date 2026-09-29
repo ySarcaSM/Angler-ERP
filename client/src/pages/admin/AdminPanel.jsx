@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Shield, Users, Trash2, Search, LogOut, RefreshCw,
   UserCheck, UserX, ChevronDown, AlertTriangle, Loader2,
-  Building2, Eye,
+  Building2, Eye, MessageSquare,
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import {
@@ -11,6 +11,7 @@ import {
   disableUser,
   enableUser,
   deleteUserFull,
+  listContactMessages,
 } from '../../services/firebase/admin';
 import DeleteConfirmModal from '../../components/admin/DeleteConfirmModal';
 import toast from 'react-hot-toast';
@@ -50,6 +51,8 @@ export default function AdminPanel() {
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [contactMessages, setContactMessages] = useState([]);
+  const [messagesLoading, setMessagesLoading] = useState(true);
 
   // ─── Verificar autenticação ───
 
@@ -58,6 +61,21 @@ export default function AdminPanel() {
       navigate('/admin/login', { replace: true });
     }
   }, [authLoading, isAuthenticated, navigate]);
+
+  // ─── Carregar mensagens do formulário de contato ───
+
+  const loadContactMessages = useCallback(async () => {
+    setMessagesLoading(true);
+    try {
+      const data = await listContactMessages();
+      setContactMessages(data);
+    } catch (err) {
+      console.error('Erro ao carregar mensagens de contato:', err);
+      toast.error('Erro ao carregar mensagens de contato.');
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, []);
 
   // ─── Carregar TODOS os usuários ───
 
@@ -77,8 +95,9 @@ export default function AdminPanel() {
   useEffect(() => {
     if (isAuthenticated) {
       loadUsers();
+      loadContactMessages();
     }
-  }, [isAuthenticated, loadUsers]);
+  }, [isAuthenticated, loadUsers, loadContactMessages]);
 
   // ─── Empresas únicas (para filtro) ───
 
@@ -231,6 +250,7 @@ export default function AdminPanel() {
             { label: 'Ativos', value: stats.active, icon: UserCheck, color: 'text-green-400' },
             { label: 'Desativados', value: stats.disabled, icon: UserX, color: 'text-red-400' },
             { label: 'Empresas', value: stats.companies, icon: Building2, color: 'text-blue-400' },
+            { label: 'Mensagens', value: contactMessages.length, icon: MessageSquare, color: 'text-purple-400' },
           ].map(({ label, value, icon: Icon, color }) => (
             <div
               key={label}
@@ -244,6 +264,70 @@ export default function AdminPanel() {
             </div>
           ))}
         </div>
+
+        {/* Mensagens de contato */}
+        <section className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-dark-700">
+            <div>
+              <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-purple-400" />
+                Mensagens do formulário de contato
+              </h2>
+              <p className="text-xs text-dark-500 mt-1">Todas as mensagens enviadas pela página inicial.</p>
+            </div>
+            <button
+              onClick={loadContactMessages}
+              disabled={messagesLoading}
+              className="p-2 rounded-lg text-dark-400 hover:text-white hover:bg-dark-800 transition-colors"
+              title="Atualizar mensagens"
+            >
+              <RefreshCw className={`w-4 h-4 ${messagesLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {messagesLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+              <span className="ml-3 text-sm text-dark-400">Carregando mensagens...</span>
+            </div>
+          ) : contactMessages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-dark-500">
+              <MessageSquare className="w-10 h-10 mb-2 opacity-30" />
+              <p className="text-sm">Nenhuma mensagem recebida ainda.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-dark-800">
+                    <th className="text-left px-5 py-3 text-xs font-medium text-dark-500 uppercase">Título</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-dark-500 uppercase">E-mail</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-dark-500 uppercase">Descrição</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-dark-500 uppercase">Recebida em</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-dark-800">
+                  {contactMessages.map((message) => (
+                    <tr key={message.id} className="hover:bg-dark-800/50 align-top">
+                      <td className="px-5 py-4 text-sm font-medium text-white min-w-[180px]">
+                        {message.title || 'Sem título'}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-blue-300 break-all min-w-[190px]">
+                        {message.email || '—'}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-dark-300 whitespace-pre-wrap min-w-[280px] max-w-[520px]">
+                        {message.description || '—'}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-dark-400 whitespace-nowrap">
+                        {formatDate(message.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
         {/* Search & Filters */}
         <div className="bg-dark-900 border border-dark-700 rounded-xl p-4 space-y-4">
