@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  UserPlus, ArrowLeft, ArrowRight, Check, Building2, User, LayoutGrid, Wand2,
+  UserPlus, ArrowLeft, ArrowRight, Check, Building2, User, LayoutGrid, Wand2, CreditCard, Crown, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
@@ -98,6 +98,37 @@ const STEPS = [
   { num: 1, label: 'Conta', icon: User },
   { num: 2, label: 'Empresa', icon: Building2 },
   { num: 3, label: 'Módulos', icon: LayoutGrid },
+  { num: 4, label: 'Planos', icon: CreditCard },
+];
+
+const PLANS = [
+  {
+    key: 'testfree',
+    name: 'TestFREE',
+    price: 'R$ 0',
+    period: 'para sempre',
+    badge: 'Grátis',
+    description: 'Comece sem custo com acesso ao conteúdo já disponível.',
+    icon: Sparkles,
+  },
+  {
+    key: 'anglerpro',
+    name: 'AnglerPro',
+    price: 'R$ 119,98',
+    period: '/mês',
+    badge: 'Pro',
+    description: 'Recursos avançados para empresas que querem evoluir.',
+    icon: Crown,
+  },
+  {
+    key: 'anglerultra',
+    name: 'AnglerUltra',
+    price: 'R$ 199,98',
+    period: '/mês',
+    badge: 'Ultra',
+    description: 'Recursos avançados e configurações adicionais da plataforma.',
+    icon: Crown,
+  },
 ];
 
 // ═══════════════════════════════════════════
@@ -351,6 +382,71 @@ function Step3({ modules, setModules, errors }) {
   );
 }
 
+function Step4({ plan, setPlan, errors }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-4">
+        <CreditCard size={20} className="text-primary-400" />
+        <h2 className="text-lg font-semibold text-dark-100">Escolha seu plano</h2>
+      </div>
+
+      <p className="text-dark-400 text-sm">
+        Escolha o plano que deseja utilizar na sua empresa:
+      </p>
+
+      <div className="grid grid-cols-1 gap-3">
+        {PLANS.map((item) => {
+          const Icon = item.icon;
+          const selected = plan === item.key;
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setPlan(item.key)}
+              aria-pressed={selected}
+              className={`w-full text-left p-4 rounded-xl border transition-all ${
+                selected
+                  ? 'border-primary-400/60 bg-primary-400/10 ring-1 ring-primary-400/30'
+                  : 'border-dark-700/50 bg-dark-800/50 hover:border-dark-600'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  selected ? 'bg-primary-500/20 text-primary-300' : 'bg-dark-700 text-dark-400'
+                }`}>
+                  <Icon size={20} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-dark-100">{item.name}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-dark-700 text-dark-300">{item.badge}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1.5 mt-1">
+                    <span className="text-lg font-bold text-primary-300">{item.price}</span>
+                    <span className="text-xs text-dark-500">{item.period}</span>
+                  </div>
+                  <p className="text-xs text-dark-400 mt-1">{item.description}</p>
+                </div>
+
+                <div className={`w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 ${
+                  selected ? 'border-primary-400 bg-primary-500' : 'border-dark-600'
+                }`}>
+                  {selected && <div className="w-2 h-2 rounded-full bg-dark-950" />}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {errors.plan && <p className="text-red-400 text-xs">{errors.plan}</p>}
+    </div>
+  );
+}
+
+
 // ═══════════════════════════════════════════
 // Componente principal
 // ═══════════════════════════════════════════
@@ -380,6 +476,9 @@ export default function Register() {
     suppliers: true, locations: true, financial: true, stock: true, reports: true,
     assistant: true, measurement: true, formulas: true, budgets: true,
   });
+
+  // ─── Step 4: Plano ───
+  const [plan, setPlan] = useState('testfree');
 
   // ═══════════════════════════════════════════
   // Validação por passo
@@ -423,6 +522,15 @@ export default function Register() {
     return true;
   }
 
+  function validateStep4() {
+    if (!PLANS.some((item) => item.key === plan)) {
+      setErrors({ plan: 'Selecione um plano' });
+      return false;
+    }
+    setErrors({});
+    return true;
+  }
+
   // ═══════════════════════════════════════════
   // Navegação
   // ═══════════════════════════════════════════
@@ -430,6 +538,7 @@ export default function Register() {
   function nextStep() {
     if (step === 1 && validateStep1()) setStep(2);
     else if (step === 2 && validateStep2()) setStep(3);
+    else if (step === 3 && validateStep3()) setStep(4);
   }
 
   function fillRandomCompany() {
@@ -462,7 +571,7 @@ export default function Register() {
 
   async function handleSubmit(e) {
     e?.preventDefault?.();
-    if (!validateStep3()) return;
+    if (!validateStep4()) return;
 
     setLoading(true);
     try {
@@ -483,6 +592,7 @@ export default function Register() {
         companyEmail: company.companyEmail.trim(),
         companyPhone: company.companyPhone.replace(/\D/g, ''),
         enabledModules,
+        plan,
       });
 
       toast.success(result.requiresEmailVerification
@@ -538,6 +648,13 @@ export default function Register() {
                   errors={errors}
                 />
               )}
+              {step === 4 && (
+                <Step4
+                  plan={plan}
+                  setPlan={setPlan}
+                  errors={errors}
+                />
+              )}
 
               {/* Botões de navegação */}
               <div className="flex items-center gap-3 mt-6 pt-4 border-t border-dark-700/50">
@@ -551,7 +668,7 @@ export default function Register() {
                   </button>
                 )}
 
-                {step < 3 ? (
+                {step < 4 ? (
                   <button
                     type="button"
                     onClick={nextStep}
