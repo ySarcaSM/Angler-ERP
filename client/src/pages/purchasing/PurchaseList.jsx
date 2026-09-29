@@ -111,7 +111,7 @@ export default function PurchaseList() {
         <DataTable columns={columns} data={data} loading={loading} />
       </div>
 
-      <Modal open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/purchases/new') navigate('/app/purchases'); }} title="Nova Compra" size="lg" backdropClassName="bg-transparent">
+      <Modal fullscreen={location.pathname === '/app/purchases/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/purchases/new') navigate('/app/purchases'); }} title="Nova Compra" size="lg" backdropClassName="bg-transparent">
         <form onSubmit={handleCreate} className="space-y-5">
           <div><label className="label">Fornecedor *</label><select className="input" value={form.supplierId} onChange={(event) => setForm({ ...form, supplierId: event.target.value })} required><option value="">Selecione...</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></div>
           <div className="space-y-3">
