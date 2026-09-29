@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, CheckCircle, Trash2 } from 'lucide-react';
+import { Plus, Search, CheckCircle, Trash2, Edit2 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { listPurchases, receivePurchase, createPurchase } from '../../services/firebase/purchases';
 import { listSuppliers } from '../../services/firebase/suppliers';
@@ -87,6 +87,8 @@ export default function PurchaseList() {
     finally { setSaving(false); }
   };
 
+  const handleEdit = (id) => navigate(`/app/purchases/${id}/edit`);
+
   const handleReceive = async (id) => {
     try { const purchase = data.find((item) => item.id === id); await receivePurchase(id, company.id); await logAudit(company.id, { user, userName: userData?.name, action: 'receive', entity: 'Compra', entityId: id, description: `${userData?.name || 'Usuário'} recebeu a compra #${purchase?.number || id} e atualizou o estoque.`, details: { total: purchase?.total, supplierName: purchase?.supplierName } }); toast.success('Recebida! Estoque atualizado.'); load(); }
     catch (err) { toast.error(err.message); }
@@ -98,7 +100,7 @@ export default function PurchaseList() {
     { key: 'total', label: 'Total', render: (v) => <span className="font-semibold text-dark-100">{formatBRL(v)}</span> },
     { key: 'status', label: 'Status', render: (v) => <span className={{ draft: 'badge-neutral', ordered: 'badge-info', received: 'badge-success', cancelled: 'badge-danger' }[v] || 'badge-neutral'}>{statusLabel(v)}</span> },
     { key: 'createdAt', label: 'Data', render: (v) => <span className="text-dark-500 text-xs">{formatDate(v?.toDate?.() || v)}</span> },
-    { key: '_actions', label: '', width: '60px', render: (_, row) => (!isViewer && (row.status === 'ordered' || row.status === 'draft')) ? <button onClick={(e) => { e.stopPropagation(); handleReceive(row.id); }} className="btn-ghost btn-sm text-emerald-400"><CheckCircle size={14} /></button> : null },
+    { key: '_actions', label: '', width: '90px', render: (_, row) => !isViewer ? <div className="flex gap-1">{row.status === 'draft' && <button onClick={(e) => { e.stopPropagation(); handleEdit(row.id); }} className="btn-ghost btn-sm" title="Editar"><Edit2 size={14} /></button>}{(row.status === 'ordered' || row.status === 'draft') && <button onClick={(e) => { e.stopPropagation(); handleReceive(row.id); }} className="btn-ghost btn-sm text-emerald-400" title="Receber"><CheckCircle size={14} /></button>}</div> : null },
   ];
 
   return (
