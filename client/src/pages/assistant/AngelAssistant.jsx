@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, Edit2, KeyRound, MessageCircle, Mic, MicOff, Plus, Send, Sparkles, Trash2 } from 'lucide-react';
+import { Bot, Edit2, Eye, EyeOff, KeyRound, MessageCircle, Mic, MicOff, Plus, Send, Sparkles, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/useAuth';
 import PageHeader from '../../components/ui/PageHeader';
@@ -40,6 +40,7 @@ export default function AngelAssistant() {
   const [clearingEmptyChats, setClearingEmptyChats] = useState(false);
   const [provider, setProvider] = useState('gemini');
   const [providerKey, setProviderKey] = useState('');
+  const [providerKeyVisible, setProviderKeyVisible] = useState(false);
   const [providerModel, setProviderModel] = useState('');
   const [listening, setListening] = useState(false);
   const [models, setModels] = useState([]);
@@ -378,7 +379,10 @@ export default function AngelAssistant() {
               </select>
               <label className="text-sm font-medium text-dark-200 block mt-3">API key do {aiProviders[provider].label}</label>
               <div className="flex gap-2 mt-2">
-                <input type="password" value={providerKey} onChange={(event) => setProviderKey(event.target.value)} placeholder="Cole sua API key aqui" className="input flex-1" autoComplete="off" />
+                <div className="relative flex-1">
+                <input type={providerKeyVisible ? "text" : "password"} value={providerKey} onChange={(event) => setProviderKey(event.target.value)} placeholder="Cole sua API key aqui" className="input flex-1 pr-10" autoComplete="off" />
+                <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-violet-300 hover:text-violet-100" onClick={() => setProviderKeyVisible((value) => !value)} aria-label={providerKeyVisible ? 'Ocultar API key' : 'Mostrar API key'} title={providerKeyVisible ? 'Ocultar API key' : 'Mostrar API key'}>{providerKeyVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+                </div>
                 <button type="button" className="btn-secondary" onClick={saveProviderSettings}>Salvar</button>
               </div>
               <label className="text-sm font-medium text-dark-200 block mt-3">Modelo</label>
