@@ -432,15 +432,12 @@ export default function CustomReportsPage() {
       </div>
 
       <div className="space-y-6">
-        <div className="space-y-6">
-          <div className="grid lg:grid-cols-[minmax(0,.7fr)_minmax(0,1.3fr)] gap-6">
-            <div className="card">
-            <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">Identificação</h2></div>
-            <div className="card-body">
-              <label><span className="block text-sm font-medium text-dark-300 mb-2">Título do relatório</span><input className="input w-full" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-            </div>
-            </div>
+        <div className="card">
+          <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">Identificação</h2></div>
+          <div className="card-body">
+            <label><span className="block text-sm font-medium text-dark-300 mb-2">Título do relatório</span><input className="input w-full" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
           </div>
+        </div>
 
           <div className="card">
             <div className="card-header flex items-center justify-between">
@@ -450,27 +447,32 @@ export default function CustomReportsPage() {
             <div className="card-body space-y-5">
               {charts.map((chart, index) => (
                 <div key={chart.id} className="rounded-2xl border border-dark-700/60 bg-dark-900/30 p-4">
-                  <div className="grid lg:grid-cols-[minmax(230px,.7fr)_minmax(220px,.75fr)_minmax(0,1.55fr)] gap-5 items-start">
-                    <span className="w-8 h-8 rounded-xl bg-primary-400/10 text-primary-300 flex items-center justify-center text-sm font-bold">{index + 1}</span>
-                    <input className="input h-9 flex-1" value={chart.title} onChange={(event) => updateChart(chart.id, { title: event.target.value })} />
-                    <button type="button" onClick={() => removeChart(chart.id)} disabled={charts.length === 1} className="p-2 text-dark-500 hover:text-red-300 disabled:opacity-30"><Trash2 size={17}/></button>
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Estilo</div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {CHARTS.map((type) => {
-                        const Icon = type.icon;
-                        return <button key={type.key} type="button" onClick={() => updateChart(chart.id, { type: type.key })} className={`rounded-xl border p-3 flex flex-col items-center gap-1.5 text-xs ${chart.type === type.key ? 'border-primary-400/40 bg-primary-400/10 text-primary-200' : 'border-dark-700/60 text-dark-500'}`}><Icon size={19}/>{type.label}</button>;
-                      })}
+                  <div className="grid lg:grid-cols-[minmax(180px,.7fr)_minmax(190px,.65fr)_minmax(0,1.65fr)] gap-5 items-start">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Gráfico {index + 1}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-8 h-8 shrink-0 rounded-xl bg-primary-400/10 text-primary-300 flex items-center justify-center text-sm font-bold">{index + 1}</span>
+                        <input className="input h-9 flex-1 min-w-0" value={chart.title} onChange={(event) => updateChart(chart.id, { title: event.target.value })} />
+                        <button type="button" onClick={() => removeChart(chart.id)} disabled={charts.length === 1} className="p-2 shrink-0 text-dark-500 hover:text-red-300 disabled:opacity-30"><Trash2 size={17}/></button>
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-2"><div className="text-xs font-semibold uppercase tracking-wider text-dark-500">Informações do gráfico</div><span className="text-xs text-primary-300">{chart.metrics.length} selecionada(s)</span></div>
-                    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
-                      {METRICS.map((metric) => {
-                        const active = chart.metrics.includes(metric.key);
-                        return <button key={metric.key} type="button" onClick={() => toggleChartMetric(chart, metric.key)} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs ${active ? 'border-primary-400/30 bg-primary-400/10 text-primary-200' : 'border-dark-700/50 text-dark-500'}`}><span className={`w-4 h-4 rounded border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-600'}`}>{active && <Check size={10}/>}</span>{metric.label}</button>;
-                      })}
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Estilo</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {CHARTS.map((type) => {
+                          const Icon = type.icon;
+                          return <button key={type.key} type="button" onClick={() => updateChart(chart.id, { type: type.key })} className={`rounded-xl border p-3 flex flex-col items-center gap-1.5 text-xs ${chart.type === type.key ? 'border-primary-400/40 bg-primary-400/10 text-primary-200' : 'border-dark-700/60 text-dark-500'}`}><Icon size={19}/>{type.label}</button>;
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2"><div className="text-xs font-semibold uppercase tracking-wider text-dark-500">Informações do gráfico</div><span className="text-xs text-primary-300">{chart.metrics.length} selecionada(s)</span></div>
+                      <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
+                        {METRICS.map((metric) => {
+                          const active = chart.metrics.includes(metric.key);
+                          return <button key={metric.key} type="button" onClick={() => toggleChartMetric(chart, metric.key)} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs ${active ? 'border-primary-400/30 bg-primary-400/10 text-primary-200' : 'border-dark-700/50 text-dark-500'}`}><span className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-600'}`}>{active && <Check size={10}/>}</span>{metric.label}</button>;
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
