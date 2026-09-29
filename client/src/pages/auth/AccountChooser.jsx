@@ -17,6 +17,7 @@ export default function AccountChooser() {
   }, [availableCompanies.length, navigate]);
   const enter = async (companyId) => {
     await selectCompanyContext(companyId);
+    sessionStorage.setItem('angler-account-selected', 'true');
     navigate('/app', { replace: true });
   };
 
