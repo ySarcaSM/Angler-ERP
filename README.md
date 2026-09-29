@@ -18,6 +18,8 @@ Os planos atualmente apresentados pelo Angler são:
 
 O plano TestFREE permite começar sem pagamento, enquanto os planos AnglerPro e AnglerUltra oferecem recursos adicionais conforme a oferta comercial vigente.
 
+> **Medição:** o módulo de Medição inclui cálculo físico de planos de corte para materiais em folha, considerando dimensões, largura do material, capacidade, sobras, aproveitamento e componentes adicionais como sanfonas e acessórios.
+
 ## Funcionalidades
 
 ### Gestão empresarial
@@ -27,7 +29,12 @@ O plano TestFREE permite começar sem pagamento, enquanto os planos AnglerPro e 
 - Compras com recebimento, entrada automática no estoque e lançamento financeiro de despesas.
 - Estoque com histórico de movimentações, alertas de baixo estoque e ajustes manuais.
 - Financeiro com receitas, despesas, pendências e baixa de pagamentos.
-- Orçamentos, fórmulas e calculadora de medição/aproveitamento de materiais.
+- Orçamentos, fórmulas e o módulo de Medição com cálculo de aproveitamento e planos de corte físicos.
+- Medição com cálculo de capacidade, disposição de peças, sobras, aproveitamento, consumo de material, sanfonas e acessórios.
+- Preview visual dos planos de corte com cotas alinhadas às peças, indicação de sobras e sanfonas destacadas.
+- Geração de múltiplos planos quando a quantidade solicitada excede a capacidade de um único corte.
+- Relatório de corte em PDF, com uma página por plano contendo aproveitamento, consumo e acessórios, dicas industriais e especificações.
+- Download em ZIP com o relatório em PDF e as imagens individuais de cada plano de corte.
 - Relatórios de desempenho com gráficos e exportação em PDF.
 - Sistema de módulos para ativar ou desativar recursos disponíveis para a empresa.
 
@@ -291,7 +298,7 @@ Atualizações, infraestrutura e disponibilidade do serviço são administradas 
 | `/app` | Dashboard autenticado |
 | `/app/clients`, `/products`, `/sales`, `/purchases` | Gestão comercial e operacional |
 | `/app/financial`, `/stock`, `/reports` | Financeiro, estoque e relatórios |
-| `/app/budgets` | Orçamentos, fórmulas e medição |
+| `/app/budgets` | Orçamentos, fórmulas, Medição e planos de corte |
 | `/app/settings` | Configurações da empresa |
 | `/app/users` | Gestão de usuários |
 | `/app/logs` | Auditoria |
