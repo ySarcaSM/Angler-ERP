@@ -77,7 +77,7 @@ export default function CustomReportsPage() {
   const selectedMetricKeys = useMemo(() => [...new Set(charts.flatMap((chart) => chart.metrics))], [charts]);
   const selectedMetricObjects = selectedMetricKeys.map((key) => METRICS.find((metric) => metric.key === key)).filter(Boolean);
 
-  const addChart = () => setCharts((current) => [...current, { id: Date.now(), title: \`Gráfico \${current.length + 1}\`, type: 'bar', metrics: ['salesTotal'] }]);
+  const addChart = () => setCharts((current) => [...current, { id: Date.now(), title: `Gráfico ${current.length + 1}`, type: 'bar', metrics: ['salesTotal'] }]);
   const removeChart = (id) => setCharts((current) => current.length > 1 ? current.filter((chart) => chart.id !== id) : current);
   const updateChart = (id, patch) => setCharts((current) => current.map((chart) => chart.id === id ? { ...chart, ...patch } : chart));
   const toggleChartMetric = (chart, key) => updateChart(chart.id, { metrics: chart.metrics.includes(key) ? (chart.metrics.length > 1 ? chart.metrics.filter((item) => item !== key) : chart.metrics) : [...chart.metrics, key] });
