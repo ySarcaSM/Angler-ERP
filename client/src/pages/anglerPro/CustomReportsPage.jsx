@@ -412,13 +412,11 @@ export default function CustomReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-primary-400/10 text-primary-300"><SlidersHorizontal size={24} /></div>
-          <div>
-            <h1 className="text-2xl font-bold text-dark-100">Relatórios customizáveis</h1>
-            <p className="text-dark-500 text-sm mt-1">Monte o relatório com as informações, indicadores e gráficos que você quiser e gere um PDF automaticamente.</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="p-3 rounded-2xl bg-primary-400/10 text-primary-300"><SlidersHorizontal size={24} /></div>
+        <div>
+          <h1 className="text-2xl font-bold text-dark-100">Relatórios customizáveis</h1>
+          <p className="text-dark-500 text-sm mt-1">Monte um painel no estilo Power BI com vários gráficos e indicadores.</p>
         </div>
       </div>
 
@@ -432,62 +430,74 @@ export default function CustomReportsPage() {
           </div>
 
           <div className="card">
-            <div className="card-header flex items-center justify-between"><div><h2 className="text-sm font-semibold text-dark-200">Painel de gráficos</h2><p className="text-xs text-dark-500 mt-1">Adicione vários gráficos e combine várias informações em cada um.</p></div><button type="button" onClick={addChart} className="btn-secondary text-xs"><Plus size={15}/> Adicionar gráfico</button></div>
+            <div className="card-header flex items-center justify-between">
+              <div><h2 className="text-sm font-semibold text-dark-200">Painel de gráficos</h2><p className="text-xs text-dark-500 mt-1">Cada gráfico pode ter estilo e múltiplas informações independentes.</p></div>
+              <button type="button" onClick={addChart} className="btn-secondary text-xs"><Plus size={15}/> Adicionar gráfico</button>
+            </div>
             <div className="card-body space-y-5">
-              {charts.map((chart, index) => <div key={chart.id} className="rounded-2xl border border-dark-700/60 bg-dark-900/30 p-4 space-y-4">
-                <div className="flex items-center gap-3"><span className="w-8 h-8 rounded-xl bg-primary-400/10 text-primary-300 flex items-center justify-center text-sm font-bold">{index + 1}</span><input className="input h-9 flex-1" value={chart.title} onChange={(event) => updateChart(chart.id, { title: event.target.value })}/><button type="button" onClick={() => removeChart(chart.id)} disabled={charts.length === 1} className="p-2 text-dark-500 hover:text-red-300 disabled:opacity-30"><Trash2 size={17}/></button></div>
-                <div><div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Estilo</div><div className="grid grid-cols-3 gap-2">{CHARTS.map((type) => { const Icon=type.icon; return <button key={type.key} type="button" onClick={() => updateChart(chart.id,{type:type.key})} className={`rounded-xl border p-3 flex flex-col items-center gap-1.5 text-xs ${chart.type===type.key?'border-primary-400/40 bg-primary-400/10 text-primary-200':'border-dark-700/60 text-dark-500'}`}><Icon size={19}/>{type.label}</button>; })}</div></div>
-                <div><div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Informações do gráfico</div><div className="grid sm:grid-cols-2 gap-2">{METRICS.map((metric) => { const active=chart.metrics.includes(metric.key); return <button key={metric.key} type="button" onClick={() => toggleChartMetric(chart,metric.key)} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs ${active?'border-primary-400/30 bg-primary-400/10 text-primary-200':'border-dark-700/50 text-dark-500'}`}><span className={`w-4 h-4 rounded border flex items-center justify-center ${active?'bg-primary-500 border-primary-500 text-white':'border-dark-600'}`}>{active&&<Check size={10}/>}</span>{metric.label}</button>; })}</div></div>
-              </div>)}
+              {charts.map((chart, index) => (
+                <div key={chart.id} className="rounded-2xl border border-dark-700/60 bg-dark-900/30 p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-xl bg-primary-400/10 text-primary-300 flex items-center justify-center text-sm font-bold">{index + 1}</span>
+                    <input className="input h-9 flex-1" value={chart.title} onChange={(event) => updateChart(chart.id, { title: event.target.value })} />
+                    <button type="button" onClick={() => removeChart(chart.id)} disabled={charts.length === 1} className="p-2 text-dark-500 hover:text-red-300 disabled:opacity-30"><Trash2 size={17}/></button>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Estilo</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {CHARTS.map((type) => {
+                        const Icon = type.icon;
+                        return <button key={type.key} type="button" onClick={() => updateChart(chart.id, { type: type.key })} className={`rounded-xl border p-3 flex flex-col items-center gap-1.5 text-xs ${chart.type === type.key ? 'border-primary-400/40 bg-primary-400/10 text-primary-200' : 'border-dark-700/60 text-dark-500'}`}><Icon size={19}/>{type.label}</button>;
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-2"><div className="text-xs font-semibold uppercase tracking-wider text-dark-500">Informações do gráfico</div><span className="text-xs text-primary-300">{chart.metrics.length} selecionada(s)</span></div>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      {METRICS.map((metric) => {
+                        const active = chart.metrics.includes(metric.key);
+                        return <button key={metric.key} type="button" onClick={() => toggleChartMetric(chart, metric.key)} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs ${active ? 'border-primary-400/30 bg-primary-400/10 text-primary-200' : 'border-dark-700/50 text-dark-500'}`}><span className={`w-4 h-4 rounded border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-600'}`}>{active && <Check size={10}/>}</span>{metric.label}</button>;
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+
+          <button type="button" onClick={() => setIncludeTable((value) => !value)} className={`card w-full text-left ${includeTable ? 'border-primary-400/20' : ''}`}>
+            <div className="card-body flex items-center gap-3">
+              <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${includeTable ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-600'}`}>{includeTable && <Check size={13}/>}</span>
+              <Table2 size={17} className="text-dark-400"/>
+              <div><div className="text-sm text-dark-200">Incluir detalhamento</div><div className="text-xs text-dark-500">Adiciona a tabela diária ao PDF.</div></div>
+            </div>
+          </button>
 
           <div className="card">
-            <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">3. Gráfico</h2></div>
-            <div className="card-body space-y-5">
-              <div>
-                <div className="text-sm font-medium text-dark-300 mb-2">Estilo</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {CHARTS.map((chart) => {
-                    const Icon = chart.icon;
-                    const active = chartType === chart.key;
-                    return <button key={chart.key} type="button" onClick={() => setChartType(chart.key)} className={`rounded-xl border p-3 flex flex-col items-center gap-2 text-sm transition ${active ? 'border-primary-400/40 bg-primary-400/10 text-primary-200' : 'border-dark-700/60 text-dark-400 hover:text-dark-200'}`}><Icon size={20} /><span>{chart.label}</span></button>;
-                  })}
-                </div>
-              </div>
-              <label>
-                <span className="block text-sm font-medium text-dark-300 mb-2">Informação exibida no gráfico</span>
-                <div className="relative"><ChevronDown size={17} className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-500 pointer-events-none" /><select className="input w-full appearance-none" value={chartData} onChange={(event) => setChartData(event.target.value)}>{CHART_DATA.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select></div>
-              </label>
-              <button type="button" onClick={() => setIncludeTable((value) => !value)} className={`flex items-center gap-3 w-full rounded-xl border p-3 text-left ${includeTable ? 'border-primary-400/40 bg-primary-400/10' : 'border-dark-700/60'}`}>
-                <span className={`w-5 h-5 rounded-md border flex items-center justify-center ${includeTable ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-600'}`}>{includeTable && <Check size={13} />}</span>
-                <Table2 size={17} className="text-dark-400" /><span className="text-sm text-dark-300">Incluir tabela de detalhamento diário</span>
-              </button>
+            <div className="card-header"><div className="flex items-center gap-2"><Sparkles size={17} className="text-primary-300"/><h2 className="text-sm font-semibold text-dark-200">Resumo da configuração</h2></div></div>
+            <div className="card-body space-y-3">
+              <div className="text-sm text-dark-200"><span className="text-dark-500">Relatório:</span> {title || 'Relatório personalizado'}</div>
+              <div className="text-sm text-dark-200"><span className="text-dark-500">Gráficos:</span> {charts.length}</div>
+              {charts.map((chart, index) => <div key={chart.id} className="rounded-xl border border-dark-700/50 p-3"><div className="text-sm text-dark-200">{index + 1}. {chart.title}</div><div className="text-xs text-dark-500 mt-1">{CHARTS.find((type) => type.key === chart.type)?.label} · {chart.metrics.length} informação(ões)</div><div className="flex flex-wrap gap-1.5 mt-2">{chart.metrics.map((key) => <span key={key} className="px-2 py-1 rounded-md bg-dark-800 text-[11px] text-dark-400">{METRICS.find((metric) => metric.key === key)?.label}</span>)}</div></div>)}
+              <div className="rounded-xl bg-primary-400/5 border border-primary-400/10 p-3 text-xs text-dark-400">O PDF será montado automaticamente com os dados disponíveis da empresa e a configuração acima.</div>
             </div>
           </div>
 
-          <div className="card"> className="btn-primary w-full justify-center py-3 disabled:opacity-50 disabled:cursor-not-allowed">
-            {generating ? <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <FileDown size={19} />}
-            {generating ? 'Gerando PDF...' : 'Gerar relatório em PDF'}
-          </div>
-          <button type="button" onClick={handleGenerate} disabled={generating} className="btn-primary w-full justify-center py-3.5 disabled:opacity-50">
+          <button type="button" onClick={handleGenerate} disabled={generating} className="btn-primary w-full justify-center py-3.5 disabled:opacity-50 disabled:cursor-not-allowed">
+            {generating ? <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <FileDown size={19}/>}
             {generating ? 'Gerando PDF...' : 'Gerar relatório em PDF'}
           </button>
         </div>
 
         <div className="card h-fit xl:sticky xl:top-6">
-          <div className="card-header"><div className="flex items-center gap-2"><Sparkles size={17} className="text-primary-300" /><h2 className="text-sm font-semibold text-dark-200">Resumo da configuração</h2></div></div>
-          <div className="card-body space-y-4">
-            <div className="rounded-2xl bg-dark-900/60 border border-dark-700/50 p-4">
-              <div className="flex items-center gap-2 text-xs text-dark-500"><FileText size={14} /> Documento</div>
-              <div className="text-base font-semibold text-dark-100 mt-1">{title || 'Relatório personalizado'}</div>
-              <div className="text-xs text-dark-500 mt-1">{charts.length} gráfico(s) configurado(s)</div>
+          <div className="card-header"><div className="flex items-center gap-2"><Sparkles size={17} className="text-primary-300"/><h2 className="text-sm font-semibold text-dark-200">Visão do painel</h2></div></div>
+          <div className="card-body">
+            <div className="rounded-2xl bg-dark-900/60 border border-dark-700/50 p-4 space-y-3">
+              <div className="text-xs text-dark-500 mb-2">Estrutura do PDF</div>
+              <div className="text-sm text-dark-300">Capa + resumo dos indicadores</div>
+              {charts.map((chart, index) => <div key={chart.id} className="flex items-center gap-3"><span className="w-8 h-8 rounded-lg bg-dark-800 text-dark-400 flex items-center justify-center">{chart.type === 'line' ? <LineChart size={15}/> : chart.type === 'pie' ? <PieChart size={15}/> : <BarChart3 size={15}/>}</span><div><div className="text-sm text-dark-300">Gráfico {index + 1}</div><div className="text-xs text-dark-500">{chart.metrics.length} informação(ões)</div></div></div>)}
+              {includeTable && <div className="text-sm text-dark-300">+ tabela de detalhamento</div>}
             </div>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Gráficos</div><div className="space-y-2">{charts.map((chart,index)=><div key={chart.id} className="text-sm text-dark-300">{index+1}. {chart.title} — {chart.metrics.length} informação(ões)</div>)}</div><div className="rounded-xl bg-primary-400/5 border border-primary-400/10 p-3 text-xs text-dark-400">
-              O PDF é montado automaticamente com os dados disponíveis da empresa. O gráfico e a tabela acompanham as opções selecionadas.
-            </div>
-            {preview && <div className="flex items-center gap-2 text-xs text-emerald-300"><Check size={14} /> Dados calculados e prontos para exportação.</div>}
           </div>
         </div>
       </div>
