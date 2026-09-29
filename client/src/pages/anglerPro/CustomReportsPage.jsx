@@ -431,12 +431,14 @@ export default function CustomReportsPage() {
         </div>
       </div>
 
-      <div className="grid xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,.85fr)] gap-6">
+      <div className="space-y-6">
         <div className="space-y-6">
-          <div className="card">
+          <div className="grid lg:grid-cols-[minmax(0,.7fr)_minmax(0,1.3fr)] gap-6">
+            <div className="card">
             <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">Identificação</h2></div>
             <div className="card-body">
               <label><span className="block text-sm font-medium text-dark-300 mb-2">Título do relatório</span><input className="input w-full" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+            </div>
             </div>
           </div>
 
@@ -447,8 +449,8 @@ export default function CustomReportsPage() {
             </div>
             <div className="card-body space-y-5">
               {charts.map((chart, index) => (
-                <div key={chart.id} className="rounded-2xl border border-dark-700/60 bg-dark-900/30 p-4 space-y-4">
-                  <div className="flex items-center gap-3">
+                <div key={chart.id} className="rounded-2xl border border-dark-700/60 bg-dark-900/30 p-4">
+                  <div className="grid lg:grid-cols-[minmax(230px,.7fr)_minmax(220px,.75fr)_minmax(0,1.55fr)] gap-5 items-start">
                     <span className="w-8 h-8 rounded-xl bg-primary-400/10 text-primary-300 flex items-center justify-center text-sm font-bold">{index + 1}</span>
                     <input className="input h-9 flex-1" value={chart.title} onChange={(event) => updateChart(chart.id, { title: event.target.value })} />
                     <button type="button" onClick={() => removeChart(chart.id)} disabled={charts.length === 1} className="p-2 text-dark-500 hover:text-red-300 disabled:opacity-30"><Trash2 size={17}/></button>
@@ -464,7 +466,7 @@ export default function CustomReportsPage() {
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2"><div className="text-xs font-semibold uppercase tracking-wider text-dark-500">Informações do gráfico</div><span className="text-xs text-primary-300">{chart.metrics.length} selecionada(s)</span></div>
-                    <div className="grid sm:grid-cols-2 gap-2">
+                    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
                       {METRICS.map((metric) => {
                         const active = chart.metrics.includes(metric.key);
                         return <button key={metric.key} type="button" onClick={() => toggleChartMetric(chart, metric.key)} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs ${active ? 'border-primary-400/30 bg-primary-400/10 text-primary-200' : 'border-dark-700/50 text-dark-500'}`}><span className={`w-4 h-4 rounded border flex items-center justify-center ${active ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-600'}`}>{active && <Check size={10}/>}</span>{metric.label}</button>;
@@ -487,9 +489,13 @@ export default function CustomReportsPage() {
           <div className="card">
             <div className="card-header"><div className="flex items-center gap-2"><Sparkles size={17} className="text-primary-300"/><h2 className="text-sm font-semibold text-dark-200">Resumo da configuração</h2></div></div>
             <div className="card-body space-y-3">
-              <div className="text-sm text-dark-200"><span className="text-dark-500">Relatório:</span> {title || 'Relatório personalizado'}</div>
-              <div className="text-sm text-dark-200"><span className="text-dark-500">Gráficos:</span> {charts.length}</div>
-              {charts.map((chart, index) => <div key={chart.id} className="rounded-xl border border-dark-700/50 p-3"><div className="text-sm text-dark-200">{index + 1}. {chart.title}</div><div className="text-xs text-dark-500 mt-1">{CHARTS.find((type) => type.key === chart.type)?.label} · {chart.metrics.length} informação(ões)</div><div className="flex flex-wrap gap-1.5 mt-2">{chart.metrics.map((key) => <span key={key} className="px-2 py-1 rounded-md bg-dark-800 text-[11px] text-dark-400">{METRICS.find((metric) => metric.key === key)?.label}</span>)}</div></div>)}
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div className="rounded-xl bg-dark-900/50 border border-dark-700/50 p-3"><div className="text-xs text-dark-500">Relatório</div><div className="text-sm text-dark-200 mt-1 truncate">{title || 'Relatório personalizado'}</div></div>
+                <div className="rounded-xl bg-dark-900/50 border border-dark-700/50 p-3"><div className="text-xs text-dark-500">Gráficos</div><div className="text-sm text-dark-200 mt-1">{charts.length}</div></div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+              {charts.map((chart, index) => <div key={chart.id} className="rounded-xl border border-dark-700/50 p-3 flex-1 min-w-[220px]"><div className="text-sm text-dark-200">{index + 1}. {chart.title}</div><div className="text-xs text-dark-500 mt-1">{CHARTS.find((type) => type.key === chart.type)?.label} · {chart.metrics.length} informação(ões)</div><div className="flex flex-wrap gap-1.5 mt-2">{chart.metrics.map((key) => <span key={key} className="px-2 py-1 rounded-md bg-dark-800 text-[11px] text-dark-400">{METRICS.find((metric) => metric.key === key)?.label}</span>)}</div></div>)}
+              </div>
               <div className="rounded-xl bg-primary-400/5 border border-primary-400/10 p-3 text-xs text-dark-400">O PDF será montado automaticamente com os dados disponíveis da empresa e a configuração acima.</div>
             </div>
           </div>
@@ -497,7 +503,8 @@ export default function CustomReportsPage() {
           <div className="card">
             <div className="card-header"><div className="flex items-center gap-2"><Sparkles size={17} className="text-primary-300"/><h2 className="text-sm font-semibold text-dark-200">Visão do painel</h2></div></div>
             <div className="card-body">
-              <div className="rounded-2xl bg-dark-900/60 border border-dark-700/50 p-4 space-y-3">
+              <div className="rounded-2xl bg-dark-900/60 border border-dark-700/50 p-4">
+              <div className="flex flex-wrap items-center gap-4">
                 <div className="text-xs text-dark-500 mb-2">Estrutura do PDF</div>
                 <div className="text-sm text-dark-300">Capa + resumo dos indicadores</div>
                 {charts.map((chart, index) => <div key={chart.id} className="flex items-center gap-3"><span className="w-8 h-8 rounded-lg bg-dark-800 text-dark-400 flex items-center justify-center">{chart.type === 'line' ? <LineChart size={15}/> : chart.type === 'pie' ? <PieChart size={15}/> : <BarChart3 size={15}/>}</span><div><div className="text-sm text-dark-300">Gráfico {index + 1}</div><div className="text-xs text-dark-500">{chart.metrics.length} informação(ões)</div></div></div>)}
