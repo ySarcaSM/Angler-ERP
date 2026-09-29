@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { listSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../services/firebase/suppliers';
@@ -40,7 +40,6 @@ function isValidCNPJ(value) {
 
 export default function SupplierList() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { company, user, userData } = useAuth();
   const isOperator = userData?.role === 'operator';
   const [data, setData] = useState([]);
@@ -63,8 +62,6 @@ export default function SupplierList() {
   useEffect(() => { load(); }, [load]);
 
   const openNew = () => { navigate('/app/suppliers/new'); };
-  const openNewForm = () => { setForm(EMPTY); setEditing(null); setModal(true); };
-  useEffect(() => { if (location.pathname === '/app/suppliers/new') openNewForm(); }, [location.pathname]);
 
   const openEdit = (s) => { setForm({ ...EMPTY, ...s }); setEditing(s.id); setModal(true); };
 
@@ -93,7 +90,7 @@ export default function SupplierList() {
     try {
       if (editing) { const previousSupplier = data.find((supplier) => supplier.id === editing); await updateSupplier(editing, form); await logAudit(company.id, { user, userName: userData?.name, action: 'update', entity: 'Fornecedor', entityId: editing, description: `${userData?.name || 'Usuário'} alterou o fornecedor ${form.name}.`, details: { antes: { name: previousSupplier?.name, email: previousSupplier?.email, phone: previousSupplier?.phone }, depois: { name: form.name, email: form.email, phone: form.phone } } }); toast.success('Atualizado!'); }
       else { const createdSupplier = await createSupplier(company.id, form); await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Fornecedor', entityId: createdSupplier.id, description: `${userData?.name || 'Usuário'} criou o fornecedor ${form.name}.`, details: { name: form.name, email: form.email } }); toast.success('Criado!'); }
-      setModal(false); if (location.pathname === '/app/suppliers/new') navigate('/app/suppliers'); load();
+      setModal(false); load();
     } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setSaving(false); }
   };
@@ -120,7 +117,7 @@ export default function SupplierList() {
         <div className="card-header"><div className="flex items-center gap-2 bg-dark-800 rounded-xl px-4 py-2 max-w-sm"><Search size={16} className="text-dark-500" /><input type="text" placeholder="Buscar..." className="bg-transparent text-sm outline-none w-full" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
       </div>
-      <Modal fullscreen={location.pathname === '/app/suppliers/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/suppliers/new') navigate('/app/suppliers'); }} title={editing ? 'Editar Fornecedor' : 'Novo Fornecedor'} size="lg" backdropClassName="bg-transparent">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Editar Fornecedor' : 'Novo Fornecedor'} size="lg" backdropClassName="bg-transparent">
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="label">Nome *</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
