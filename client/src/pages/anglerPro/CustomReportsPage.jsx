@@ -344,14 +344,24 @@ export default function CustomReportsPage() {
           pdf.lines(vectors, cx, cy, [1, 1], 'F', true);
           angle = next;
         });
+        // A legenda fica abaixo da pizza para nunca sobrepor as fatias.
         pdf.setFontSize(8);
+        const legendStartY = cy + radius + 18;
+        const legendGap = 6;
+        let legendX = x;
+        let legendY = legendStartY;
         labels.forEach((label, index) => {
-          const ly = top + 18 + index * 9;
-          const color = CHART_COLORS[index % CHART_COLORS.length];
+          const color = getChartColor(index);
+          const itemWidth = 6 + 4 + pdf.getTextWidth(label) + legendGap;
+          if (legendX !== x && legendX + itemWidth > x + size) {
+            legendX = x;
+            legendY += 10;
+          }
           pdf.setFillColor(color[0], color[1], color[2]);
-          pdf.rect(x + size - 65, ly - 5, 4, 4, 'F');
+          pdf.rect(legendX, legendY - 5, 4, 4, 'F');
           pdf.setTextColor(80, 80, 80);
-          pdf.text(label, x + size - 59, ly - 1);
+          pdf.text(label, legendX + 6, legendY - 1);
+          legendX += itemWidth;
         });
       };
 
