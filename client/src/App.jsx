@@ -48,9 +48,18 @@ function PrivateRoute({ children }) {
 }
 function AuthenticatedEntry() {
   const { availableCompanies, userData } = useAuth();
-  if (availableCompanies.length > 1) return <Navigate to="/escolher-conta" replace />;
+  if (availableCompanies.length > 1 && sessionStorage.getItem('angler-account-selected') !== 'true') {
+    return <Navigate to="/escolher-conta" replace />;
+  }
   if (!userData?.companyId) return <Navigate to="/login" replace />;
   return <Navigate to="/app" replace />;
+}
+function MultiCompanyRoute({ children }) {
+  const { availableCompanies } = useAuth();
+  if (availableCompanies.length > 1 && sessionStorage.getItem('angler-account-selected') !== 'true') {
+    return <Navigate to="/escolher-conta" replace />;
+  }
+  return children;
 }
 function ModuleRoute({ moduleKey, children }) {
   const { getEffectiveModules, userData } = useAuth();
@@ -74,7 +83,7 @@ export default function App() {
     <Route path="/escolher-conta" element={<PrivateRoute><AccountChooser /></PrivateRoute>} />
     <Route path="/admin/*" element={<AdminAuthProvider><Routes><Route path="login" element={<AdminLogin />} /><Route path="contas" element={<AdminPanel />} /><Route path="*" element={<Navigate to="/admin/login" replace />} /></Routes></AdminAuthProvider>} />
     <Route path="/assistant" element={<PrivateRoute><ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute></PrivateRoute>} />
-    <Route path="/app/*" element={<PrivateRoute><Layout><Routes>
+    <Route path="/app/*" element={<PrivateRoute><MultiCompanyRoute><Layout><Routes>
       <Route path="/" element={<OperatorHomeOrDashboard />} />
       <Route path="/clients/new" element={<ModuleRoute moduleKey="clients"><WriteRoute><ClientForm /></WriteRoute></ModuleRoute>} />
       <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
@@ -107,7 +116,7 @@ export default function App() {
       <Route path="/logs" element={<OperatorBlockedRoute><LogsPage /></OperatorBlockedRoute>} />
       <Route path="/notifications" element={<OperatorBlockedRoute><NotificationsPage /></OperatorBlockedRoute>} />
       <Route path="*" element={<Navigate to="/app" replace />} />
-    </Routes></Layout></PrivateRoute>} />
+    </Routes></Layout></MultiCompanyRoute></PrivateRoute>} />
     <Route path="*" element={<Navigate to={isAuthenticated ? '/app' : '/login'} replace />} />
   </Routes><AccessibilityFloatingButton /></>;
 }
