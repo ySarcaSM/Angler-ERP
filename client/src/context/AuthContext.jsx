@@ -11,6 +11,7 @@ import {
   isRegistrationInProgress,
   switchActiveCompany,
   getPersonalCompanyId as getOwnedPersonalCompanyId,
+  subscribeCompanyData,
 } from '../services/firebase/auth';
 import { getStoredAdminSession } from '../services/firebase/admin';
 import { listApprovedCompanyAccessRequests } from '../services/firebase/companyAccess';
@@ -246,6 +247,26 @@ export function AuthProvider({ children }) {
     const result = await fbRegister(data);
     return result;
   }, []);
+
+  // Mantém plano, módulos e demais dados da empresa sincronizados em tempo real.
+  // Assim, alterações feitas por outro usuário aparecem sem recarregar a página.
+  useEffect(() => {
+    if (!company?.id) return undefined;
+
+    const unsubscribe = subscribeCompanyData(
+      company.id,
+      (updatedCompany) => {
+        if (!updatedCompany) return;
+        setCompany(updatedCompany);
+        setAvailableCompanies((current) => current.map((item) => (
+          item.id === updatedCompany.id ? { ...item, ...updatedCompany } : item
+        )));
+      },
+      (error) => console.warn('[Auth] Não foi possível sincronizar a empresa em tempo real:', error),
+    );
+
+    return () => unsubscribe();
+  }, [company?.id]);
 
   const navigate = useNavigate();
 
