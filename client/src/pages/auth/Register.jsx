@@ -74,10 +74,6 @@ function createRandomCNPJ() {
   return formatCNPJ([...first, digit1, digit2].join(''));
 }
 
-// ═══════════════════════════════════════════
-// Módulos disponíveis
-// ═══════════════════════════════════════════
-
 const AVAILABLE_MODULES = [
   { key: 'clients', label: 'Clientes', desc: 'CRM, busca, endereço, status' },
   { key: 'products', label: 'Produtos', desc: 'Cadastro, preços, categorias' },
@@ -131,11 +127,7 @@ const PLANS = [
   },
 ];
 
-// ═══════════════════════════════════════════
-// Sub-componentes (FORA para evitar re-criação)
-// ═══════════════════════════════════════════
-
-function InputField({ label, name, type = 'text', placeholder, value, onChange, error, required, ...rest }) {
+function InputField({ label, name, type = 'text', placeholder, value, onChange, error, required, className = '', ...rest }) {
   return (
     <div>
       <label className="label">
@@ -143,7 +135,7 @@ function InputField({ label, name, type = 'text', placeholder, value, onChange, 
       </label>
       <input
         type={type}
-        className={`input ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+        className={`input ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''} ${className}`}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
@@ -314,54 +306,14 @@ function Step2({ company, setCompany, errors, onFillRandom }) {
         </button>
       </div>
 
-      <InputField
-        label="Nome da Empresa" name="companyName" placeholder="Angler Tech" required
-        value={company.companyName}
-        onChange={(e) => setCompany({ ...company, companyName: e.target.value })}
-        error={errors.companyName}
-      />
-
-      <InputField
-        label="Razão Social" name="razaoSocial" placeholder="Angler Tecnologia Ltda"
-        value={company.razaoSocial}
-        onChange={(e) => setCompany({ ...company, razaoSocial: e.target.value })}
-      />
-
-      <InputField
-        label="CNPJ" name="cnpj" placeholder="00.000.000/0000-00" required
-        value={company.cnpj}
-        onChange={(e) => setCompany({ ...company, cnpj: formatCNPJ(e.target.value) })}
-        error={errors.cnpj}
-        maxLength={18}
-      />
-
-      <InputField
-        label="Setor" name="sector" placeholder="Tecnologia, Comércio, Serviços..."
-        value={company.sector}
-        onChange={(e) => setCompany({ ...company, sector: e.target.value })}
-      />
-
-      <InputField
-        label="Endereço" name="address" placeholder="Rua Exemplo, 123 - Centro - São Paulo/SP" required
-        value={company.address}
-        onChange={(e) => setCompany({ ...company, address: e.target.value })}
-        error={errors.address}
-      />
-
+      <InputField label="Nome da Empresa" name="companyName" placeholder="Angler Tech" required value={company.companyName} onChange={(e) => setCompany({ ...company, companyName: e.target.value })} error={errors.companyName} />
+      <InputField label="Razão Social" name="razaoSocial" placeholder="Angler Tecnologia Ltda" value={company.razaoSocial} onChange={(e) => setCompany({ ...company, razaoSocial: e.target.value })} />
+      <InputField label="CNPJ" name="cnpj" placeholder="00.000.000/0000-00" required value={company.cnpj} onChange={(e) => setCompany({ ...company, cnpj: formatCNPJ(e.target.value) })} error={errors.cnpj} maxLength={18} />
+      <InputField label="Setor" name="sector" placeholder="Tecnologia, Comércio, Serviços..." value={company.sector} onChange={(e) => setCompany({ ...company, sector: e.target.value })} />
+      <InputField label="Endereço" name="address" placeholder="Rua Exemplo, 123 - Centro - São Paulo/SP" required value={company.address} onChange={(e) => setCompany({ ...company, address: e.target.value })} error={errors.address} />
       <div className="grid grid-cols-2 gap-3">
-        <InputField
-          label="Email Empresarial" name="companyEmail" type="email" placeholder="contato@empresa.com" required
-          value={company.companyEmail}
-          onChange={(e) => setCompany({ ...company, companyEmail: e.target.value })}
-          error={errors.companyEmail}
-        />
-        <InputField
-          label="Telefone" name="companyPhone" placeholder="(11) 99999-9999" required
-          value={company.companyPhone}
-          onChange={(e) => setCompany({ ...company, companyPhone: formatPhone(e.target.value) })}
-          error={errors.companyPhone}
-          maxLength={15}
-        />
+        <InputField label="Email Empresarial" name="companyEmail" type="email" placeholder="contato@empresa.com" required value={company.companyEmail} onChange={(e) => setCompany({ ...company, companyEmail: e.target.value })} error={errors.companyEmail} />
+        <InputField label="Telefone" name="companyPhone" placeholder="(11) 99999-9999" required value={company.companyPhone} onChange={(e) => setCompany({ ...company, companyPhone: formatPhone(e.target.value) })} error={errors.companyPhone} maxLength={15} />
       </div>
     </div>
   );
@@ -380,30 +332,14 @@ function Step3({ modules, setModules, errors }) {
         <LayoutGrid size={20} className="text-primary-400" />
         <h2 className="text-lg font-semibold text-dark-100">Personalização</h2>
       </div>
-
-      <p className="text-dark-400 text-sm">
-        Selecione os módulos que sua empresa vai utilizar:
-      </p>
-
+      <p className="text-dark-400 text-sm">Selecione os módulos que sua empresa vai utilizar:</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {AVAILABLE_MODULES.map((mod) => (
-          <ModuleToggle
-            key={mod.key}
-            modKey={mod.key}
-            label={mod.label}
-            desc={mod.desc}
-            active={modules[mod.key]}
-            onToggle={() => toggleModule(mod.key)}
-          />
+          <ModuleToggle key={mod.key} modKey={mod.key} label={mod.label} desc={mod.desc} active={modules[mod.key]} onToggle={() => toggleModule(mod.key)} />
         ))}
       </div>
-
       {errors.modules && <p className="text-red-400 text-xs">{errors.modules}</p>}
-
-      <div className="text-xs text-dark-500">
-        {selectedCount} de {AVAILABLE_MODULES.length} módulos selecionados
-      </div>
-
+      <div className="text-xs text-dark-500">{selectedCount} de {AVAILABLE_MODULES.length} módulos selecionados</div>
     </div>
   );
 }
@@ -415,35 +351,20 @@ function Step4({ plan, setPlan, errors }) {
         <CreditCard size={20} className="text-primary-400" />
         <h2 className="text-lg font-semibold text-dark-100">Escolha seu plano</h2>
       </div>
-
-      <p className="text-dark-400 text-sm">
-        Escolha o plano que deseja utilizar na sua empresa:
-      </p>
-
+      <p className="text-dark-400 text-sm">Escolha o plano que deseja utilizar na sua empresa:</p>
       <div className="grid grid-cols-1 gap-3">
         {PLANS.map((item) => {
           const Icon = item.icon;
           const selected = plan === item.key;
-
           return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setPlan(item.key)}
-              aria-pressed={selected}
+            <button key={item.key} type="button" onClick={() => setPlan(item.key)} aria-pressed={selected}
               className={`w-full text-left p-4 rounded-xl border transition-all ${
-                selected
-                  ? 'border-primary-400/60 bg-primary-400/10 ring-1 ring-primary-400/30'
-                  : 'border-dark-700/50 bg-dark-800/50 hover:border-dark-600'
-              }`}
-            >
+                selected ? 'border-primary-400/60 bg-primary-400/10 ring-1 ring-primary-400/30' : 'border-dark-700/50 bg-dark-800/50 hover:border-dark-600'
+              }`}>
               <div className="flex items-start gap-3">
-                <div className={`mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  selected ? 'bg-primary-500/20 text-primary-300' : 'bg-dark-700 text-dark-400'
-                }`}>
+                <div className={`mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${selected ? 'bg-primary-500/20 text-primary-300' : 'bg-dark-700 text-dark-400'}`}>
                   <Icon size={20} />
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-dark-100">{item.name}</span>
@@ -455,10 +376,7 @@ function Step4({ plan, setPlan, errors }) {
                   </div>
                   <p className="text-xs text-dark-400 mt-1">{item.description}</p>
                 </div>
-
-                <div className={`w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 ${
-                  selected ? 'border-primary-400 bg-primary-500' : 'border-dark-600'
-                }`}>
+                <div className={`w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 ${selected ? 'border-primary-400 bg-primary-500' : 'border-dark-600'}`}>
                   {selected && <div className="w-2 h-2 rounded-full bg-dark-950" />}
                 </div>
               </div>
@@ -466,49 +384,21 @@ function Step4({ plan, setPlan, errors }) {
           );
         })}
       </div>
-
       {errors.plan && <p className="text-red-400 text-xs">{errors.plan}</p>}
     </div>
   );
 }
 
-
-// ═══════════════════════════════════════════
-// Componente principal
-// ═══════════════════════════════════════════
-
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-
-  // ─── Step 1: Conta ───
-  const [account, setAccount] = useState({
-    name: '', lastName: '', email: '', password: '', confirmPassword: '',
-  });
-
-  // ─── Step 2: Empresa ───
-  const [company, setCompany] = useState({
-    companyName: '', razaoSocial: '', cnpj: '', sector: '',
-    address: '', companyEmail: '', companyPhone: '',
-  });
-
-  // ─── Step 3: Módulos ───
-  const [modules, setModules] = useState({
-    clients: true, products: true, sales: true, purchases: true,
-    suppliers: true, locations: true, financial: true, stock: true, reports: true,
-    assistant: true, measurement: true, formulas: true, budgets: true,
-  });
-
-  // ─── Step 4: Plano ───
+  const [account, setAccount] = useState({ name: '', lastName: '', email: '', password: '', confirmPassword: '' });
+  const [company, setCompany] = useState({ companyName: '', razaoSocial: '', cnpj: '', sector: '', address: '', companyEmail: '', companyPhone: '' });
+  const [modules, setModules] = useState({ clients: true, products: true, sales: true, purchases: true, suppliers: true, locations: true, financial: true, stock: true, reports: true, assistant: true, measurement: true, formulas: true, budgets: true });
   const [plan, setPlan] = useState('testfree');
-
-  // ═══════════════════════════════════════════
-  // Validação por passo
-  // ═══════════════════════════════════════════
 
   function validateStep1() {
     const errs = {};
@@ -516,9 +406,7 @@ export default function Register() {
     if (!account.email.trim()) errs.email = 'Email é obrigatório';
     else if (!validateEmail(account.email)) errs.email = 'Email inválido';
     if (!account.password) errs.password = 'Senha é obrigatória';
-    else if (getPasswordChecks(account.password).some((check) => !check.valid)) {
-      errs.password = 'Use 8+ caracteres, maiúscula, minúscula, número e símbolo';
-    }
+    else if (getPasswordChecks(account.password).some((check) => !check.valid)) errs.password = 'Use 8+ caracteres, maiúscula, minúscula, número e símbolo';
     if (account.password !== account.confirmPassword) errs.confirmPassword = 'As senhas não coincidem';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -540,26 +428,16 @@ export default function Register() {
 
   function validateStep3() {
     const selected = Object.values(modules).some(Boolean);
-    if (!selected) {
-      setErrors({ modules: 'Selecione pelo menos um módulo' });
-      return false;
-    }
+    if (!selected) { setErrors({ modules: 'Selecione pelo menos um módulo' }); return false; }
     setErrors({});
     return true;
   }
 
   function validateStep4() {
-    if (!PLANS.some((item) => item.key === plan)) {
-      setErrors({ plan: 'Selecione um plano' });
-      return false;
-    }
+    if (!PLANS.some((item) => item.key === plan)) { setErrors({ plan: 'Selecione um plano' }); return false; }
     setErrors({});
     return true;
   }
-
-  // ═══════════════════════════════════════════
-  // Navegação
-  // ═══════════════════════════════════════════
 
   function nextStep() {
     if (step === 1 && validateStep1()) setStep(2);
@@ -575,10 +453,7 @@ export default function Register() {
     ];
     const [companyName, razaoSocial, sector] = samples[Math.floor(Math.random() * samples.length)];
     setCompany({
-      companyName,
-      razaoSocial,
-      cnpj: createRandomCNPJ(),
-      sector,
+      companyName, razaoSocial, cnpj: createRandomCNPJ(), sector,
       address: 'Rua das Flores, 123 - Centro - Sao Paulo/SP',
       companyEmail: `contato${Math.floor(Math.random() * 900 + 100)}@empresa.com.br`,
       companyPhone: formatPhone(`119${Math.floor(Math.random() * 90000000 + 10000000)}`),
@@ -586,44 +461,21 @@ export default function Register() {
     setErrors({});
   }
 
-  function prevStep() {
-    setErrors({});
-    if (step > 1) setStep(step - 1);
-  }
-
-  // ═══════════════════════════════════════════
-  // Submit
-  // ═══════════════════════════════════════════
+  function prevStep() { setErrors({}); if (step > 1) setStep(step - 1); }
 
   async function handleSubmit(e) {
     e?.preventDefault?.();
     if (!validateStep4()) return;
-
     setLoading(true);
     try {
-      const enabledModules = Object.entries(modules)
-        .filter(([, v]) => v)
-        .map(([k]) => k);
-
+      const enabledModules = Object.entries(modules).filter(([, v]) => v).map(([k]) => k);
       const result = await register({
-        email: account.email.trim(),
-        password: account.password,
-        name: account.name.trim(),
-        lastName: account.lastName.trim(),
-        companyName: company.companyName.trim(),
-        razaoSocial: company.razaoSocial.trim(),
-        cnpj: company.cnpj.replace(/\D/g, ''),
-        sector: company.sector.trim(),
-        address: company.address.trim(),
-        companyEmail: company.companyEmail.trim(),
-        companyPhone: company.companyPhone.replace(/\D/g, ''),
-        enabledModules,
-        plan,
+        email: account.email.trim(), password: account.password, name: account.name.trim(), lastName: account.lastName.trim(),
+        companyName: company.companyName.trim(), razaoSocial: company.razaoSocial.trim(), cnpj: company.cnpj.replace(/\D/g, ''),
+        sector: company.sector.trim(), address: company.address.trim(), companyEmail: company.companyEmail.trim(),
+        companyPhone: company.companyPhone.replace(/\D/g, ''), enabledModules, plan,
       });
-
-      toast.success(result.requiresEmailVerification
-        ? 'Conta criada! Verifique seu email antes de entrar.'
-        : 'Conta criada! Você já pode entrar no sistema.');
+      toast.success(result.requiresEmailVerification ? 'Conta criada! Verifique seu email antes de entrar.' : 'Conta criada! Você já pode entrar no sistema.');
       navigate('/login');
     } catch (err) {
       const msg = err.code === 'auth/email-already-in-use' ? 'Este email já está cadastrado. Use a tela de login para acessar a conta.'
@@ -636,100 +488,37 @@ export default function Register() {
     }
   }
 
-  // ═══════════════════════════════════════════
-  // Render
-  // ═══════════════════════════════════════════
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-dark-950 px-4 py-8">
       <div className="w-full max-w-lg">
-        {/* Header */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-block">
-            <img src="../logo.png" alt="logo" />
-          </Link>
+          <Link to="/" className="inline-block"><img src="../logo.png" alt="logo" /></Link>
           <h1 className="text-2xl font-bold text-gold mt-4">Criar Conta</h1>
           <p className="text-dark-500 text-sm mt-1">Comece a gerenciar seu negócio</p>
         </div>
-
-        {/* Card */}
         <div className="card">
           <div className="card-body">
             <StepIndicator currentStep={step} />
-
             <form onSubmit={handleSubmit}>
               {step === 1 && <Step1 account={account} setAccount={setAccount} errors={errors} />}
-              {step === 2 && (
-                <Step2
-                  company={company}
-                  setCompany={setCompany}
-                  errors={errors}
-                  onFillRandom={fillRandomCompany}
-                />
-              )}
-              {step === 3 && (
-                <Step3
-                  modules={modules}
-                  setModules={setModules}
-                  errors={errors}
-                />
-              )}
-              {step === 4 && (
-                <Step4
-                  plan={plan}
-                  setPlan={setPlan}
-                  errors={errors}
-                />
-              )}
-
-              {/* Botões de navegação */}
+              {step === 2 && <Step2 company={company} setCompany={setCompany} errors={errors} onFillRandom={fillRandomCompany} />}
+              {step === 3 && <Step3 modules={modules} setModules={setModules} errors={errors} />}
+              {step === 4 && <Step4 plan={plan} setPlan={setPlan} errors={errors} />}
               <div className="flex items-center gap-3 mt-6 pt-4 border-t border-dark-700/50">
-                {step > 1 && (
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="btn-secondary flex items-center gap-2"
-                  >
-                    <ArrowLeft size={16} /> Voltar
-                  </button>
-                )}
-
+                {step > 1 && <button type="button" onClick={prevStep} className="btn-secondary flex items-center gap-2"><ArrowLeft size={16} /> Voltar</button>}
                 {step < 4 ? (
-                  <button
-                    type="button"
-                    onClick={nextStep}
-                    className="btn-primary flex-1 flex items-center justify-center gap-2"
-                  >
-                    Próximo <ArrowRight size={16} />
-                  </button>
+                  <button type="button" onClick={nextStep} className="btn-primary flex-1 flex items-center justify-center gap-2">Próximo <ArrowRight size={16} /></button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="btn-primary flex-1 flex items-center justify-center gap-2"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <div className="animate-spin w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full" />
-                    ) : (
-                      <><UserPlus size={18} /> Criar Conta</>
-                    )}
+                  <button type="button" onClick={handleSubmit} className="btn-primary flex-1 flex items-center justify-center gap-2" disabled={loading}>
+                    {loading ? <div className="animate-spin w-5 h-5 border-2 border-dark-950 border-t-transparent rounded-full" /> : <><UserPlus size={18} /> Criar Conta</>}
                   </button>
                 )}
               </div>
             </form>
           </div>
         </div>
-
-        {/* Footer */}
-        <p className="text-center text-sm text-dark-500 mt-6">
-          Já tem conta? <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium">Entrar</Link>
-        </p>
-        <p className="text-center text-sm text-dark-500 mt-3">
-          <Link to="/" className="text-dark-400 hover:text-primary-300 flex items-center justify-center gap-1">
-            <ArrowLeft size={14} /> Voltar ao início
-          </Link>
-        </p>
+        <p className="text-center text-sm text-dark-500 mt-6">Já tem conta? <Link to="/login" className="text-primary-400 hover:text-primary-300 font-medium">Entrar</Link></p>
+        <p className="text-center text-sm text-dark-500 mt-3"><Link to="/" className="text-dark-400 hover:text-primary-300 flex items-center justify-center gap-1"><ArrowLeft size={14} /> Voltar ao início</Link></p>
       </div>
     </div>
   );
