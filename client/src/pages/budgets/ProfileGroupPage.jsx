@@ -925,10 +925,10 @@ function CutPreview({ profile, result, onDownload }) {
       const firstPieceY = mainAreaY;
       // A altura da mochila é identificada pelo próprio retângulo; não exibimos seta vertical.
     }
-    const cardY = 520;
+    const cardY = 500;
     const cardGap = 22;
     const cardWidth = (panelWidth - 120 - (cardGap * 2)) / 3;
-    const cardHeight = 170;
+    const cardHeight = 220;
     const cardStartX = 60;
 
     const drawPlanCards = (plan, planQuantity, targetContext = context, accumulatedLeftoverArea = null) => {
@@ -1010,9 +1010,6 @@ function CutPreview({ profile, result, onDownload }) {
 
     drawPlanCards(firstCutPlan, previewQuantity);
 
-    context.fillStyle = '#0a0b0e';
-    context.font = '700 14px Arial';
-    context.fillText('LAYOUT SIMPLES, RÁPIDO E COM MÍNIMO DE DESPERDÍCIO', panelX + 150, panelY + panelHeight - 18);
 
     setPreviewUrl(canvas.toDataURL('image/png'));
 
