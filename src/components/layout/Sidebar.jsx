@@ -35,6 +35,7 @@ const NAV_SECTIONS = [
     { to: '/app/angler-pro/relatorios-semanais', icon: FileText, label: 'Relatórios semanais' },
     { to: '/app/angler-pro/relatorios-customizaveis', icon: BarChart3, label: 'Relatórios customizáveis' },
   ] },
+  { label: 'Angler Ultra', planKey: 'anglerultra', items: [] },
   { label: 'Sistema', items: [
     { to: '/app/settings', icon: Settings, label: 'Configurações' },
     { to: '/app/modules', icon: Blocks, label: 'Módulos', viewerHidden: true },
