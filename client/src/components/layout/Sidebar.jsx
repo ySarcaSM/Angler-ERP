@@ -12,7 +12,6 @@ const NAV_SECTIONS = [
     { to: '/', icon: Home, label: 'Home', end: true },
     { to: '/app', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/assistant', icon: Bot, label: 'Assistente de IA', moduleKey: 'assistant' },
-    { to: '/app/ia-audio', icon: Mic, label: 'IA por áudio' },
   ] },
   { label: 'Gestão', items: [
     { to: '/app/clients', icon: Users, label: 'Clientes', moduleKey: 'clients' },
@@ -34,6 +33,7 @@ const NAV_SECTIONS = [
   ] },
   { label: 'Angler Pro', planKey: 'anglerpro', items: [
     { to: '/app/angler-pro/relatorios-semanais', icon: FileText, label: 'Relatórios semanais' },
+    { to: '/app/ia-audio', icon: Mic, label: 'IA por áudio' },
   ] },
   { label: 'Sistema', items: [
     { to: '/app/settings', icon: Settings, label: 'Configurações' },
