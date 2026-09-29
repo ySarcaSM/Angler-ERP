@@ -22,6 +22,7 @@ import SupplierForm from './pages/purchasing/SupplierForm';
 import FinancialDashboard from './pages/financial/FinancialDashboard';
 import StockDashboard from './pages/stock/StockDashboard';
 import ReportsPage from './pages/reports/ReportsPage';
+import WeeklyReportsPage from './pages/anglerPro/WeeklyReportsPage';
 import LogsPage from './pages/logs/LogsPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import AngelAssistant from './pages/assistant/AngelAssistant';
@@ -71,6 +72,7 @@ function WriteRoute({ children }) { const { userData } = useAuth(); return userD
 function OperatorHomeOrDashboard() { return <Dashboard />; }
 function OperatorBlockedRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'operator' ? <Navigate to="/app" replace /> : children; }
 function AdminOrOwnerRoute({ children }) { const { userData } = useAuth(); return ['owner','admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />; }
+function AnglerProRoute({ children }) { const { company } = useAuth(); return company?.plan === 'anglerpro' ? children : <Navigate to="/app" replace />; }
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -101,6 +103,7 @@ export default function App() {
       <Route path="/financial" element={<ModuleRoute moduleKey="financial"><FinancialDashboard /></ModuleRoute>} />
       <Route path="/stock" element={<ModuleRoute moduleKey="stock"><StockDashboard /></ModuleRoute>} />
       <Route path="/reports" element={<ModuleRoute moduleKey="reports"><ReportsPage /></ModuleRoute>} />
+      <Route path="/angler-pro/relatorios-semanais" element={<AnglerProRoute><WeeklyReportsPage /></AnglerProRoute>} />
       <Route path="/budgets/new" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />
       <Route path="/budgets/profiles" element={<ModuleRoute moduleKey="measurement"><ProfileGroupPage /></ModuleRoute>} />
