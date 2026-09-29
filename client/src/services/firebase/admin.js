@@ -232,6 +232,19 @@ export async function listContactMessages() {
   }));
 }
 
+/**
+ * Exclui uma mensagem do formulário de contato.
+ * A regra do Firestore permite esta operação somente para o superadmin.
+ */
+export async function deleteContactMessage(messageId) {
+  if (!messageId) throw new Error('ID da mensagem não informado.');
+
+  await getValidToken();
+  await deleteDoc(doc(db, 'contactMessages', messageId));
+
+  return { id: messageId, deleted: true };
+}
+
 // ─── Gerenciamento de Usuários (TODOS) ───
 
 /**
