@@ -77,8 +77,11 @@ export default function LocationList() {
     }
   };
 
-  const openNew = () => { navigate('/app/locations/new'); };\n  const openNewForm = () => { setForm({ ...EMPTY }); setEditing(null); setModal(true); };
-  useEffect(() => { if (location.pathname === '/app/locations/new') openNewForm(); }, [location.pathname]);\n\n  const openEdit = (location) => { setForm({ ...EMPTY, ...location }); setEditing(location.id); setModal(true); };
+  const openNew = () => { navigate('/app/locations/new'); };
+  const openNewForm = () => { setForm({ ...EMPTY }); setEditing(null); setModal(true); };
+  useEffect(() => { if (location.pathname === '/app/locations/new') openNewForm(); }, [location.pathname]);
+
+  const openEdit = (location) => { setForm({ ...EMPTY, ...location }); setEditing(location.id); setModal(true); };
 
   const handleSave = async (event) => {
     event.preventDefault();
