@@ -60,7 +60,7 @@ export default function ProductList() {
 
   const openNew = () => { navigate('/app/products/new'); };
 
-  const openEdit = (p) => { setForm({ ...EMPTY, ...p, stock: { ...EMPTY.stock, ...p.stock } }); setEditing(p.id); setModal(true); };
+  const openEdit = (p) => { navigate(`/app/products/${p.id}/edit`); };
 
   const handleSave = async (e) => {
     e.preventDefault(); setSaving(true);
