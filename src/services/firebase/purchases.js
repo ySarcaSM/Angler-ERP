@@ -64,6 +64,21 @@ export async function createPurchase(companyId, data, user) {
   return { id: purchaseRef.id, ...purchase };
 }
 
+export async function updatePurchase(id, data) {
+  const existing = await getPurchase(id);
+  if (!existing) throw new Error('Compra não encontrada');
+  if (['received', 'cancelled'].includes(existing.status)) throw new Error('Apenas compras em rascunho podem ser editadas.');
+  const items = (data.items || []).map((item) => ({
+    ...item,
+    quantity: Math.floor(Number(item.quantity) || 0),
+    unitCost: Number(item.unitCost) || 0,
+    total: Math.floor(Number(item.quantity) || 0) * (Number(item.unitCost) || 0),
+  }));
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  const total = subtotal + (Number(data.shipping) || 0) + (Number(data.tax) || 0);
+  return updateDoc_(COLLECTION, id, { ...data, items, subtotal, total });
+}
+
 export async function receivePurchase(purchaseId, companyId) {
   const purchase = await getPurchase(purchaseId);
   if (!purchase) throw new Error('Compra não encontrada');
