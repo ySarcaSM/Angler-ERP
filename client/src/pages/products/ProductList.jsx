@@ -135,7 +135,7 @@ export default function ProductList() {
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
       </div>
 
-      <Modal open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/products/new') navigate('/app/products'); }} title={editing ? 'Editar Produto' : 'Novo Produto'} size="xl">
+      <Modal fullscreen={location.pathname === '/app/products/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/products/new') navigate('/app/products'); }} title={editing ? 'Editar Produto' : 'Novo Produto'} size="xl">
         <form onSubmit={handleSave} className="space-y-4">
           <div>
             <label className="label">Nome *</label>
