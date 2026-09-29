@@ -63,8 +63,11 @@ export default function ClientList() {
 
   useEffect(() => { setSearch(urlSearch); }, [urlSearch]);
 
-  const openNew = () => { navigate('/app/clients/new'); };\n  const openNewForm = () => { setForm({ ...EMPTY, address: { ...EMPTY.address } }); setErrors({}); setEditing(null); setModal(true); };
-  useEffect(() => { if (location.pathname === '/app/clients/new') openNewForm(); }, [location.pathname]);\n\n  const openEdit = (c) => { setForm({ ...EMPTY, ...c, address: { ...EMPTY.address, ...c.address } }); setErrors({}); setEditing(c.id); setModal(true); };
+  const openNew = () => { navigate('/app/clients/new'); };
+  const openNewForm = () => { setForm({ ...EMPTY, address: { ...EMPTY.address } }); setErrors({}); setEditing(null); setModal(true); };
+  useEffect(() => { if (location.pathname === '/app/clients/new') openNewForm(); }, [location.pathname]);
+
+  const openEdit = (c) => { setForm({ ...EMPTY, ...c, address: { ...EMPTY.address, ...c.address } }); setErrors({}); setEditing(c.id); setModal(true); };
 
   const validateForm = () => {
     const nextErrors = {};
