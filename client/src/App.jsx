@@ -10,11 +10,15 @@ import CompanyAccessRequest from './pages/auth/CompanyAccessRequest';
 import AccountChooser from './pages/auth/AccountChooser';
 import Dashboard from './pages/dashboard/Dashboard';
 import ClientList from './pages/clients/ClientList';
+import ClientForm from './pages/clients/ClientForm';
 import ProductList from './pages/products/ProductList';
+import ProductForm from './pages/products/ProductForm';
 import SaleList from './pages/sales/SaleList';
 import SaleForm from './pages/sales/SaleForm';
 import PurchaseList from './pages/purchasing/PurchaseList';
+import PurchaseForm from './pages/purchasing/PurchaseForm';
 import SupplierList from './pages/purchasing/SupplierList';
+import SupplierForm from './pages/purchasing/SupplierForm';
 import FinancialDashboard from './pages/financial/FinancialDashboard';
 import StockDashboard from './pages/stock/StockDashboard';
 import ReportsPage from './pages/reports/ReportsPage';
@@ -23,12 +27,15 @@ import NotificationsPage from './pages/notifications/NotificationsPage';
 import AngelAssistant from './pages/assistant/AngelAssistant';
 import ProfileGroupPage from './pages/budgets/ProfileGroupPage';
 import FormulasPage from './pages/budgets/FormulasPage';
+import FormulaForm from './pages/budgets/FormulaForm';
 import BudgetsPage from './pages/budgets/BudgetsPage';
+import BudgetForm from './pages/budgets/BudgetForm';
 import SettingsPage from './pages/settings/SettingsPage';
 import UserManagement from './pages/settings/UserManagement';
 import UserDetails from './pages/settings/UserDetails';
 import DeletionRequests from './pages/settings/DeletionRequests';
 import LocationList from './pages/locations/LocationList';
+import LocationForm from './pages/locations/LocationForm';
 import ModulesPage from './pages/modules/ModulesPage';
 import AccessibilityFloatingButton from './components/ui/AccessibilityFloatingButton';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -76,27 +83,27 @@ export default function App() {
     <Route path="/assistant" element={<PrivateRoute><ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute></PrivateRoute>} />
     <Route path="/app/*" element={<PrivateRoute><Layout><Routes>
       <Route path="/" element={<OperatorHomeOrDashboard />} />
-      <Route path="/clients/new" element={<ModuleRoute moduleKey="clients"><WriteRoute><ClientList /></WriteRoute></ModuleRoute>} />
+      <Route path="/clients/new" element={<ModuleRoute moduleKey="clients"><WriteRoute><ClientForm /></WriteRoute></ModuleRoute>} />
       <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
-      <Route path="/products/new" element={<ModuleRoute moduleKey="products"><WriteRoute><ProductList /></WriteRoute></ModuleRoute>} />
+      <Route path="/products/new" element={<ModuleRoute moduleKey="products"><WriteRoute><ProductForm /></WriteRoute></ModuleRoute>} />
       <Route path="/products" element={<ModuleRoute moduleKey="products"><ProductList /></ModuleRoute>} />
       <Route path="/sales" element={<ModuleRoute moduleKey="sales"><SaleList /></ModuleRoute>} />
       <Route path="/sales/new" element={<ModuleRoute moduleKey="sales"><WriteRoute><SaleForm /></WriteRoute></ModuleRoute>} />
       <Route path="/sales/:id" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
-      <Route path="/purchases/new" element={<ModuleRoute moduleKey="purchases"><WriteRoute><PurchaseList /></WriteRoute></ModuleRoute>} />
+      <Route path="/purchases/new" element={<ModuleRoute moduleKey="purchases"><WriteRoute><PurchaseForm /></WriteRoute></ModuleRoute>} />
       <Route path="/purchases" element={<ModuleRoute moduleKey="purchases"><PurchaseList /></ModuleRoute>} />
-      <Route path="/suppliers/new" element={<ModuleRoute moduleKey="suppliers"><WriteRoute><SupplierList /></WriteRoute></ModuleRoute>} />
+      <Route path="/suppliers/new" element={<ModuleRoute moduleKey="suppliers"><WriteRoute><SupplierForm /></WriteRoute></ModuleRoute>} />
       <Route path="/suppliers" element={<ModuleRoute moduleKey="suppliers"><SupplierList /></ModuleRoute>} />
-      <Route path="/locations/new" element={<ModuleRoute moduleKey="locations"><WriteRoute><LocationList /></WriteRoute></ModuleRoute>} />
+      <Route path="/locations/new" element={<ModuleRoute moduleKey="locations"><WriteRoute><LocationForm /></WriteRoute></ModuleRoute>} />
       <Route path="/locations" element={<ModuleRoute moduleKey="locations"><LocationList /></ModuleRoute>} />
       <Route path="/financial" element={<ModuleRoute moduleKey="financial"><FinancialDashboard /></ModuleRoute>} />
       <Route path="/stock" element={<ModuleRoute moduleKey="stock"><StockDashboard /></ModuleRoute>} />
       <Route path="/reports" element={<ModuleRoute moduleKey="reports"><ReportsPage /></ModuleRoute>} />
-      <Route path="/budgets/new" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetsPage /></WriteRoute></ModuleRoute>} />
+      <Route path="/budgets/new" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />
       <Route path="/budgets/profiles" element={<ModuleRoute moduleKey="measurement"><ProfileGroupPage /></ModuleRoute>} />
       <Route path="/budgets/profiles/:groupSlug" element={<Navigate to="/app/budgets/profiles" replace />} />
-      <Route path="/budgets/formulas/new" element={<ModuleRoute moduleKey="formulas"><WriteRoute><FormulasPage /></WriteRoute></ModuleRoute>} />
+      <Route path="/budgets/formulas/new" element={<ModuleRoute moduleKey="formulas"><WriteRoute><FormulaForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets/formulas" element={<ModuleRoute moduleKey="formulas"><FormulasPage /></ModuleRoute>} />
       <Route path="/settings" element={<OperatorBlockedRoute><SettingsPage /></OperatorBlockedRoute>} />
       <Route path="/modules" element={<OperatorBlockedRoute><ModulesPage /></OperatorBlockedRoute>} />
