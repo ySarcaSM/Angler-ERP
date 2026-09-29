@@ -78,7 +78,7 @@ export default function LocationList() {
 
   const openNew = () => { navigate('/app/locations/new'); };
 
-  const openEdit = (location) => { setForm({ ...EMPTY, ...location }); setEditing(location.id); setModal(true); };
+  const openEdit = (location) => { navigate(`/app/locations/${location.id}/edit`); };
 
   const handleSave = async (event) => {
     event.preventDefault();
