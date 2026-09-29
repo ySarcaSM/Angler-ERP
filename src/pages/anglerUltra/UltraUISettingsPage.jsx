@@ -40,9 +40,18 @@ export default function UltraUISettingsPage() {
   };
   const reset = () => setForm(savedSettings);
 
+  const normalizeFontScale = (value) => {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return 1;
+    return parsed > 2 ? parsed / 100 : parsed;
+  };
+  const previewFontScale = normalizeFontScale(form.fontSize);
+  const currentAppFontScale = normalizeFontScale(savedSettings.fontSize);
+
   const previewStyle = {
     fontFamily: form.fontFamily,
-    fontSize: `calc(16px * ${form.fontSize})`,
+    fontSize: '1rem',
+    zoom: previewFontScale / currentAppFontScale,
     borderRadius: form.borderRadius,
     boxShadow: form.cardShadow === 'none'
       ? 'none'
