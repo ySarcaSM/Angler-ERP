@@ -76,20 +76,27 @@ export default function App() {
     <Route path="/assistant" element={<PrivateRoute><ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute></PrivateRoute>} />
     <Route path="/app/*" element={<PrivateRoute><Layout><Routes>
       <Route path="/" element={<OperatorHomeOrDashboard />} />
+      <Route path="/clients/new" element={<ModuleRoute moduleKey="clients"><WriteRoute><ClientList /></WriteRoute></ModuleRoute>} />
       <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
+      <Route path="/products/new" element={<ModuleRoute moduleKey="products"><WriteRoute><ProductList /></WriteRoute></ModuleRoute>} />
       <Route path="/products" element={<ModuleRoute moduleKey="products"><ProductList /></ModuleRoute>} />
       <Route path="/sales" element={<ModuleRoute moduleKey="sales"><SaleList /></ModuleRoute>} />
       <Route path="/sales/new" element={<ModuleRoute moduleKey="sales"><WriteRoute><SaleForm /></WriteRoute></ModuleRoute>} />
       <Route path="/sales/:id" element={<ModuleRoute moduleKey="sales"><SaleForm /></ModuleRoute>} />
+      <Route path="/purchases/new" element={<ModuleRoute moduleKey="purchases"><WriteRoute><PurchaseList /></WriteRoute></ModuleRoute>} />
       <Route path="/purchases" element={<ModuleRoute moduleKey="purchases"><PurchaseList /></ModuleRoute>} />
+      <Route path="/suppliers/new" element={<ModuleRoute moduleKey="suppliers"><WriteRoute><SupplierList /></WriteRoute></ModuleRoute>} />
       <Route path="/suppliers" element={<ModuleRoute moduleKey="suppliers"><SupplierList /></ModuleRoute>} />
+      <Route path="/locations/new" element={<ModuleRoute moduleKey="locations"><WriteRoute><LocationList /></WriteRoute></ModuleRoute>} />
       <Route path="/locations" element={<ModuleRoute moduleKey="locations"><LocationList /></ModuleRoute>} />
       <Route path="/financial" element={<ModuleRoute moduleKey="financial"><FinancialDashboard /></ModuleRoute>} />
       <Route path="/stock" element={<ModuleRoute moduleKey="stock"><StockDashboard /></ModuleRoute>} />
       <Route path="/reports" element={<ModuleRoute moduleKey="reports"><ReportsPage /></ModuleRoute>} />
+      <Route path="/budgets/new" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetsPage /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />
       <Route path="/budgets/profiles" element={<ModuleRoute moduleKey="measurement"><ProfileGroupPage /></ModuleRoute>} />
       <Route path="/budgets/profiles/:groupSlug" element={<Navigate to="/app/budgets/profiles" replace />} />
+      <Route path="/budgets/formulas/new" element={<ModuleRoute moduleKey="formulas"><WriteRoute><FormulasPage /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets/formulas" element={<ModuleRoute moduleKey="formulas"><FormulasPage /></ModuleRoute>} />
       <Route path="/settings" element={<OperatorBlockedRoute><SettingsPage /></OperatorBlockedRoute>} />
       <Route path="/modules" element={<OperatorBlockedRoute><ModulesPage /></OperatorBlockedRoute>} />
