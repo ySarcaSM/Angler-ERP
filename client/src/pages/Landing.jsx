@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import {
   Home, ArrowRight, Users, ShoppingCart, Truck,
@@ -154,6 +155,8 @@ export default function Landing() {
   const pausedRef = useRef(false);
   const scrollPosRef = useRef(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({ title: '', email: '', description: '' });
+  const [contactSending, setContactSending] = useState(false);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -231,6 +234,37 @@ export default function Landing() {
       const y = el.getBoundingClientRect().top + window.scrollY - 80;
       window.scrollTo({ top: y, behavior: 'smooth' });
     });
+  };
+
+  const handleContactChange = (e) => {
+    const { id, value } = e.target;
+    const fieldMap = {
+      'contact-title': 'title',
+      'contact-email': 'email',
+      'contact-desc': 'description',
+    };
+    setContactForm((current) => ({ ...current, [fieldMap[id]]: value }));
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    if (contactSending) return;
+    setContactSending(true);
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contactForm),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Não foi possível enviar sua mensagem.');
+      toast.success('Mensagem enviada! Enviamos uma confirmação para o seu email.');
+      setContactForm({ title: '', email: '', description: '' });
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível enviar sua mensagem. Tente novamente.');
+    } finally {
+      setContactSending(false);
+    }
   };
 
   const scrollToTop = (e) => {
@@ -468,21 +502,21 @@ export default function Landing() {
           </div>
         </Reveal>
         <Reveal>
-          <form className="lp-contact-form" onSubmit={(e) => e.preventDefault()}>
+          <form className="lp-contact-form" onSubmit={handleContactSubmit}>
             <div className="lp-contact-field">
               <label htmlFor="contact-title">Título</label>
-              <input id="contact-title" type="text" placeholder="Ex: Dúvida sobre integração" />
+              <input id="contact-title" type="text" value={contactForm.title} onChange={handleContactChange} placeholder="Ex: Dúvida sobre integração" required maxLength={120} />
             </div>
             <div className="lp-contact-field">
               <label htmlFor="contact-email">Email</label>
-              <input id="contact-email" type="email" placeholder="seu@email.com" />
+              <input id="contact-email" type="email" value={contactForm.email} onChange={handleContactChange} placeholder="seu@email.com" required maxLength={254} />
             </div>
             <div className="lp-contact-field">
               <label htmlFor="contact-desc">Descrição do problema</label>
-              <textarea id="contact-desc" rows={5} placeholder="Descreva com detalhes o que aconteceu..." />
+              <textarea id="contact-desc" rows={5} value={contactForm.description} onChange={handleContactChange} placeholder="Descreva com detalhes o que aconteceu..." required maxLength={5000} />
             </div>
-            <button type="submit" className="lp-btn lp-btn-gold lp-contact-submit">
-              Enviar mensagem
+            <button type="submit" className="lp-btn lp-btn-gold lp-contact-submit" disabled={contactSending}>
+              {contactSending ? 'Enviando...' : 'Enviar mensagem'}
             </button>
           </form>
         </Reveal>
