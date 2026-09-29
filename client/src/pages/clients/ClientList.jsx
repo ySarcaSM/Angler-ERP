@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, Phone, Mail } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { listClients, createClient, updateClient, deleteClient } from '../../services/firebase/clients';
@@ -34,6 +34,8 @@ function isValidCPF(value) {
 }
 
 export default function ClientList() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { company, user, userData } = useAuth();
   const isOperator = userData?.role === 'operator';
   const [searchParams] = useSearchParams();
@@ -61,8 +63,8 @@ export default function ClientList() {
 
   useEffect(() => { setSearch(urlSearch); }, [urlSearch]);
 
-  const openNew = () => { setForm({ ...EMPTY, address: { ...EMPTY.address } }); setErrors({}); setEditing(null); setModal(true); };
-  const openEdit = (c) => { setForm({ ...EMPTY, ...c, address: { ...EMPTY.address, ...c.address } }); setErrors({}); setEditing(c.id); setModal(true); };
+  const openNew = () => { navigate('/app/clients/new'); };\n  const openNewForm = () => { setForm({ ...EMPTY, address: { ...EMPTY.address } }); setErrors({}); setEditing(null); setModal(true); };
+  useEffect(() => { if (location.pathname === '/app/clients/new') openNewForm(); }, [location.pathname]);\n\n  const openEdit = (c) => { setForm({ ...EMPTY, ...c, address: { ...EMPTY.address, ...c.address } }); setErrors({}); setEditing(c.id); setModal(true); };
 
   const validateForm = () => {
     const nextErrors = {};
@@ -90,7 +92,7 @@ export default function ClientList() {
         await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Cliente', entityId: createdClient.id, description: `${userData?.name || 'Usuário'} criou o cliente ${form.name}.`, details: { name: form.name, email: form.email, phone: form.phone } });
         toast.success('Cliente criado!');
       }
-      setModal(false); load();
+      setModal(false); if (location.pathname === '/app/clients/new') navigate('/app/clients'); load();
     } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setSaving(false); }
   };
@@ -128,7 +130,7 @@ export default function ClientList() {
 
       <Modal
         open={modal}
-        onClose={() => setModal(false)}
+        onClose={() => { setModal(false); if (location.pathname === '/app/clients/new') navigate('/app/clients'); }}
         title={editing ? 'Editar Cliente' : 'Novo Cliente'}
         size="lg"
         backdropClassName="bg-transparent"
