@@ -72,7 +72,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             !(userData?.role === 'operator' && !item.moduleKey && !item.requestsPage && !['/', '/app'].includes(item.to))
             && !(userData?.role === 'viewer' && item.viewerHidden)
             && !(userData?.role === 'viewer' && item.moduleKey === 'measurement')
-            && (!item.moduleKey || effectiveModules.includes(item.moduleKey) || (userData?.role === 'operator' && item.moduleKey === 'assistant'))
+            && (!item.moduleKey || effectiveModules.includes(item.moduleKey) || (['anglerpro', 'anglerultra'].includes(company?.plan) && item.moduleKey === 'assistant') || (userData?.role === 'operator' && item.moduleKey === 'assistant'))
             && (!item.ownerOnly || userData?.role === 'owner')
             && (!item.adminOrOwner || ['owner', 'admin'].includes(userData?.role))
           ));
