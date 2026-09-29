@@ -2330,3 +2330,8 @@ html[data-accessibility-theme='light'] .text-dark-500 {
     justify-content: center;
   }
 }
+
+
+/* Brilho sutil para textos Angler Pro */
+.pro-shimmer { background: linear-gradient(90deg, #c4b5fd 0%, #ede9fe 45%, #a78bfa 55%, #c4b5fd 100%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: pro-shimmer 2.8s ease-in-out infinite; }
+@keyframes pro-shimmer { 0%, 100% { background-position: 120% 0; } 50% { background-position: -20% 0; } }
