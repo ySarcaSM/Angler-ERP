@@ -52,6 +52,7 @@ O fluxo de acesso entre empresas permite:
 2. O proprietário ou administrador da empresa analisar a solicitação.
 3. O acesso ser aprovado com um cargo específico.
 4. O usuário passar a ter a nova empresa disponível em seu contexto, sem transferir a propriedade da empresa.
+5. Quando a conta possui mais de uma empresa disponível no login, o usuário é direcionado para a seleção de empresa antes de entrar no ERP.
 
 A aprovação de acesso não altera o `ownerUid` da empresa de destino.
 
@@ -126,6 +127,10 @@ A **Angel** é a assistente de IA integrada ao ERP.
 Ela pode trabalhar com o contexto dos dados disponíveis para o usuário e da empresa ativa. A chave da API Gemini é informada pelo próprio usuário e permanece somente no `sessionStorage` do navegador durante a sessão autenticada.
 
 A aplicação chama a API Gemini diretamente do navegador.
+
+## Pesquisa global
+
+A pesquisa global da barra superior permite localizar módulos e recursos do sistema, incluindo Configurações, Módulos, Usuários, Requisições, Logs e Notificações, além dos principais registros operacionais.
 
 Quando a API Gemini retorna erro de indisponibilidade temporária (`503`), a Angel informa o usuário e registra um alerta local no centro de notificações.
 
@@ -296,9 +301,13 @@ Atualizações, infraestrutura e disponibilidade do serviço são administradas 
 | `/` | Landing page institucional e planos |
 | `/login` e `/register` | Autenticação e criação de conta |
 | `/app` | Dashboard autenticado |
+| `/escolher-conta` | Seleção da empresa ativa quando a conta possui múltiplas empresas |
 | `/app/clients`, `/products`, `/sales`, `/purchases` | Gestão comercial e operacional |
+| `/app/clients/new`, `/products/new`, `/sales/new`, `/purchases/new` | Formulários dedicados para criação de registros |
+| `/app/suppliers/new`, `/locations/new` | Formulários dedicados para criação de fornecedores e localizações |
 | `/app/financial`, `/stock`, `/reports` | Financeiro, estoque e relatórios |
 | `/app/budgets` | Orçamentos, fórmulas, Medição e planos de corte |
+| `/app/budgets/new`, `/app/budgets/formulas/new` | Formulários dedicados para criação de orçamentos e fórmulas |
 | `/app/settings` | Configurações da empresa |
 | `/app/users` | Gestão de usuários |
 | `/app/logs` | Auditoria |
