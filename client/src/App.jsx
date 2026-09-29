@@ -46,6 +46,12 @@ function PrivateRoute({ children }) {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-dark-950"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" /></div>;
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
+function AuthenticatedEntry() {
+  const { availableCompanies, userData } = useAuth();
+  if (availableCompanies.length > 1) return <Navigate to="/escolher-conta" replace />;
+  if (!userData?.companyId) return <Navigate to="/login" replace />;
+  return <Navigate to="/app" replace />;
+}
 function ModuleRoute({ moduleKey, children }) {
   const { getEffectiveModules, userData } = useAuth();
   if (userData?.role === 'viewer' && moduleKey === 'measurement') return <Navigate to="/app" replace />;
@@ -53,29 +59,16 @@ function ModuleRoute({ moduleKey, children }) {
   return getEffectiveModules().includes(moduleKey) ? children : <Navigate to="/app" replace />;
 }
 function WriteRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'viewer' ? <Navigate to="/app" replace /> : children; }
-function OperatorHome() {
-  const { getEffectiveModules } = useAuth();
-  const routes = [
-    ['clients','/app/clients'], ['products','/app/products'], ['sales','/app/sales'],
-    ['purchases','/app/purchases'], ['suppliers','/app/suppliers'], ['locations','/app/locations'],
-    ['financial','/app/financial'], ['stock','/app/stock'], ['reports','/app/reports'],
-    ['measurement','/app/budgets/profiles'], ['formulas','/app/budgets/formulas'], ['budgets','/app/budgets'],
-  ];
-  const firstAvailable = routes.find(([key]) => getEffectiveModules().includes(key));
-  return firstAvailable
-    ? <Navigate to={firstAvailable[1]} replace />
-    : <div className="card p-6"><h1 className="text-lg font-semibold text-dark-100">Nenhum módulo disponível</h1><p className="text-sm text-dark-500 mt-2">Nenhum módulo operacional está habilitado nesta empresa.</p></div>;
-}
+function OperatorHomeOrDashboard() { return <Dashboard />; }
 function OperatorBlockedRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'operator' ? <Navigate to="/app" replace /> : children; }
 function AdminOrOwnerRoute({ children }) { const { userData } = useAuth(); return ['owner','admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />; }
-function OperatorHomeOrDashboard() { return <Dashboard />; }
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-dark-950"><div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full" /></div>;
   return <><Routes>
     <Route path="/" element={<Landing />} />
-    <Route path="/login" element={isAuthenticated ? <Navigate to="/app" replace /> : <Login />} />
+    <Route path="/login" element={isAuthenticated ? <AuthenticatedEntry /> : <Login />} />
     <Route path="/register" element={isAuthenticated ? <Navigate to="/app" replace /> : <Register />} />
     <Route path="/empresa/:companyId" element={<CompanyAccessRequest />} />
     <Route path="/escolher-conta" element={<PrivateRoute><AccountChooser /></PrivateRoute>} />
