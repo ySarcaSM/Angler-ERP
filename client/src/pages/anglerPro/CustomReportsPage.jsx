@@ -292,7 +292,9 @@ export default function CustomReportsPage() {
         drawLegend(x, base + 19, series.map((item) => item.metric));
       };
 
-      const getChartColor = (index) => CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS[0];\n\n      const drawPie = (x, top, size, values, labels, titleText) => {
+      const getChartColor = (index) => CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS[0];
+
+      const drawPie = (x, top, size, values, labels, titleText) => {
         pdf.setFontSize(11);
         pdf.setTextColor(35, 35, 35);
         pdf.text(titleText, x, top);
