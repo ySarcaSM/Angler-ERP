@@ -424,12 +424,12 @@ export default function Landing() {
 
           {/* PRO */}
           <Reveal>
-            <div className="lp-pricing-card popular">
-              <div className="lp-pricing-popular-tag"><Star size={12} /> Mais popular</div>
+            <div className="lp-pricing-card popular" style={{ borderColor: "rgba(124, 58, 237, 0.28)", background: "linear-gradient(180deg, rgba(124, 58, 237, 0.05) 0%, #0c0c0c 40%)", boxShadow: "0 0 60px rgba(124, 58, 237, 0.07)" }}>
+              <div className="lp-pricing-popular-tag" style={{ background: "linear-gradient(135deg, #7c3aed, #5b21b6)", color: "#fff" }}><Star size={12} /> Mais popular</div>
               <div className="lp-pricing-top">
-                <div className="lp-pricing-icon pro"><Crown size={20} /></div>
+                <div className="lp-pricing-icon pro" style={{ background: "rgba(124, 58, 237, 0.14)", color: "#a78bfa" }}><Crown size={20} /></div>
                 <span className="lp-pricing-name">AnglerPro</span>
-                <span className="lp-pricing-badge pro">Pro</span>
+                <span className="lp-pricing-badge pro" style={{ background: "rgba(124, 58, 237, 0.14)", color: "#a78bfa" }}>Pro</span>
               </div>
               <div className="lp-pricing-price">
                 <span className="lp-pricing-val">R$ 119<span className="lp-pricing-cents">,98</span></span>
@@ -443,7 +443,7 @@ export default function Landing() {
                 <li><Check size={14} /> Mais distribuidoras de IA</li>
                 <li><Check size={14} /> Cálculos para usar menos token</li>
               </ul>
-              <Link to="/register" className="lp-btn lp-btn-gold lp-pricing-cta">Assinar agora</Link>
+              <Link to="/register" className="lp-btn lp-pricing-cta" style={{ color: "#fff", background: "linear-gradient(180deg, #8b5cf6 0%, #7c3aed 45%, #5b21b6 100%)", boxShadow: "0 2px 16px rgba(124, 58, 237, 0.28)" }}>Assinar agora</Link>
             </div>
           </Reveal>
 
@@ -451,9 +451,9 @@ export default function Landing() {
           <Reveal>
             <div className="lp-pricing-card">
               <div className="lp-pricing-top">
-                <div className="lp-pricing-icon ultra"><Zap size={20} /></div>
+                <div className="lp-pricing-icon ultra" style={{ background: "rgba(127, 29, 29, 0.18)", color: "#b91c1c" }}><Zap size={20} /></div>
                 <span className="lp-pricing-name">AnglerUltra</span>
-                <span className="lp-pricing-badge ultra">Ultra</span>
+                <span className="lp-pricing-badge ultra" style={{ background: "rgba(127, 29, 29, 0.18)", color: "#dc2626" }}>Ultra</span>
               </div>
               <div className="lp-pricing-price">
                 <span className="lp-pricing-val">R$ 199<span className="lp-pricing-cents">,98</span></span>
@@ -466,7 +466,7 @@ export default function Landing() {
                 <li><Check size={14} /> Importação e exportação de dados</li>
                 <li><Check size={14} /> Relatórios visão geral em PDF</li>
               </ul>
-              <Link to="/register" className="lp-btn lp-btn-ghost lp-pricing-cta">Assinar agora</Link>
+              <Link to="/register" className="lp-btn lp-pricing-cta" style={{ color: "#fff", background: "linear-gradient(180deg, #991b1b 0%, #7f1d1d 45%, #450a0a 100%)", boxShadow: "0 2px 16px rgba(127, 29, 29, 0.3)" }}>Assinar agora</Link>
             </div>
           </Reveal>
         </div>
