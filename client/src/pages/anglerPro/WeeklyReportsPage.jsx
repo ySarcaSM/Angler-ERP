@@ -6,6 +6,7 @@ import { listSales } from '../../services/firebase/sales';
 import { listTransactions } from '../../services/firebase/financial';
 import { createWeeklyReport, deleteWeeklyReport, listWeeklyReports } from '../../services/firebase/weeklyReports';
 import { listBudgets } from '../../services/firebase/budgets';
+import { updateDoc_ } from '../../services/firebase/firestore';
 import { timestampToDate } from '../../utils/format';
 import { formatBRL } from '../../utils/format';
 import toast from 'react-hot-toast';
@@ -44,6 +45,9 @@ export default function WeeklyReportsPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [automationEnabled, setAutomationEnabled] = useState(false);
+  const [automationDate, setAutomationDate] = useState(toDateInputValue(new Date()));
+  const [savingAutomation, setSavingAutomation] = useState(false);
 
   const selectedPeriod = useMemo(() => {
     const start = toLocalDate(startDate);
@@ -63,7 +67,12 @@ export default function WeeklyReportsPage() {
     }
   };
 
-  useEffect(() => { loadReports(); }, [company?.id]);
+  useEffect(() => {
+    loadReports();
+    const automation = company?.weeklyReportAutomation;
+    setAutomationEnabled(Boolean(automation?.enabled));
+    setAutomationDate(automation?.startDate || toDateInputValue(new Date()));
+  }, [company?.id, company?.weeklyReportAutomation?.enabled, company?.weeklyReportAutomation?.startDate]);
 
   const handleDownloadPdf = (report) => {
     const pdf = new jsPDF();
@@ -224,6 +233,25 @@ export default function WeeklyReportsPage() {
     pdf.save(`relatorio-semanal-${report.startDate || 'periodo'}.pdf`);
   };
 
+  const handleAutomationSave = async () => {
+    if (!company?.id || !automationDate) return;
+    setSavingAutomation(true);
+    try {
+      await updateDoc_('companies', company.id, {
+        weeklyReportAutomation: {
+          enabled: automationEnabled,
+          startDate: automationDate,
+          nextStartDate: automationDate,
+        },
+      });
+      toast.success(automationEnabled ? 'Automação semanal ativada.' : 'Automação semanal desativada.');
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível salvar a automação.');
+    } finally {
+      setSavingAutomation(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!company?.id || reports.length >= 5) return;
 
@@ -335,6 +363,35 @@ export default function WeeklyReportsPage() {
             <h1 className="text-2xl font-bold text-dark-100">Relatórios semanais</h1>
             <p className="text-dark-500 text-sm mt-1">Crie e consulte snapshots semanais dos resultados da empresa.</p>
           </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">Automação semanal</h2></div>
+        <div className="card-body">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex-1">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={automationEnabled} onChange={(event) => setAutomationEnabled(event.target.checked)} className="h-4 w-4" />
+                <span className="text-sm font-medium text-dark-200">Criar um relatório automaticamente toda semana</span>
+              </label>
+              <p className="text-xs text-dark-500 mt-2 ml-7">A partir da data escolhida, o sistema cria um novo snapshot a cada 7 dias. O limite continua em 5 relatórios; quando estiver cheio, o mais antigo é substituído pelo automático mais recente.</p>
+            </div>
+            <div className="flex items-end gap-3">
+              <label className="block">
+                <span className="block text-xs text-dark-500 mb-1">Primeira semana</span>
+                <input type="date" value={automationDate} onChange={(event) => setAutomationDate(event.target.value)} className="input" disabled={!automationEnabled} />
+              </label>
+              <button type="button" onClick={handleAutomationSave} disabled={savingAutomation || !automationDate} className="btn-primary">
+                {savingAutomation ? 'Salvando...' : 'Salvar automação'}
+              </button>
+            </div>
+          </div>
+          {company?.weeklyReportAutomation?.enabled && (
+            <div className="mt-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-300">
+              Automação ativa. Próximo relatório programado para {formatDate(getDate(company.weeklyReportAutomation.nextStartDate || company.weeklyReportAutomation.startDate))}.
+            </div>
+          )}
         </div>
       </div>
 
