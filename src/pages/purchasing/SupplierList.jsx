@@ -63,7 +63,7 @@ export default function SupplierList() {
 
   const openNew = () => { navigate('/app/suppliers/new'); };
 
-  const openEdit = (s) => { setForm({ ...EMPTY, ...s }); setEditing(s.id); setModal(true); };
+  const openEdit = (s) => { navigate(`/app/suppliers/${s.id}/edit`); };
 
   const lookupCEP = async (value) => {
     const cep = value.replace(/\D/g, '');
