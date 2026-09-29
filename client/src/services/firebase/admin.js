@@ -213,6 +213,25 @@ export function onAdminAuthChange(callback) {
   });
 }
 
+// ─── Mensagens do formulário de contato ───
+
+/**
+ * Lista todas as mensagens enviadas pelo formulário público de contato.
+ */
+export async function listContactMessages() {
+  const q = query(
+    collection(db, 'contactMessages'),
+    orderBy('createdAt', 'desc')
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((item) => ({
+    id: item.id,
+    ...item.data(),
+    createdAt: item.data().createdAt?.toDate?.() || null,
+  }));
+}
+
 // ─── Gerenciamento de Usuários (TODOS) ───
 
 /**
