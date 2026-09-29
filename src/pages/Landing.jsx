@@ -451,9 +451,9 @@ export default function Landing() {
           <Reveal>
             <div className="lp-pricing-card">
               <div className="lp-pricing-top">
-                <div className="lp-pricing-icon ultra" style={{ background: "rgba(234, 88, 12, 0.16)", color: "#f97316" }}><Zap size={20} /></div>
+                <div className="lp-pricing-icon ultra" style={{ background: "rgba(249, 115, 22, 0.16)", color: "#fb923c" }}><Zap size={20} /></div>
                 <span className="lp-pricing-name">AnglerUltra</span>
-                <span className="lp-pricing-badge ultra" style={{ background: "rgba(234, 88, 12, 0.16)", color: "#fdba74" }}>Ultra</span>
+                <span className="lp-pricing-badge ultra" style={{ background: "rgba(234, 88, 12, 0.16)", color: "#fed7aa" }}>Ultra</span>
               </div>
               <div className="lp-pricing-price">
                 <span className="lp-pricing-val">R$ 199<span className="lp-pricing-cents">,98</span></span>
@@ -466,7 +466,7 @@ export default function Landing() {
                 <li><Check size={14} /> Importação e exportação de dados</li>
                 <li><Check size={14} /> Relatórios visão geral em PDF</li>
               </ul>
-              <Link to="/register" className="lp-btn lp-pricing-cta" style={{ color: "#fff", background: "linear-gradient(180deg, #f97316 0%, #ea580c 48%, #c2410c 100%)", boxShadow: "0 2px 16px rgba(234, 88, 12, 0.28)" }}>Assinar agora</Link>
+              <Link to="/register" className="lp-btn lp-pricing-cta" style={{ color: "#fff", background: "linear-gradient(180deg, #fb923c 0%, #f97316 48%, #ea580c 100%)", boxShadow: "0 2px 16px rgba(249, 115, 22, 0.28)" }}>Assinar agora</Link>
             </div>
           </Reveal>
         </div>
