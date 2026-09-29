@@ -67,8 +67,8 @@ export default function CustomReportsPage() {
   const { company } = useAuth();
   const [title, setTitle] = useState('Relatório personalizado');
   const [charts, setCharts] = useState([
-    { id: 1, title: 'Desempenho financeiro', type: 'bar', metrics: ['income', 'expense', 'profit'] },
-    { id: 2, title: 'Vendas', type: 'line', metrics: ['salesTotal', 'salesCount'] },
+    { id: 1, title: 'Desempenho financeiro', type: 'bar', period: 'global', date: '', metrics: ['income', 'expense', 'profit'] },
+    { id: 2, title: 'Vendas', type: 'line', period: 'global', date: '', metrics: ['salesTotal', 'salesCount'] },
   ]);
   const [includeTable, setIncludeTable] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -217,7 +217,7 @@ export default function CustomReportsPage() {
         let cursor = x;
         pdf.setFontSize(7);
         metrics.forEach((metric, index) => {
-          const color = CHART_COLORS[index % CHART_COLORS.length];
+          const color = getChartColor(index);
           pdf.setFillColor(color[0], color[1], color[2]);
           pdf.rect(cursor, yLegend - 4, 4, 4, 'F');
           pdf.setTextColor(80, 80, 80);
@@ -244,7 +244,7 @@ export default function CustomReportsPage() {
           series.forEach((item, seriesIndex) => {
             const value = Math.max(0, Number(item.values[index] || 0));
             const barH = (value / max) * (h - 12);
-            const color = CHART_COLORS[seriesIndex % CHART_COLORS.length];
+            const color = getChartColor(seriesIndex);
             pdf.setFillColor(color[0], color[1], color[2]);
             pdf.roundedRect(groupX + seriesIndex * (barW + barGap), base - barH, barW, barH, 0.8, 0.8, 'F');
           });
@@ -267,7 +267,7 @@ export default function CustomReportsPage() {
         pdf.setTextColor(35, 35, 35);
         pdf.text(titleText, x, top);
         series.forEach((item, seriesIndex) => {
-          const color = CHART_COLORS[seriesIndex % CHART_COLORS.length];
+          const color = getChartColor(seriesIndex);
           pdf.setDrawColor(color[0], color[1], color[2]);
           pdf.setFillColor(color[0], color[1], color[2]);
           const points = item.values.map((value, index) => ({
@@ -292,7 +292,7 @@ export default function CustomReportsPage() {
         drawLegend(x, base + 19, series.map((item) => item.metric));
       };
 
-      const drawPie = (x, top, size, values, labels, titleText) => {
+      const getChartColor = (index) => CHART_COLORS[index % CHART_COLORS.length] || CHART_COLORS[0];\n\n      const drawPie = (x, top, size, values, labels, titleText) => {
         pdf.setFontSize(11);
         pdf.setTextColor(35, 35, 35);
         pdf.text(titleText, x, top);
@@ -316,7 +316,7 @@ export default function CustomReportsPage() {
             const current = angle + (next - angle) * (step / steps);
             points.push([cx + Math.cos(current) * radius, cy + Math.sin(current) * radius]);
           }
-          const color = CHART_COLORS[index % CHART_COLORS.length];
+          const color = getChartColor(index);
           pdf.setFillColor(color[0], color[1], color[2]);
           const vectors = points.slice(1).map((point, pointIndex) => [
             point[0] - (pointIndex === 0 ? cx : points[pointIndex][0]),
