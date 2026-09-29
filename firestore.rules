@@ -344,6 +344,20 @@ service cloud.firestore {
         (isSuperAdmin() || isAdmin(resource.data.companyId));
     }
 
+    match /contactMessages/{messageId} {
+      allow create: if request.resource.data.title is string &&
+        request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 120 &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() > 3 &&
+        request.resource.data.email.size() <= 254 &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() > 0 &&
+        request.resource.data.description.size() <= 5000;
+      allow read: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
     match /counters/{companyId} {
       allow read: if canReadCollection(companyId, 'counters');
       allow write: if canWriteCollection(companyId, 'counters');
