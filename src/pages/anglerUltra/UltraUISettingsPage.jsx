@@ -38,7 +38,7 @@ export default function UltraUISettingsPage() {
       toast.error(error.message || 'Não foi possível salvar as configurações.');
     } finally { setSaving(false); }
   };
-  const reset = () => setForm(savedSettings);
+  const reset = () => setForm({ ...DEFAULT });
 
   const normalizeFontScale = (value) => {
     const parsed = Number.parseFloat(value);
@@ -87,6 +87,6 @@ export default function UltraUISettingsPage() {
       </section>
       <section className="card p-6"><h2 className="font-semibold text-dark-100 mb-4">Prévia</h2><div className="rounded-xl border border-dark-700 space-y-4" style={previewStyle}><div><div className="text-lg font-bold text-dark-100" style={{ color: form.accentColor }}>Exemplo de interface</div><p className="text-sm text-dark-400">Esta prévia acompanha as alterações enquanto você edita. Elas só são aplicadas ao restante do /app após salvar.</p></div><div className="flex flex-wrap gap-2"><button className="btn-primary" style={{ ...previewButtonStyle, background: form.primaryButtonColor }}>Botão principal</button><button className="btn-secondary" style={{ ...previewButtonStyle, background: form.secondaryButtonColor }}>Secundário</button><button className="btn-danger" style={{ ...previewButtonStyle, background: form.dangerButtonColor }}>Excluir</button></div></div></section>
     </div>
-    <div className="flex justify-end gap-3"><button type="button" className="btn-secondary" onClick={reset}><RotateCcw size={17}/>Restaurar padrão</button><button type="button" className="btn-primary" onClick={save} disabled={!canEdit || saving}><Save size={17}/>{saving ? 'Salvando...' : 'Salvar configurações'}</button></div>
+    <div className="flex justify-end gap-3"><button type="button" className="btn-secondary" onClick={reset}><RotateCcw size={17}/>Voltar aos padrões</button><button type="button" className="btn-primary" onClick={save} disabled={!canEdit || saving}><Save size={17}/>{saving ? 'Salvando...' : 'Salvar configurações'}</button></div>
   </div>;
 }
