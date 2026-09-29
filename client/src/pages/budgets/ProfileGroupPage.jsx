@@ -923,7 +923,7 @@ function CutPreview({ profile, result, onDownload }) {
       // usando a altura real do retângulo desenhado.
       const firstPieceX = mainStartX + mainPieceDrawWidth + (hasAccordion ? accordionDrawWidth : 0);
       const firstPieceY = mainAreaY;
-      drawVerticalDimension(context, firstPieceX + 8, firstPieceY, firstPieceY + (cutHeightCm * verticalCentimeterScale), `${formatNumber(cutHeightCm, 0)} cm`);
+      // A altura da mochila é identificada pelo próprio retângulo; não exibimos seta vertical.
     }
     const cardY = 520;
     const cardGap = 22;
@@ -964,6 +964,11 @@ function CutPreview({ profile, result, onDownload }) {
         `Espaço vago útil: ${formatNumber(emptyPositions, 0)} posição(ões) (${formatNumber(emptyArea, 0)} cm²)`,
         `Faixa residual: ${formatNumber(plan?.lengthLeftover || 0, 0)} cm no comprimento`,
         `Área residual das bordas: ${formatNumber(residualEdgeArea, 0)} cm²`,
+        ...(hasAccordion ? [
+          `Sanfonas: 2 por mochila × ${formatNumber(result.accordionWidth, 1)} cm × ${formatNumber(result.originalProductHeight, 1)} cm`,
+          `Área das sanfonas: ${formatNumber(accordionAreaPerUnit, 0)} cm² por mochila`,
+          `Área total das sanfonas: ${formatNumber(accordionAreaPerUnit * placedPieces, 0)} cm²`,
+        ] : []),
         `Área total de sobra: ${formatNumber(placedAreaLeftover, 0)} cm²`,
         ...(accumulatedLeftoverArea !== null ? [`Sobra acumulada dos cortes: ${formatNumber(accumulatedLeftoverArea, 0)} cm²`] : []),
       ], '#dfeaf5');
@@ -987,6 +992,11 @@ function CutPreview({ profile, result, onDownload }) {
         `Comprimento em metros lineares: ${formatNumber(totalComprimentoM, 2)} m`,
         `Largura do material: ${formatNumber(plan?.width || materialWidth, 0)} cm`,
         `Quantidade neste plano: ${formatNumber(placedPieces, 0)} unidade(s)`,
+        ...(hasAccordion ? [
+          `Sanfonas: 2 por mochila × ${formatNumber(result.accordionWidth, 1)} cm`,
+          `Consumo das sanfonas: ${formatNumber(accordionAreaPerUnit * placedPieces / 10000, 2)} m²`,
+          `Área total das sanfonas: ${formatNumber(accordionAreaPerUnit * placedPieces, 0)} cm²`,
+        ] : []),
         ...accessoryLines,
       ], '#f5dfe8');
 
@@ -1089,7 +1099,7 @@ function CutPreview({ profile, result, onDownload }) {
           drawHorizontalDimension(duplicateContext, firstGroupX, secondMainStart, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#15803d');
           drawHorizontalDimension(duplicateContext, secondMainEnd, secondMainEnd + secondAccordionDrawWidth, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#15803d');
         }
-        drawVerticalDimension(duplicateContext, secondMainEnd + 8, mainAreaY, mainAreaY + secondMainAreaHeight, `${formatNumber(secondPieceHeightCm, 0)} cm`);
+        // A altura da mochila é identificada pelo próprio retângulo; não exibimos seta vertical.
       }
 
       const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * (Number(secondPlan?.pieceHeight) || cutHeightCm) * verticalCentimeterScale));
