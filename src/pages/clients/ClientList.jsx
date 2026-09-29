@@ -64,7 +64,7 @@ export default function ClientList() {
 
   const openNew = () => { navigate('/app/clients/new'); };
 
-  const openEdit = (c) => { setForm({ ...EMPTY, ...c, address: { ...EMPTY.address, ...c.address } }); setErrors({}); setEditing(c.id); setModal(true); };
+  const openEdit = (c) => { navigate(`/app/clients/${c.id}/edit`); };
 
   const validateForm = () => {
     const nextErrors = {};
