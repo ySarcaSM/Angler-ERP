@@ -291,8 +291,10 @@ function PhysicalCalculationPreview({ profile, result, onDownload }) {
         const widthUtilization = (Number(plan.width) || 0) > 0
           ? (usedWidthCm / (Number(plan.width) || 0)) * 100
           : 0;
-        const utilization = Math.max(lengthUtilization, widthUtilization);
-        const utilizationAxis = widthUtilization >= lengthUtilization ? 'largura' : 'comprimento';
+        const lengthLeftoverForTip = Math.max(0, Number(plan?.lengthLeftover) || 0);
+        const widthLeftoverForTip = Math.max(0, Number(plan?.widthLeftover) || 0);
+        const utilization = widthLeftoverForTip <= lengthLeftoverForTip ? widthUtilization : lengthUtilization;
+        const utilizationAxis = widthLeftoverForTip <= lengthLeftoverForTip ? 'largura' : 'comprimento';
 
         const accessoryLines = result.accessoryType === 'handle'
           ? [
@@ -993,8 +995,9 @@ function CutPreview({ profile, result, onDownload }) {
           const leftAccordionEnd = groupX + accordionDrawWidthForDimension;
           const rightAccordionStart = mainEnd;
           const rightAccordionEnd = rightAccordionStart + accordionDrawWidthForDimension;
-          drawHorizontalDimension(context, leftAccordionStart, leftAccordionEnd, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#111827');
-          drawHorizontalDimension(context, rightAccordionStart, rightAccordionEnd, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#111827');
+          const accordionPairStart = leftAccordionStart;
+          const accordionPairEnd = rightAccordionEnd;
+          drawHorizontalDimension(context, accordionPairStart, accordionPairEnd, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm cada sanfona`, '#111827');
         }
       }
 
