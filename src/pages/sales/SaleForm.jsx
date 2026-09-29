@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
-import { createSale, getSale } from '../../services/firebase/sales';
+import { createSale, getSale, updateSale } from '../../services/firebase/sales';
 import { listClients } from '../../services/firebase/clients';
 import { listProducts } from '../../services/firebase/products';
 import { formatBRL } from '../../utils/format';
@@ -22,6 +22,7 @@ export default function SaleForm() {
   const [clients, setClients] = useState([]);
   const [products, setProducts] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(Boolean(id));
 
   useEffect(() => {
     if (!company?.id) return;
@@ -40,7 +41,7 @@ export default function SaleForm() {
             items: sale.items?.length ? sale.items : prev.items,
           }));
         }
-      });
+      }).catch((error) => toast.error(error.message)).finally(() => setLoading(false));
     }
   }, [company, id]);
 
@@ -93,9 +94,10 @@ export default function SaleForm() {
     setSaving(true);
     try {
       const client = clients.find((c) => c.id === form.clientId);
-      const createdSale = await createSale(company.id, { ...form, clientName: client?.name || form.clientName }, { ...user, displayName: userData?.name || user.email });
-      await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Venda', entityId: createdSale.id, description: `${userData?.name || 'Usuário'} criou a venda #${createdSale.number || createdSale.id} para ${client?.name || form.clientName}, no valor de ${formatBRL(createdSale.total)}.`, details: { number: createdSale.number, clientName: client?.name || form.clientName, total: createdSale.total, itemCount: form.items.length } });
-      toast.success('Venda criada!');
+      const payload = { ...form, clientName: client?.name || form.clientName };
+      const createdSale = id ? await updateSale(id, payload) : await createSale(company.id, payload, { ...user, displayName: userData?.name || user.email });
+      await logAudit(company.id, { user, userName: userData?.name, action: id ? 'update' : 'create', entity: 'Venda', entityId: id || createdSale.id, description: `${userData?.name || 'Usuário'} ${id ? 'alterou' : 'criou'} a venda #${createdSale.number || createdSale.id} para ${client?.name || form.clientName}, no valor de ${formatBRL(createdSale.total)}.`, details: { number: createdSale.number, clientName: client?.name || form.clientName, total: createdSale.total, itemCount: form.items.length } });
+      toast.success(id ? 'Venda atualizada!' : 'Venda criada!');
       navigate('/app/sales');
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
@@ -148,7 +150,7 @@ export default function SaleForm() {
 
         <div className="flex justify-end gap-3">
           <button type="button" className="btn-secondary" onClick={() => navigate('/app/sales')}>Cancelar</button>
-          {!isViewer && <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Salvando...' : <><Save size={18} /> Criar Venda</>}</button>}
+          {!isViewer && <button type="submit" className="btn-primary" disabled={saving || loading}>{saving ? 'Salvando...' : <><Save size={18} /> {id ? 'Salvar alterações' : 'Criar Venda'}</>}</button>}
         </div>
       </form>
     </div>
