@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Home, LayoutDashboard, Users, Package, ShoppingCart, Truck, Mic,
+  Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
   FileText, MapPin, ClipboardList, Bell, Bot, Ruler, Calculator, FileSignature, Blocks, ChevronLeft, ChevronRight, ShieldAlert,
 } from 'lucide-react';
@@ -34,7 +34,6 @@ const NAV_SECTIONS = [
   { label: 'Angler Pro', planKey: 'anglerpro', items: [
     { to: '/app/angler-pro/relatorios-semanais', icon: FileText, label: 'Relatórios semanais' },
     { to: '/app/angler-pro/relatorios-customizaveis', icon: BarChart3, label: 'Relatórios customizáveis' },
-    { to: '/app/ia-audio', icon: Mic, label: 'IA por áudio' },
   ] },
   { label: 'Sistema', items: [
     { to: '/app/settings', icon: Settings, label: 'Configurações' },
