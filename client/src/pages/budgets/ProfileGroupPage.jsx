@@ -485,7 +485,7 @@ function CutPreview({ profile, result, onDownload }) {
       img.src = '/mesa.png';
     });
 
-    const drawCardText = (x, y, width, height, title, lines, fill, titleSize = 12, bodySize = 11) => {
+    const drawCardText = (x, y, width, height, title, lines, fill, titleSize = 11, bodySize = 10) => {
       context.fillStyle = fill;
       context.fillRect(x, y, width, height);
       context.strokeStyle = '#111827';
@@ -496,7 +496,7 @@ function CutPreview({ profile, result, onDownload }) {
       context.fillText(title, x + 12, y + 20);
       context.font = `400 ${bodySize}px Arial`;
       lines.forEach((line, index) => {
-        const lineY = y + 42 + (index * 16);
+        const lineY = y + 38 + (index * 15);
         context.fillText(line, x + 12, lineY);
       });
     };
@@ -925,10 +925,10 @@ function CutPreview({ profile, result, onDownload }) {
       const firstPieceY = mainAreaY;
       // A altura da mochila é identificada pelo próprio retângulo; não exibimos seta vertical.
     }
-    const cardY = 500;
+    const cardY = 515;
     const cardGap = 22;
     const cardWidth = (panelWidth - 120 - (cardGap * 2)) / 3;
-    const cardHeight = 220;
+    const cardHeight = 205;
     const cardStartX = 60;
 
     const drawPlanCards = (plan, planQuantity, targetContext = context, accumulatedLeftoverArea = null) => {
