@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bot, Check, KeyRound, Loader2, Mic, MicOff, Save, Sparkles, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { askProvider, getAiProviders, getStoredApiKey, saveStoredApiKey } from '../../services/ai/audioAi';
+import { askProvider, getAiProviders, getStoredApiKey, getStoredModel, listProviderModels, saveStoredApiKey, saveStoredModel } from '../../services/ai/audioAi';
 
 const PROVIDERS = getAiProviders();
 
@@ -9,6 +9,11 @@ export default function AudioAiPage() {
   const [provider, setProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
   const [saved, setSaved] = useState(false);
+  const [model, setModel] = useState('');
+  const [models, setModels] = useState([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [testingApi, setTestingApi] = useState(false);
+  const [apiTested, setApiTested] = useState(false);
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -20,6 +25,10 @@ export default function AudioAiPage() {
     const stored = getStoredApiKey(provider);
     setApiKey(stored);
     setSaved(Boolean(stored));
+    const storedModel = getStoredModel(provider) || PROVIDERS[provider].model;
+    setModel(storedModel);
+    setModels([]);
+    setApiTested(false);
   }, [provider]);
 
   useEffect(() => () => {
@@ -30,13 +39,58 @@ export default function AudioAiPage() {
     ? (window.SpeechRecognition || window.webkitSpeechRecognition)
     : null;
 
+  const loadModels = async (key = apiKey) => {
+    if (!key?.trim()) {
+      toast.error('Informe a API key antes de carregar os modelos.');
+      return;
+    }
+    setLoadingModels(true);
+    try {
+      const availableModels = await listProviderModels(provider, key);
+      setModels(availableModels);
+      const selected = availableModels.some((item) => item.id === model)
+        ? model
+        : availableModels[0]?.id || PROVIDERS[provider].model;
+      setModel(selected);
+      saveStoredModel(provider, selected);
+      toast.success(`${availableModels.length} modelo(s) disponível(is).`);
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível carregar os modelos.');
+      setModels([]);
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
+  const handleTestApi = async () => {
+    const key = getStoredApiKey(provider) || apiKey;
+    if (!key?.trim()) {
+      toast.error('Informe e salve a API key antes de testar.');
+      return;
+    }
+    setTestingApi(true);
+    setApiTested(false);
+    try {
+      const result = await askProvider(provider, key, 'Responda apenas: OK', model);
+      setApiTested(Boolean(result));
+      toast.success(`API funcionando com o modelo ${model}.`);
+    } catch (error) {
+      toast.error(error.message || 'O teste da API falhou.');
+    } finally {
+      setTestingApi(false);
+    }
+  };
+
   const handleSaveKey = () => {
     saveStoredApiKey(provider, apiKey);
     setSaved(Boolean(apiKey.trim()));
     toast.success(apiKey.trim() ? `API do ${PROVIDERS[provider].label} salva neste dispositivo.` : 'API removida.');
+    setApiTested(false);
   };
 
   const handleClearKey = () => {
+    setModels([]);
+    setApiTested(false);
     saveStoredApiKey(provider, '');
     setApiKey('');
     setSaved(false);
@@ -61,7 +115,7 @@ export default function AudioAiPage() {
 
 "${text}"
 
-Responda diretamente ao pedido do usuário.`);
+Responda diretamente ao pedido do usuário.`, model);
       setAnswer(result || 'A IA não retornou uma resposta.');
     } catch (error) {
       toast.error(error.message || 'Não foi possível consultar a IA.');
@@ -136,7 +190,7 @@ Responda diretamente ao pedido do usuário.`);
           <div className="text-center max-w-xl mb-8">
             <div className="text-sm font-medium text-dark-300">Provedor atual</div>
             <div className="mt-1 text-xl font-bold text-primary-300">{PROVIDERS[provider].label}</div>
-            <div className="text-xs text-dark-500 mt-1">Modelo: {PROVIDERS[provider].model}</div>
+            <div className="text-xs text-dark-500 mt-1">Modelo: {model || PROVIDERS[provider].model}</div>
           </div>
 
           <button
@@ -218,6 +272,33 @@ Responda diretamente ao pedido do usuário.`);
               <p className="text-[11px] text-dark-500 mt-2">
                 A chave fica salva apenas no armazenamento local deste navegador.
               </p>
+            </div>
+
+            <div>
+              <label className="label">Modelo</label>
+              <select
+                className="input"
+                value={model}
+                onChange={(event) => {
+                  setModel(event.target.value);
+                  saveStoredModel(provider, event.target.value);
+                  setApiTested(false);
+                }}
+              >
+                {!models.length && <option value={model}>{model || 'Carregue os modelos da API'}</option>}
+                {models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+              <div className="flex gap-2 mt-2">
+                <button type="button" className="btn-secondary flex-1" onClick={() => loadModels()} disabled={loadingModels}>
+                  {loadingModels ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                  {loadingModels ? 'Carregando...' : 'Carregar modelos'}
+                </button>
+                <button type="button" className="btn-secondary flex-1" onClick={handleTestApi} disabled={testingApi || !apiKey.trim()}>
+                  {testingApi ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  {testingApi ? 'Testando...' : 'Testar API'}
+                </button>
+              </div>
+              {apiTested && <div className="text-xs text-emerald-400 mt-2">✓ API testada com sucesso neste modelo.</div>}
             </div>
 
             <div className="flex gap-2">
