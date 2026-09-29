@@ -70,17 +70,17 @@ export default function AngelAssistant() {
 
   const activeChat = useMemo(() => chats.find((chat) => chat.id === activeChatId), [chats, activeChatId]);
   const isFreePlan = ['free', 'trial'].includes(String(company?.plan || 'free').toLowerCase());
-  const isAnglerPro = String(company?.plan || '').toLowerCase() === 'anglerpro';
+  const hasProFeatures = ['anglerpro', 'anglerultra'].includes(String(company?.plan || '').toLowerCase());
   const aiProviders = getAiProviders();
   const SpeechRecognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 
   useEffect(() => {
-    if (!isAnglerPro) return;
+    if (!hasProFeatures) return;
     setProviderKey(getStoredApiKey(provider));
     setProviderModel(getStoredModel(provider) || aiProviders[provider]?.model || '');
     setModels([]);
     setApiTested(false);
-  }, [provider, isAnglerPro]);
+  }, [provider, hasProFeatures]);
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
@@ -178,12 +178,12 @@ export default function AngelAssistant() {
     if (event) event.preventDefault();
     const content = (voiceContent || message).trim();
     if (!content || sending) return;
-    if (!isAnglerPro && !apiKeyConfigured) {
+    if (!hasProFeatures && !apiKeyConfigured) {
       toast.error('Informe sua chave da API Gemini antes de conversar com a Angel.');
       setKeyVisible(true);
       return;
     }
-    if (isAnglerPro && provider !== 'gemini' && !providerKey.trim()) {
+    if (hasProFeatures && provider !== 'gemini' && !providerKey.trim()) {
       toast.error('Informe a API do ' + aiProviders[provider].label + ' antes de conversar.');
       return;
     }
@@ -206,7 +206,7 @@ export default function AngelAssistant() {
 
       const readContext = await loadAngelReadContext(company);
       const readOnlyAnswer = getReadOnlyListAnswer(content, readContext);
-      const answer = readOnlyAnswer || (isAnglerPro
+      const answer = readOnlyAnswer || (hasProFeatures
         ? await askProvider(
             provider,
             provider === 'gemini' ? (getStoredApiKey('gemini') || providerKey) : providerKey,
@@ -314,14 +314,14 @@ export default function AngelAssistant() {
   };
 
   const saveProviderSettings = () => {
-    if (!isAnglerPro) return;
+    if (!hasProFeatures) return;
     saveStoredApiKey(provider, providerKey);
     saveStoredModel(provider, providerModel);
     toast.success('Configuração do ' + aiProviders[provider].label + ' salva neste dispositivo.');
   };
 
   const toggleListening = () => {
-    if (!isAnglerPro || sending) return;
+    if (!hasProFeatures || sending) return;
     if (listening) {
       recognitionRef.current?.stop();
       return;
@@ -367,12 +367,12 @@ export default function AngelAssistant() {
             <div className="w-10 h-10 rounded-xl bg-primary-400/10 flex items-center justify-center"><Sparkles size={20} className="text-primary-300" /></div>
             <div><div className="text-sm font-semibold text-dark-100">Angel está pronta para ajudar</div><div className="text-xs text-dark-500">{isFreePlan ? 'Plano Free: consulta de dados somente para leitura' : 'Respostas limitadas ao contexto do Angler ERP'}</div></div>
           </div>
-          <button type="button" onClick={() => setKeyVisible((value) => !value)} className="btn-secondary"><KeyRound size={16} /> {isAnglerPro ? 'Provedor de IA' : 'Chave Gemini'}</button>
+          <button type="button" onClick={() => setKeyVisible((value) => !value)} className="btn-secondary"><KeyRound size={16} /> {hasProFeatures ? 'Provedor de IA' : 'Chave Gemini'}</button>
         </div>
 
         {keyVisible && (
           <div className="p-4 border-b border-dark-700/50 bg-dark-900/40">
-            {isAnglerPro ? <>
+            {hasProFeatures ? <>
               <label className="text-sm font-medium text-dark-200">Provedor de IA</label>
               <select className="input mt-2 !border-violet-400/30 focus:!border-violet-400 focus:!ring-violet-400/20" value={provider} onChange={(event) => setProvider(event.target.value)}>
                 {Object.entries(aiProviders).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}
@@ -457,7 +457,7 @@ export default function AngelAssistant() {
             </div>
             <form onSubmit={sendMessage} className="border-t border-dark-700/50 p-4 flex gap-3">
               <input value={message} onChange={(event) => setMessage(event.target.value)} className="input flex-1" placeholder="Pergunte algo sobre o Angler ERP..." disabled={sending} />
-              {isAnglerPro && <button type="button" onClick={toggleListening} disabled={sending} className={listening ? 'btn-secondary !border-violet-400/50 !text-violet-200 !bg-violet-500/15' : 'btn-secondary !border-violet-400/30 !text-violet-200 hover:!bg-violet-500/10'} aria-label={listening ? 'Parar gravação' : 'Falar com a Angel'} title={listening ? 'Parar gravação' : 'Falar com a Angel'}>{listening ? <MicOff size={18} /> : <Mic size={18} />}</button>}
+              {hasProFeatures && <button type="button" onClick={toggleListening} disabled={sending} className={listening ? 'btn-secondary !border-violet-400/50 !text-violet-200 !bg-violet-500/15' : 'btn-secondary !border-violet-400/30 !text-violet-200 hover:!bg-violet-500/10'} aria-label={listening ? 'Parar gravação' : 'Falar com a Angel'} title={listening ? 'Parar gravação' : 'Falar com a Angel'}>{listening ? <MicOff size={18} /> : <Mic size={18} />}</button>}
               <button type="submit" className="btn-primary" disabled={sending || !message.trim()} aria-label="Enviar mensagem"><Send size={18} /></button>
             </form>
           </section>
