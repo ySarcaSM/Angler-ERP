@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  BarChart3, Check, ChevronDown, FileDown, FileText, LineChart, PieChart, Plus, Settings2, SlidersHorizontal, Sparkles, Table2, Trash2,
+  BarChart3, Check, FileDown, FileText, LineChart, PieChart, Plus, SlidersHorizontal, Sparkles, Table2, Trash2,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useAuth } from '../../context/useAuth';
