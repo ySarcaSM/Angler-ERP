@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Accessibility, RotateCcw, Volume2, X } from 'lucide-react';
+import { Hand, RotateCcw, Volume2, X } from 'lucide-react';
 import {
   DEFAULT_ACCESSIBILITY,
   getAccessibilityPreferences,
@@ -52,16 +52,16 @@ export default function AccessibilityFloatingButton() {
       <button
         type="button"
         onClick={openPanel}
-        className="fixed right-3 top-[30%] z-[60] w-9 h-9 rounded-full bg-primary-400 text-dark-950 shadow-lg flex items-center justify-center hover:bg-primary-300 focus:outline-none focus:ring-4 focus:ring-primary-400/50"
+        className="fixed right-3 bottom-3 z-[60] w-10 h-10 rounded-full bg-primary-400 text-dark-950 shadow-lg flex items-center justify-center hover:bg-primary-300 focus:outline-none focus:ring-4 focus:ring-primary-400/50"
         aria-label="Abrir opções de acessibilidade"
         aria-expanded={open}
         title="Acessibilidade"
       >
-        <Accessibility size={22} />
+        <Hand size={22} />
       </button>
 
       {open && (
-        <div className="fixed right-3 top-[30%] translate-y-12 z-[61] w-72 max-w-[calc(100vw-1.5rem)] bg-dark-900 border border-dark-700 rounded-xl shadow-2xl p-3" role="dialog" aria-label="Opções de acessibilidade">
+        <div className="fixed right-3 bottom-16 z-[61] w-72 max-w-[calc(100vw-1.5rem)] bg-dark-900 border border-dark-700 rounded-xl shadow-2xl p-3" role="dialog" aria-label="Opções de acessibilidade">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-dark-100">Acessibilidade</h2>
             <button type="button" onClick={() => setOpen(false)} className="btn-ghost btn-sm" aria-label="Fechar opções de acessibilidade"><X size={18} /></button>
