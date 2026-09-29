@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { listProducts, createProduct, updateProduct, deleteProduct } from '../../services/firebase/products';
@@ -15,7 +15,6 @@ const EMPTY = { name: '', description: '', costPrice: 0, sellPrice: 0, stock: { 
 
 export default function ProductList() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { company, user, userData } = useAuth();
   const isOperator = userData?.role === 'operator';
   const [searchParams] = useSearchParams();
@@ -60,8 +59,6 @@ export default function ProductList() {
   }, [company]);
 
   const openNew = () => { navigate('/app/products/new'); };
-  const openNewForm = () => { setForm(EMPTY); setEditing(null); setModal(true); };
-  useEffect(() => { if (location.pathname === '/app/products/new') openNewForm(); }, [location.pathname]);
 
   const openEdit = (p) => { setForm({ ...EMPTY, ...p, stock: { ...EMPTY.stock, ...p.stock } }); setEditing(p.id); setModal(true); };
 
@@ -87,7 +84,7 @@ export default function ProductList() {
         await logAudit(company.id, { user, userName: userData?.name, action: 'create', entity: 'Produto', entityId: createdProduct.id, description: `${userData?.name || 'Usuário'} criou o produto ${productData.name}.`, details: { name: productData.name, sellPrice: productData.sellPrice, stock: productData.stock } });
         toast.success('Produto criado!');
       }
-      setModal(false); if (location.pathname === '/app/products/new') navigate('/app/products'); load();
+      setModal(false); load();
     } catch (err) { if (err.code === 'deletion-request-created') { toast.success(err.message); } else { toast.error(err.message); } }
     finally { setSaving(false); }
   };
@@ -135,7 +132,7 @@ export default function ProductList() {
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
       </div>
 
-      <Modal fullscreen={location.pathname === '/app/products/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/products/new') navigate('/app/products'); }} title={editing ? 'Editar Produto' : 'Novo Produto'} size="xl">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Editar Produto' : 'Novo Produto'} size="xl">
         <form onSubmit={handleSave} className="space-y-4">
           <div>
             <label className="label">Nome *</label>
