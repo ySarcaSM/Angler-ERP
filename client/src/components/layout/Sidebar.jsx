@@ -31,7 +31,9 @@ const NAV_SECTIONS = [
     { to: '/app/budgets/formulas', icon: Calculator, label: 'Fórmulas', moduleKey: 'formulas' },
     { to: '/app/budgets', icon: FileSignature, label: 'Orçamentos', end: true, moduleKey: 'budgets' },
   ] },
-  { label: 'Angler Pro', planKey: 'anglerpro', items: [] },
+  { label: 'Angler Pro', planKey: 'anglerpro', items: [
+    { to: '/app/angler-pro/relatorios-semanais', icon: FileText, label: 'Relatórios semanais' },
+  ] },
   { label: 'Sistema', items: [
     { to: '/app/settings', icon: Settings, label: 'Configurações' },
     { to: '/app/modules', icon: Blocks, label: 'Módulos', viewerHidden: true },
