@@ -73,7 +73,7 @@ function WriteRoute({ children }) { const { userData } = useAuth(); return userD
 function OperatorHomeOrDashboard() { return <Dashboard />; }
 function OperatorBlockedRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'operator' ? <Navigate to="/app" replace /> : children; }
 function AdminOrOwnerRoute({ children }) { const { userData } = useAuth(); return ['owner','admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />; }
-function AnglerProRoute({ children }) { const { company } = useAuth(); return company?.plan === 'anglerpro' ? children : <Navigate to="/app" replace />; }
+function AnglerProRoute({ children }) { const { company } = useAuth(); return ['anglerpro', 'anglerultra'].includes(company?.plan) ? children : <Navigate to="/app" replace />; }
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth();

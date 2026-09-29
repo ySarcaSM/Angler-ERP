@@ -56,7 +56,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div className="gold-line" />
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {NAV_SECTIONS.map((section) => {
-          if (section.planKey && company?.plan !== section.planKey) return null;
+          if (section.planKey && !['anglerpro', 'anglerultra'].includes(company?.plan)) return null;
 
           const effectiveModules = getEffectiveModules();
           const visibleItems = section.items.filter((item) => (
