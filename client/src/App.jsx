@@ -27,7 +27,6 @@ import CustomReportsPage from './pages/anglerPro/CustomReportsPage';
 import LogsPage from './pages/logs/LogsPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import AngelAssistant from './pages/assistant/AngelAssistant';
-import AudioAiPage from './pages/assistant/AudioAiPage';
 import ProfileGroupPage from './pages/budgets/ProfileGroupPage';
 import FormulasPage from './pages/budgets/FormulasPage';
 import FormulaForm from './pages/budgets/FormulaForm';
@@ -89,7 +88,6 @@ export default function App() {
     <Route path="/assistant" element={<PrivateRoute><ModuleRoute moduleKey="assistant"><Layout><AngelAssistant /></Layout></ModuleRoute></PrivateRoute>} />
     <Route path="/app/*" element={<PrivateRoute><MultiCompanyRoute><Layout><Routes>
       <Route path="/" element={<OperatorHomeOrDashboard />} />
-      <Route path="/ia-audio" element={<AudioAiPage />} />
       <Route path="/clients/new" element={<ModuleRoute moduleKey="clients"><WriteRoute><ClientForm /></WriteRoute></ModuleRoute>} />
       <Route path="/clients" element={<ModuleRoute moduleKey="clients"><ClientList /></ModuleRoute>} />
       <Route path="/products/new" element={<ModuleRoute moduleKey="products"><WriteRoute><ProductForm /></WriteRoute></ModuleRoute>} />
