@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { Link } from 'react-router-dom';
 import {
   Home, ArrowRight, Users, ShoppingCart, Truck,
@@ -249,19 +250,22 @@ export default function Landing() {
   const handleContactSubmit = async (e) => {
     e.preventDefault();
     if (contactSending) return;
+
     setContactSending(true);
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contactForm),
+      await addDoc(collection(db, 'contactMessages'), {
+        title: contactForm.title.trim(),
+        email: contactForm.email.trim().toLowerCase(),
+        description: contactForm.description.trim(),
+        createdAt: serverTimestamp(),
+        status: 'unread',
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Não foi possível enviar sua mensagem.');
-      toast.success('Mensagem enviada! Enviamos uma confirmação para o seu email.');
+
       setContactForm({ title: '', email: '', description: '' });
+      window.alert('Sua mensagem será lida, aguarde.');
     } catch (error) {
-      toast.error(error.message || 'Não foi possível enviar sua mensagem. Tente novamente.');
+      console.error('Erro ao salvar mensagem de contato:', error);
+      window.alert('Não foi possível enviar sua mensagem. Tente novamente.');
     } finally {
       setContactSending(false);
     }
