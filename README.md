@@ -11,8 +11,8 @@ Os planos atualmente apresentados pelo Angler são:
 | Plano | Preço | Recursos |
 | --- | ---: | --- |
 | **TestFREE** | **R$ 0 — para sempre** | Acesso completo ao conteúdo disponível, todos os módulos do ERP, painel de administração de contas e suporte da comunidade |
-| **AnglerPro** | **R$ 59,99/mês** | Tudo do TestFREE, relatórios semanais, IA por áudio, relatórios customizáveis, mais distribuidoras de IA e cálculos para reduzir o consumo de tokens |
-| **AnglerUltra** | **R$ 99,99/mês** | Tudo do AnglerPro, configurações de UI, IA controladora de sistema, importação/exportação de dados e relatórios gerais em PDF |
+| **AnglerPro** | **R$ 119,98/mês** | Tudo do TestFREE, relatórios semanais, IA por áudio, relatórios customizáveis, mais distribuidoras de IA e cálculos para reduzir o consumo de tokens |
+| **AnglerUltra** | **R$ 199,98/mês** | Tudo do AnglerPro, configurações de UI, IA controladora de sistema, importação/exportação de dados e relatórios gerais em PDF |
 
 > Os nomes, preços e recursos acima refletem a oferta atualmente apresentada em `client/src/pages/Landing.jsx`.
 
