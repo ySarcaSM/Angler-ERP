@@ -1,6 +1,6 @@
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { createDoc } from './firestore.js';
+import { createDoc, deleteDoc_ } from './firestore.js';
 
 export async function listWeeklyReports(companyId) {
   const snapshot = await getDocs(query(
@@ -13,6 +13,11 @@ export async function listWeeklyReports(companyId) {
     .sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')))
     .slice(0, 6);
 }
+
+export async function deleteWeeklyReport(id) {
+  return deleteDoc_('weeklyReports', id);
+}
+
 
 export async function createWeeklyReport(companyId, data) {
   const existing = await listWeeklyReports(companyId);
