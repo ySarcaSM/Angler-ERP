@@ -494,22 +494,22 @@ export default function CustomReportsPage() {
             </div>
           </div>
 
+          <div className="card">
+            <div className="card-header"><div className="flex items-center gap-2"><Sparkles size={17} className="text-primary-300"/><h2 className="text-sm font-semibold text-dark-200">Visão do painel</h2></div></div>
+            <div className="card-body">
+              <div className="rounded-2xl bg-dark-900/60 border border-dark-700/50 p-4 space-y-3">
+                <div className="text-xs text-dark-500 mb-2">Estrutura do PDF</div>
+                <div className="text-sm text-dark-300">Capa + resumo dos indicadores</div>
+                {charts.map((chart, index) => <div key={chart.id} className="flex items-center gap-3"><span className="w-8 h-8 rounded-lg bg-dark-800 text-dark-400 flex items-center justify-center">{chart.type === 'line' ? <LineChart size={15}/> : chart.type === 'pie' ? <PieChart size={15}/> : <BarChart3 size={15}/>}</span><div><div className="text-sm text-dark-300">Gráfico {index + 1}</div><div className="text-xs text-dark-500">{chart.metrics.length} informação(ões)</div></div></div>)}
+                {includeTable && <div className="text-sm text-dark-300">+ tabela de detalhamento</div>}
+              </div>
+            </div>
+          </div>
+
           <button type="button" onClick={handleGenerate} disabled={generating} className="btn-primary w-full justify-center py-3.5 disabled:opacity-50 disabled:cursor-not-allowed">
             {generating ? <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" /> : <FileDown size={19}/>}
             {generating ? 'Gerando PDF...' : 'Gerar relatório em PDF'}
           </button>
-        </div>
-
-        <div className="card h-fit xl:sticky xl:top-6">
-          <div className="card-header"><div className="flex items-center gap-2"><Sparkles size={17} className="text-primary-300"/><h2 className="text-sm font-semibold text-dark-200">Visão do painel</h2></div></div>
-          <div className="card-body">
-            <div className="rounded-2xl bg-dark-900/60 border border-dark-700/50 p-4 space-y-3">
-              <div className="text-xs text-dark-500 mb-2">Estrutura do PDF</div>
-              <div className="text-sm text-dark-300">Capa + resumo dos indicadores</div>
-              {charts.map((chart, index) => <div key={chart.id} className="flex items-center gap-3"><span className="w-8 h-8 rounded-lg bg-dark-800 text-dark-400 flex items-center justify-center">{chart.type === 'line' ? <LineChart size={15}/> : chart.type === 'pie' ? <PieChart size={15}/> : <BarChart3 size={15}/>}</span><div><div className="text-sm text-dark-300">Gráfico {index + 1}</div><div className="text-xs text-dark-500">{chart.metrics.length} informação(ões)</div></div></div>)}
-              {includeTable && <div className="text-sm text-dark-300">+ tabela de detalhamento</div>}
-            </div>
-          </div>
         </div>
       </div>
     </div>
