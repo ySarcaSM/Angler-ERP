@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, FileText, Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, Lock } from 'lucide-react';
+import { CalendarDays, FileText, Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, Lock, FileDown } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { useAuth } from '../../context/useAuth';
 import { listSales } from '../../services/firebase/sales';
 import { listTransactions } from '../../services/firebase/financial';
@@ -63,6 +64,38 @@ export default function WeeklyReportsPage() {
 
   useEffect(() => { loadReports(); }, [company?.id]);
 
+  const handleDownloadPdf = (report) => {
+    const pdf = new jsPDF();
+    const companyName = company?.name || 'Minha empresa';
+    const generatedAt = timestampToDate(report.createdAt) || new Date();
+    const start = getDate(report.startDate);
+    const end = getDate(report.endDate);
+
+    pdf.setFontSize(18);
+    pdf.text('Relatório semanal', 20, 20);
+    pdf.setFontSize(11);
+    pdf.text(companyName, 20, 29);
+    pdf.text(`Período: ${formatDate(start)} até ${formatDate(end)}`, 20, 36);
+    pdf.text(`Criado por: ${report.generatedByName || 'Usuário'}`, 20, 43);
+    pdf.text(`Gerado em: ${formatDate(generatedAt)}`, 20, 50);
+
+    pdf.setDrawColor(210, 210, 210);
+    pdf.line(20, 57, 190, 57);
+    pdf.setFontSize(13);
+    pdf.text('Resumo da semana', 20, 69);
+    pdf.setFontSize(11);
+    pdf.text(`Vendas realizadas: ${report.salesCount || 0}`, 20, 80);
+    pdf.text(`Valor total das vendas: ${formatBRL(report.salesTotal || 0)}`, 20, 88);
+    pdf.text(`Receitas: ${formatBRL(report.income || 0)}`, 20, 96);
+    pdf.text(`Despesas: ${formatBRL(report.expense || 0)}`, 20, 104);
+    pdf.text(`Resultado: ${formatBRL(report.profit || 0)}`, 20, 112);
+
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('Relatório gerado pelo AnglerERP.', 20, 285);
+    pdf.save(`relatorio-semanal-${report.startDate || 'periodo'}.pdf`);
+  };
+
   const handleCreate = async () => {
     if (!company?.id || reports.length >= 5) return;
 
@@ -125,7 +158,7 @@ export default function WeeklyReportsPage() {
       <div className="card">
         <div className="card-header"><h2 className="text-sm font-semibold text-dark-200">Criar novo relatório</h2></div>
         <div className="card-body">
-          <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
             <label className="block">
               <span className="block text-sm font-medium text-dark-300 mb-2">Data de início da semana</span>
               <div className="relative">
@@ -136,7 +169,7 @@ export default function WeeklyReportsPage() {
                 Período: {formatDate(selectedPeriod.start)} até {formatDate(selectedPeriod.end)}
               </span>
             </label>
-            <button type="button" onClick={handleCreate} disabled={generating || loading || reports.length >= 5} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+            <button type="button" onClick={handleCreate} disabled={generating || loading || reports.length >= 5} className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed md:mt-7">
               {generating ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Plus size={18} />}
               {generating ? 'Gerando...' : 'Criar relatório'}
             </button>
@@ -167,7 +200,12 @@ export default function WeeklyReportsPage() {
                       <div className="font-semibold text-dark-100">Semana de {formatDate(getDate(report.startDate))} a {formatDate(getDate(report.endDate))}</div>
                       <div className="text-xs text-dark-500 mt-1">Criado por {report.generatedByName || 'Usuário'}</div>
                     </div>
-                    <div className="text-xs text-dark-500">{formatDate(timestampToDate(report.createdAt) || new Date())}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-xs text-dark-500">{formatDate(timestampToDate(report.createdAt) || new Date())}</div>
+                      <button type="button" onClick={() => handleDownloadPdf(report)} className="btn-secondary !px-3 !py-2" title="Baixar PDF">
+                        <FileDown size={16} /> PDF
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
                     <div className="rounded-xl bg-blue-500/10 p-3"><div className="flex items-center gap-2 text-xs text-dark-500"><BarChart3 size={14} /> Vendas</div><div className="text-lg font-bold text-blue-300 mt-1">{report.salesCount || 0}</div><div className="text-xs text-dark-500">{formatBRL(report.salesTotal || 0)}</div></div>
