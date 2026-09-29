@@ -1316,8 +1316,7 @@ function CutPreview({ profile, result, onDownload }) {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 14;
-      const imageWidth = pageWidth - (margin * 2);
-      const imageHeight = imageWidth * (760 / 1200);
+      const contentWidth = pageWidth - margin * 2;
       const files = [];
 
       previewUrls.forEach((url, index) => {
@@ -1328,43 +1327,140 @@ function CutPreview({ profile, result, onDownload }) {
         const pieceHeight = Number(plan.pieceHeight) || Number(result.productHeight) || 0;
         const rows = Number(plan.rows) || Number(plan.verticalRows) || 0;
         const piecesPerRow = Number(plan.piecesPerRow) || Number(plan.wholePiecesPerRow) || 0;
+        const capacity = Number(plan.capacity) || 0;
         const lengthLeftover = Number(plan.lengthLeftover) || 0;
         const widthLeftover = Number(plan.widthLeftover) || 0;
+        const emptyPositions = Number(plan.emptyPositions) || Math.max(0, capacity - planQuantity);
+        const hasAccordion = Number(result.accordionWidth) > 0;
+        const accordionCount = Number(result.accordionCountPerUnit) || 2;
+        const accordionHeight = Number(result.originalProductHeight) || pieceHeight;
+        const accordionAreaPerUnit = hasAccordion ? Number(result.accordionWidth) * accordionHeight * accordionCount : 0;
+        const pieceArea = pieceWidth * pieceHeight;
+        const completeUnitArea = pieceArea + accordionAreaPerUnit;
+        const totalPlanArea = (Number(plan.usableLength) || 262) * (Number(plan.width) || Number(result.materialWidth) || 0);
+        const emptyArea = emptyPositions * completeUnitArea;
+        const residualEdgeArea = Math.max(0, totalPlanArea - capacity * completeUnitArea);
+        const totalAreaLeftover = Math.max(0, totalPlanArea - planQuantity * completeUnitArea);
+
+        // O aproveitamento segue o eixo com menor sobra física.
+        const widthUtilization = (Number(plan.width) || 0) > 0
+          ? Math.max(0, 100 - (widthLeftover / (Number(plan.width) || 1)) * 100)
+          : 0;
+        const lengthUtilization = (Number(plan.usableLength) || 262) > 0
+          ? Math.max(0, 100 - (lengthLeftover / (Number(plan.usableLength) || 262)) * 100)
+          : 0;
+        const utilization = widthLeftover <= lengthLeftover ? widthUtilization : lengthUtilization;
+        const utilizationAxis = widthLeftover <= lengthLeftover ? 'largura' : 'comprimento';
+
+        const accessoryLines = result.accessoryType === 'handle'
+          ? [
+              `Alça: ${formatNumber((Number(result.handleLength) || 0) / Math.max(1, Number(result.handleQuantity) || 0), 1)} cm por alça`,
+              `Quantidade de alças: ${formatNumber(result.handleQuantity || 0, 0)} por mochila`,
+              `Total de alças no plano: ${formatNumber((Number(result.handleQuantity) || 0) * planQuantity, 0)} unidade(s)`,
+              `Comprimento total de alça: ${formatNumber((Number(result.handleLength) || 0) * planQuantity, 1)} cm`,
+            ]
+          : [
+              `Cordão: ${formatNumber((Number(result.cordLength) || 0) / Math.max(1, Number(result.cordQuantity) || 0), 1)} cm por cordão`,
+              `Quantidade de cordões: ${formatNumber(result.cordQuantity || 0, 0)} por mochila`,
+              `Total de cordões no plano: ${formatNumber((Number(result.cordQuantity) || 0) * planQuantity, 0)} unidade(s)`,
+              `Comprimento total de cordão: ${formatNumber((Number(result.cordLength) || 0) * planQuantity, 1)} cm`,
+            ];
+
+        const tips = [
+          `Corte as ${formatNumber(planQuantity, 0)} peças principais primeiro.`,
+          ...(hasAccordion ? [`Depois corte as ${formatNumber(planQuantity * accordionCount, 0)} sanfonas.`] : []),
+          'Use régua longa e cortador circular ou faca bem afiada.',
+          'Mantenha as folhas bem alinhadas e use pregos/grampos.',
+          `Esse plano gera ${formatNumber(planQuantity, 0)} peças (${formatNumber(emptyPositions, 0)} de sobra).`,
+          `Aproveitamento de praticamente ${formatNumber(utilization, 0)}% da ${utilizationAxis}.`,
+        ];
 
         if (index > 0) pdf.addPage();
-        pdf.setTextColor(0, 0, 0);
+
+        let y = 15;
+        const addSection = (title, lines) => {
+          const lineHeight = 4.2;
+          const titleGap = 6;
+          const padding = 3;
+          const wrapped = lines.flatMap((line) => pdf.splitTextToSize(String(line), contentWidth - padding * 2));
+          const height = padding + titleGap + wrapped.length * lineHeight + padding;
+          if (y + height > pageHeight - 13) return false;
+          pdf.setFillColor(247, 248, 250);
+          pdf.setDrawColor(205, 210, 216);
+          pdf.roundedRect(margin, y, contentWidth, height, 2, 2, 'FD');
+          pdf.setTextColor(17, 24, 39);
+          pdf.setFont('helvetica', 'bold');
+          pdf.setFontSize(9);
+          pdf.text(title, margin + padding, y + 5);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(7.5);
+          wrapped.forEach((line, lineIndex) => pdf.text(line, margin + padding, y + titleGap + 3 + lineIndex * lineHeight));
+          y += height + 4;
+          return true;
+        };
+
+        pdf.setTextColor(17, 24, 39);
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(17);
-        pdf.text(`Especificação do corte — Plano ${index + 1}`, margin, 16);
+        pdf.setFontSize(16);
+        pdf.text(`RELATÓRIO DE CORTE — PLANO ${index + 1}`, margin, y);
+        y += 6;
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, 22);
-        pdf.addImage(url, 'PNG', margin, 27, imageWidth, imageHeight);
-
-        let y = 27 + imageHeight + 10;
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        pdf.text('Especificações', margin, y);
-        y += 7;
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
-        [
-          [`Quantidade neste corte: ${formatNumber(planQuantity, 0)} unidade(s)`, `Capacidade física: ${formatNumber(plan.capacity || 0, 0)} unidade(s)`],
-          [`Peça posicionada: ${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`, `Orientação: ${plan.rotated ? 'rotacionada em 90°' : 'original'}`],
-          [`Por fileira: ${formatNumber(piecesPerRow, 0)} unidade(s)`, `Fileiras: ${formatNumber(rows, 0)}`],
-          [`Área útil: 262 × ${formatNumber(plan.width || 0, 0)} cm`, `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`],
-          [`Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`, `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`],
-        ].forEach(([left, right]) => {
-          pdf.text(left, margin, y);
-          pdf.text(right, 108, y);
-          y += 6;
-        });
-
-
+        pdf.text(`Perfil: ${profile?.name || 'Medição'} | Material: ${material.label}`, margin, y);
+        y += 5;
         pdf.setFontSize(8);
-        pdf.setTextColor(90, 90, 90);
-        pdf.text('Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil: 262 × até 150 cm', margin, pageHeight - 10);
+        pdf.text(`Plano ${index + 1} de ${previewUrls.length} | ${formatNumber(planQuantity, 0)} unidade(s) neste corte`, margin, y);
+        y += 7;
 
+        addSection('APROVEITAMENTO — PLANO INDIVIDUAL', [
+          `Grade máxima: ${formatNumber(plan.wholePiecesPerRow || 0, 0)} × ${formatNumber(plan.verticalRows || 0, 0)} = ${formatNumber(capacity, 0)} mochilas`,
+          `Cada mochila: 1 corpo + ${formatNumber(accordionCount, 0)} sanfonas${hasAccordion ? ` de ${formatNumber(result.accordionWidth, 1)} cm × ${formatNumber(accordionHeight, 1)} cm` : ''}`,
+          `Acomodadas neste plano: ${formatNumber(planQuantity, 0)} mochila(s)`,
+          `Espaço vago útil: ${formatNumber(emptyPositions, 0)} posição(ões) (${formatNumber(emptyArea, 0)} cm²)`,
+          `Faixa residual: ${formatNumber(lengthLeftover, 0)} cm no comprimento`,
+          `Área residual das bordas: ${formatNumber(residualEdgeArea, 0)} cm²`,
+          ...(hasAccordion ? [
+            `Sanfonas: ${formatNumber(accordionCount, 0)} por mochila × ${formatNumber(result.accordionWidth, 1)} cm × ${formatNumber(accordionHeight, 1)} cm`,
+            `Área das sanfonas: ${formatNumber(accordionAreaPerUnit, 0)} cm² por mochila`,
+            `Área total das sanfonas: ${formatNumber(accordionAreaPerUnit * planQuantity, 0)} cm²`,
+          ] : []),
+          `Área total de sobra: ${formatNumber(totalAreaLeftover, 0)} cm²`,
+        ]);
+
+        addSection('CONSUMO E ACESSÓRIO — PLANO', [
+          `Comprimento do plano: ${formatNumber(plan.usableLength || 262, 0)} cm`,
+          `Comprimento em metros lineares: ${formatNumber((Number(plan.usableLength) || 262) / 100, 2)} m`,
+          `Largura do material: ${formatNumber(plan.width || result.materialWidth || 0, 0)} cm`,
+          `Quantidade neste plano: ${formatNumber(planQuantity, 0)} unidade(s)`,
+          ...(hasAccordion ? [
+            `Sanfonas: ${formatNumber(accordionCount, 0)} por mochila × ${formatNumber(result.accordionWidth, 1)} cm`,
+            `Consumo das sanfonas: ${formatNumber(accordionAreaPerUnit * planQuantity / 10000, 2)} m²`,
+            `Área total das sanfonas: ${formatNumber(accordionAreaPerUnit * planQuantity, 0)} cm²`,
+          ] : []),
+          ...accessoryLines,
+        ]);
+
+        addSection('DICAS — PLANO', tips);
+
+        addSection('ESPECIFICAÇÕES', [
+          `Quantidade neste corte: ${formatNumber(planQuantity, 0)} unidade(s)`,
+          `Capacidade física: ${formatNumber(capacity, 0)} unidade(s)`,
+          `Peça posicionada: ${formatNumber(pieceWidth, 0)} × ${formatNumber(pieceHeight, 0)} cm`,
+          `Orientação: ${plan.rotated ? 'Rotacionada em 90°' : 'Original'}`,
+          `Por fileira: ${formatNumber(piecesPerRow, 0)} unidade(s)`,
+          `Fileiras: ${formatNumber(rows, 0)}`,
+          `Área útil: 262 × ${formatNumber(plan.width || 0, 0)} cm`,
+          `Material informado: ${formatNumber(result.materialWidth || 0, 0)} cm`,
+          `Sobra no comprimento: ${formatNumber(lengthLeftover, 0)} cm`,
+          `Sobra na largura: ${formatNumber(widthLeftover, 0)} cm`,
+        ]);
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(90, 90, 90);
+        pdf.text('Mesa física: 300 × 159 cm | laterais sem corte: 19 cm de cada lado | área útil: 262 × até 150 cm', margin, pageHeight - 7);
+
+        // A imagem continua disponível separadamente na pasta cortes/ do ZIP.
         files.push({
           name: `cortes/plano-${String(index + 1).padStart(2, '0')}.png`,
           data: dataUrlToUint8Array(url),
