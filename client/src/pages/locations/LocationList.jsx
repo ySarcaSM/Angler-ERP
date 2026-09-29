@@ -137,7 +137,7 @@ export default function LocationList() {
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
       </div>
 
-      <Modal open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/locations/new') navigate('/app/locations'); }} title={editing ? 'Editar Localização' : 'Nova Localização'} size="lg" backdropClassName="bg-transparent">
+      <Modal fullscreen={location.pathname === '/app/locations/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/locations/new') navigate('/app/locations'); }} title={editing ? 'Editar Localização' : 'Nova Localização'} size="lg" backdropClassName="bg-transparent">
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="label">Nome *</label><input className="input" value={form.name} onChange={(event) => updateField('name', event.target.value)} required placeholder="Estoque principal" /></div>
