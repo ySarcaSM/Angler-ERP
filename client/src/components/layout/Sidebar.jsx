@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   Home, LayoutDashboard, Users, Package, ShoppingCart, Truck,
   DollarSign, Warehouse, BarChart3, Settings, LogOut,
@@ -31,6 +31,7 @@ const NAV_SECTIONS = [
     { to: '/app/budgets/formulas', icon: Calculator, label: 'Fórmulas', moduleKey: 'formulas' },
     { to: '/app/budgets', icon: FileSignature, label: 'Orçamentos', end: true, moduleKey: 'budgets' },
   ] },
+  { label: 'Angler Pro', planKey: 'anglerpro', items: [] },
   { label: 'Sistema', items: [
     { to: '/app/settings', icon: Settings, label: 'Configurações' },
     { to: '/app/modules', icon: Blocks, label: 'Módulos', viewerHidden: true },
@@ -43,7 +44,6 @@ const NAV_SECTIONS = [
 
 export default function Sidebar({ collapsed, onToggle }) {
   const { user, userData, company, logout, getEffectiveModules } = useAuth();
-  const location = useLocation();
 
   return (
     <aside className={`fixed left-0 top-0 h-screen bg-dark-900 border-r border-dark-700/50 flex flex-col z-40 transition-all duration-300 ${collapsed ? 'w-[72px]' : 'w-64'}`}>
@@ -53,6 +53,8 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div className="gold-line" />
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {NAV_SECTIONS.map((section) => {
+          if (section.planKey && company?.plan !== section.planKey) return null;
+
           const effectiveModules = getEffectiveModules();
           const visibleItems = section.items.filter((item) => (
             !(userData?.role === 'operator' && !item.moduleKey && !item.requestsPage && !['/', '/app'].includes(item.to))
@@ -62,8 +64,10 @@ export default function Sidebar({ collapsed, onToggle }) {
             && (!item.ownerOnly || userData?.role === 'owner')
             && (!item.adminOrOwner || ['owner', 'admin'].includes(userData?.role))
           ));
-          if (!visibleItems.length) return null;
-          return <div key={section.label}>{!collapsed && <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-primary-600">{section.label}</div>}<div className="space-y-1">{visibleItems.map((item) => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-primary-400/10 text-primary-300 border border-primary-400/20 shadow-sm' : 'text-dark-400 hover:text-dark-100 hover:bg-dark-800'}`}><item.icon size={20} className="flex-shrink-0" />{!collapsed && <span>{item.label}</span>}</NavLink>)}</div></div>;
+
+          if (!visibleItems.length && !section.planKey) return null;
+
+          return <div key={section.label}>{!collapsed && <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-primary-600">{section.label}</div>}{visibleItems.length > 0 && <div className="space-y-1">{visibleItems.map((item) => <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${collapsed ? 'justify-center' : ''} ${isActive ? 'bg-primary-400/10 text-primary-300 border border-primary-400/20 shadow-sm' : 'text-dark-400 hover:text-dark-100 hover:bg-dark-800'}`}><item.icon size={20} className="flex-shrink-0" />{!collapsed && <span>{item.label}</span>}</NavLink>)}</div>}</div>;
         })}
       </nav>
       <div className="border-t border-dark-700/50 p-3">
