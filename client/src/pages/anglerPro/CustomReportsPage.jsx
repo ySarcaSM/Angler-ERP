@@ -77,7 +77,7 @@ export default function CustomReportsPage() {
   const selectedMetricKeys = useMemo(() => [...new Set(charts.flatMap((chart) => chart.metrics))], [charts]);
   const selectedMetricObjects = selectedMetricKeys.map((key) => METRICS.find((metric) => metric.key === key)).filter(Boolean);
 
-  const addChart = () => setCharts((current) => [...current, { id: Date.now(), title: `Gráfico ${current.length + 1}`, type: 'bar', metrics: ['salesTotal'] }]);
+  const addChart = () => setCharts((current) => [...current, { id: Date.now(), title: `Gráfico ${current.length + 1}`, type: 'bar', period: 'global', date: '', metrics: ['salesTotal'] }]);
   const removeChart = (id) => setCharts((current) => current.length > 1 ? current.filter((chart) => chart.id !== id) : current);
   const updateChart = (id, patch) => setCharts((current) => current.map((chart) => chart.id === id ? { ...chart, ...patch } : chart));
   const toggleChartMetric = (chart, key) => updateChart(chart.id, { metrics: chart.metrics.includes(key) ? (chart.metrics.length > 1 ? chart.metrics.filter((item) => item !== key) : chart.metrics) : [...chart.metrics, key] });
@@ -356,19 +356,32 @@ export default function CustomReportsPage() {
         pdf.addPage();
         header();
         const chartTop = 55;
-        const labels = data.daily.map((day) => day.label);
+        const chartDays = data.chartDays[chart.id] || data.daily;
+        const labels = chartDays.map((day) => day.label);
+        const periodLabel = chart.period === 'weekly' ? 'Últimos 7 dias' : chart.period === 'day' ? \`Dia \${chart.date ? formatDate(toLocalDate(chart.date)) : ''}\` : 'Global';
+        const titleWithPeriod = \`\${chart.title} · \${periodLabel}\`;
 
         if (chart.type === 'pie') {
-          drawPie(margin, chartTop, contentWidth, chartMetrics.map((metric) => data[metric.key]), chartMetrics.map((metric) => metric.label), chart.title);
+          const pieValues = chartMetrics.map((metric) => {
+            if (!chartDays.length) return 0;
+            if (chartDays.length === data.daily.length && chart.period === 'global') return data[metric.key] || 0;
+            if (metric.key === 'salesCount') return chartDays.reduce((sum, day) => sum + day.salesCount, 0);
+            if (metric.key === 'salesTotal') return chartDays.reduce((sum, day) => sum + day.salesTotal, 0);
+            if (metric.key === 'income') return chartDays.reduce((sum, day) => sum + day.income, 0);
+            if (metric.key === 'expense') return chartDays.reduce((sum, day) => sum + day.expense, 0);
+            if (metric.key === 'profit') return chartDays.reduce((sum, day) => sum + day.profit, 0);
+            return data[metric.key] || 0;
+          });
+          drawPie(margin, chartTop, contentWidth, pieValues, chartMetrics.map((metric) => metric.label), titleWithPeriod);
         } else {
           const series = chartMetrics.map((metric) => ({
             metric,
-            values: data.daily.map((day) => day[metric.key] || 0),
+            values: chartDays.map((day) => day[metric.key] || 0),
           }));
           if (chart.type === 'line') {
-            drawLines(margin, chartTop, contentWidth, 150, series, labels, chart.title);
+            drawLines(margin, chartTop, contentWidth, 150, series, labels, titleWithPeriod);
           } else {
-            drawBars(margin, chartTop, contentWidth, 150, series, labels, chart.title);
+            drawBars(margin, chartTop, contentWidth, 150, series, labels, titleWithPeriod);
           }
         }
       });
@@ -462,6 +475,17 @@ export default function CustomReportsPage() {
                         <input className="input h-9 flex-1 min-w-0" value={chart.title} onChange={(event) => updateChart(chart.id, { title: event.target.value })} />
                         <button type="button" onClick={() => removeChart(chart.id)} disabled={charts.length === 1} className="p-2 shrink-0 text-dark-500 hover:text-red-300 disabled:opacity-30"><Trash2 size={17}/></button>
                       </div>
+                      <div className="mt-3">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Período</div>
+                        <div className="flex gap-2">
+                          <select className="input h-9 text-xs flex-1" value={chart.period || 'global'} onChange={(event) => updateChart(chart.id, { period: event.target.value, ...(event.target.value !== 'day' ? { date: '' } : {}) })}>
+                            <option value="global">Global</option>
+                            <option value="weekly">Semanal (últimos 7 dias)</option>
+                            <option value="day">Dia específico</option>
+                          </select>
+                          {chart.period === 'day' && <input type="date" className="input h-9 text-xs" value={chart.date || ''} onChange={(event) => updateChart(chart.id, { date: event.target.value })} />}
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wider text-dark-500 mb-2">Estilo</div>
@@ -503,7 +527,7 @@ export default function CustomReportsPage() {
                 <div className="rounded-xl bg-dark-900/50 border border-dark-700/50 p-3"><div className="text-xs text-dark-500">Gráficos</div><div className="text-sm text-dark-200 mt-1">{charts.length}</div></div>
               </div>
               <div className="flex flex-wrap gap-3">
-              {charts.map((chart, index) => <div key={chart.id} className="rounded-xl border border-dark-700/50 p-3 flex-1 min-w-[220px]"><div className="text-sm text-dark-200">{index + 1}. {chart.title}</div><div className="text-xs text-dark-500 mt-1">{CHARTS.find((type) => type.key === chart.type)?.label} · {chart.metrics.length} informação(ões)</div><div className="flex flex-wrap gap-1.5 mt-2">{chart.metrics.map((key) => <span key={key} className="px-2 py-1 rounded-md bg-dark-800 text-[11px] text-dark-400">{METRICS.find((metric) => metric.key === key)?.label}</span>)}</div></div>)}
+              {charts.map((chart, index) => <div key={chart.id} className="rounded-xl border border-dark-700/50 p-3 flex-1 min-w-[220px]"><div className="text-sm text-dark-200">{index + 1}. {chart.title}</div><div className="text-xs text-dark-500 mt-1">{CHARTS.find((type) => type.key === chart.type)?.label} · {chart.period === 'weekly' ? 'Semanal' : chart.period === 'day' ? \`Dia \${chart.date ? formatDate(toLocalDate(chart.date)) : 'não selecionado'}\` : 'Global'} · {chart.metrics.length} informação(ões)</div><div className="flex flex-wrap gap-1.5 mt-2">{chart.metrics.map((key) => <span key={key} className="px-2 py-1 rounded-md bg-dark-800 text-[11px] text-dark-400">{METRICS.find((metric) => metric.key === key)?.label}</span>)}</div></div>)}
               </div>
               <div className="rounded-xl bg-primary-400/5 border border-primary-400/10 p-3 text-xs text-dark-400">O PDF será montado automaticamente com os dados disponíveis da empresa e a configuração acima.</div>
             </div>
@@ -516,7 +540,7 @@ export default function CustomReportsPage() {
               <div className="flex flex-wrap items-center gap-4">
                 <div className="text-xs text-dark-500 mb-2">Estrutura do PDF</div>
                 <div className="text-sm text-dark-300">Capa + resumo dos indicadores</div>
-                {charts.map((chart, index) => <div key={chart.id} className="flex items-center gap-3"><span className="w-8 h-8 rounded-lg bg-dark-800 text-dark-400 flex items-center justify-center">{chart.type === 'line' ? <LineChart size={15}/> : chart.type === 'pie' ? <PieChart size={15}/> : <BarChart3 size={15}/>}</span><div><div className="text-sm text-dark-300">Gráfico {index + 1}</div><div className="text-xs text-dark-500">{chart.metrics.length} informação(ões)</div></div></div>)}
+                {charts.map((chart, index) => <div key={chart.id} className="flex items-center gap-3"><span className="w-8 h-8 rounded-lg bg-dark-800 text-dark-400 flex items-center justify-center">{chart.type === 'line' ? <LineChart size={15}/> : chart.type === 'pie' ? <PieChart size={15}/> : <BarChart3 size={15}/>}</span><div><div className="text-sm text-dark-300">Gráfico {index + 1}</div><div className="text-xs text-dark-500">{chart.period === 'weekly' ? 'Semanal' : chart.period === 'day' ? 'Dia específico' : 'Global'} · {chart.metrics.length} informação(ões)</div></div></div>)}
                 {includeTable && <div className="text-sm text-dark-300">+ tabela de detalhamento</div>}
               </div>
             </div>
