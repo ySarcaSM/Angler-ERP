@@ -39,6 +39,7 @@ import DeletionRequests from './pages/settings/DeletionRequests';
 import LocationList from './pages/locations/LocationList';
 import LocationForm from './pages/locations/LocationForm';
 import ModulesPage from './pages/modules/ModulesPage';
+import UltraUISettingsPage from './pages/anglerUltra/UltraUISettingsPage';
 import AccessibilityFloatingButton from './components/ui/AccessibilityFloatingButton';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminPanel from './pages/admin/AdminPanel';
@@ -74,6 +75,7 @@ function OperatorHomeOrDashboard() { return <Dashboard />; }
 function OperatorBlockedRoute({ children }) { const { userData } = useAuth(); return userData?.role === 'operator' ? <Navigate to="/app" replace /> : children; }
 function AdminOrOwnerRoute({ children }) { const { userData } = useAuth(); return ['owner','admin'].includes(userData?.role) ? children : <Navigate to="/app" replace />; }
 function AnglerProRoute({ children }) { const { company } = useAuth(); return ['anglerpro', 'anglerultra'].includes(company?.plan) ? children : <Navigate to="/app" replace />; }
+function AnglerUltraRoute({ children }) { const { company } = useAuth(); return company?.plan === 'anglerultra' ? children : <Navigate to="/app" replace />; }
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -112,6 +114,7 @@ export default function App() {
       <Route path="/reports" element={<ModuleRoute moduleKey="reports"><ReportsPage /></ModuleRoute>} />
       <Route path="/angler-pro/relatorios-semanais" element={<AnglerProRoute><WeeklyReportsPage /></AnglerProRoute>} />
       <Route path="/angler-pro/relatorios-customizaveis" element={<AnglerProRoute><CustomReportsPage /></AnglerProRoute>} />
+      <Route path="/angler-ultra/ui" element={<AnglerUltraRoute><UltraUISettingsPage /></AnglerUltraRoute>} />
       <Route path="/budgets/new" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets/:id/edit" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />

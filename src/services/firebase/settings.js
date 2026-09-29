@@ -12,6 +12,37 @@ import {
   createDoc, getDoc_, updateDoc_, deleteDoc_, listDocs, getBatch, docRef,
 } from './firestore.js';
 
+const DEFAULT_UI_SETTINGS = {
+  primaryButtonColor: '#d4af37',
+  secondaryButtonColor: '#374151',
+  dangerButtonColor: '#dc2626',
+  accentColor: '#d4af37',
+  fontFamily: 'Inter',
+  fontSize: '100%',
+  borderRadius: '12px',
+  density: 'comfortable',
+  cardShadow: 'medium',
+};
+
+export function getDefaultUISettings() {
+  return { ...DEFAULT_UI_SETTINGS };
+}
+
+export function applyUISettings(settings = {}) {
+  const ui = { ...DEFAULT_UI_SETTINGS, ...settings };
+  const root = document.documentElement;
+  root.style.setProperty('--ui-primary', ui.primaryButtonColor);
+  root.style.setProperty('--ui-secondary', ui.secondaryButtonColor);
+  root.style.setProperty('--ui-danger', ui.dangerButtonColor);
+  root.style.setProperty('--ui-accent', ui.accentColor);
+  root.style.setProperty('--ui-font-family', ui.fontFamily);
+  root.style.setProperty('--ui-font-size', ui.fontSize);
+  root.style.setProperty('--ui-radius', ui.borderRadius);
+  root.dataset.anglerUi = 'true';
+  document.body.style.fontFamily = ui.fontFamily;
+  document.body.style.fontSize = ui.fontSize;
+}
+
 // ─── Company ───
 export async function getCompany(companyId) {
   return getDoc_('companies', companyId);

@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import { useAuth } from '../../context/useAuth';
+import { getDefaultUISettings, applyUISettings } from '../../services/firebase/settings';
 
 export default function Layout({ children }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { company } = useAuth();
+
+  React.useEffect(() => {
+    applyUISettings(company?.settings?.ui || getDefaultUISettings());
+  }, [company]);
 
   return (
-    <div className="min-h-screen bg-dark-950">
+    <div className="app-ui min-h-screen bg-dark-950">
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}

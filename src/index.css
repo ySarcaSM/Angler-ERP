@@ -2335,3 +2335,23 @@ html[data-accessibility-theme='light'] .text-dark-500 {
 /* Brilho sutil para textos Angler Pro */
 .pro-shimmer { background: linear-gradient(90deg, #c4b5fd 0%, #ede9fe 45%, #a78bfa 55%, #c4b5fd 100%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: pro-shimmer 2.8s ease-in-out infinite; }
 @keyframes pro-shimmer { 0%, 100% { background-position: 120% 0; } 50% { background-position: -20% 0; } }
+
+/* Angler Ultra UI customization — scoped to the authenticated /app layout */
+.app-ui {
+  font-family: var(--ui-font-family, 'Inter', system-ui, sans-serif);
+  font-size: var(--ui-font-size, 100%);
+}
+.app-ui .btn-primary {
+  background: var(--ui-primary, #d4af37);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--ui-primary, #d4af37) 30%, transparent);
+  border-radius: var(--ui-radius, 12px);
+}
+.app-ui .btn-primary:hover { background: color-mix(in srgb, var(--ui-primary, #d4af37) 82%, #000); }
+.app-ui .btn-secondary { background: var(--ui-secondary, #374151); border-radius: var(--ui-radius, 12px); }
+.app-ui .btn-danger { background: var(--ui-danger, #dc2626); border-radius: var(--ui-radius, 12px); }
+.app-ui .btn-ghost, .app-ui .input, .app-ui .card, .app-ui .badge { border-radius: var(--ui-radius, 12px); }
+.app-ui .text-primary-300, .app-ui .text-primary-400 { color: var(--ui-accent, #d4af37); }
+.app-ui.ui-density-compact main { padding: 1rem; }
+.app-ui.ui-shadow-none .card { box-shadow: none; }
+.app-ui.ui-shadow-soft .card { box-shadow: 0 2px 12px rgba(0,0,0,.18); }
+.app-ui.ui-shadow-medium .card { box-shadow: 0 4px 24px rgba(0,0,0,.3); }
