@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  UserPlus, ArrowLeft, ArrowRight, Check, Building2, User, LayoutGrid, Wand2, CreditCard, Crown, Sparkles,
+  UserPlus, ArrowLeft, ArrowRight, Check, Building2, User, LayoutGrid, Wand2, CreditCard, Crown, Sparkles, Eye, EyeOff,
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
@@ -217,6 +217,8 @@ function ModuleToggle({ modKey, label, desc, active, onToggle }) {
 
 function Step1({ account, setAccount, errors }) {
   const passwordChecks = getPasswordChecks(account.password);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -246,13 +248,25 @@ function Step1({ account, setAccount, errors }) {
         error={errors.email}
       />
 
-      <InputField
-        label="Senha" name="password" type="password" placeholder="Crie uma senha forte" required
-        value={account.password}
-        onChange={(e) => setAccount({ ...account, password: e.target.value })}
-        error={errors.password}
-        minLength={8}
-      />
+      <div className="relative">
+        <InputField
+          label="Senha" name="password" type={showPassword ? 'text' : 'password'} placeholder="Crie uma senha forte" required
+          value={account.password}
+          onChange={(e) => setAccount({ ...account, password: e.target.value })}
+          error={errors.password}
+          minLength={8}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword((value) => !value)}
+          className="absolute right-2 top-8 p-2 text-dark-500 hover:text-dark-300"
+          aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+          title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+        >
+          {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
         {passwordChecks.map((check) => (
@@ -262,12 +276,24 @@ function Step1({ account, setAccount, errors }) {
         ))}
       </div>
 
-      <InputField
-        label="Confirmar Senha" name="confirmPassword" type="password" placeholder="Repita a senha" required
-        value={account.confirmPassword}
-        onChange={(e) => setAccount({ ...account, confirmPassword: e.target.value })}
-        error={errors.confirmPassword}
-      />
+      <div className="relative">
+        <InputField
+          label="Confirmar Senha" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repita a senha" required
+          value={account.confirmPassword}
+          onChange={(e) => setAccount({ ...account, confirmPassword: e.target.value })}
+          error={errors.confirmPassword}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          onClick={() => setShowConfirmPassword((value) => !value)}
+          className="absolute right-2 top-8 p-2 text-dark-500 hover:text-dark-300"
+          aria-label={showConfirmPassword ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'}
+          title={showConfirmPassword ? 'Ocultar confirmação da senha' : 'Mostrar confirmação da senha'}
+        >
+          {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+        </button>
+      </div>
     </div>
   );
 }
