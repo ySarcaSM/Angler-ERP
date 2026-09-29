@@ -44,6 +44,7 @@ export default function AngelAssistant() {
   const [listening, setListening] = useState(false);
   const [models, setModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [loadingValidModel, setLoadingValidModel] = useState(false);
   const [testingApi, setTestingApi] = useState(false);
   const [apiTested, setApiTested] = useState(false);
   const recognitionRef = useRef(null);
@@ -254,6 +255,45 @@ export default function AngelAssistant() {
     }
   };
 
+  const loadValidModel = async () => {
+    if (!providerKey.trim()) {
+      toast.error('Informe a API key antes de procurar um modelo válido.');
+      return;
+    }
+    setLoadingValidModel(true);
+    setApiTested(false);
+    try {
+      const items = await listProviderModels(provider, providerKey.trim());
+      if (!items.length) throw new Error('O provedor não disponibilizou nenhum modelo para esta API key.');
+
+      let validModel = null;
+      for (const item of items) {
+        try {
+          await askProvider(provider, providerKey.trim(), 'Responda apenas: OK', item.id);
+          validModel = item;
+          break;
+        } catch {
+          // Tenta o próximo modelo disponível.
+        }
+      }
+
+      if (!validModel) {
+        throw new Error('Nenhum dos modelos disponíveis respondeu corretamente. Verifique a API key, a cota e as permissões do provedor.');
+      }
+
+      setModels(items);
+      setProviderModel(validModel.id);
+      saveStoredApiKey(provider, providerKey);
+      saveStoredModel(provider, validModel.id);
+      setApiTested(true);
+      toast.success(`Modelo válido carregado: ${validModel.name || validModel.id}`);
+    } catch (error) {
+      toast.error(error.message || 'Não foi possível encontrar um modelo válido.');
+    } finally {
+      setLoadingValidModel(false);
+    }
+  };
+
   const testProviderApi = async () => {
     if (!providerKey.trim()) {
       toast.error('Informe a API key antes de testar.');
@@ -344,8 +384,8 @@ export default function AngelAssistant() {
               <label className="text-sm font-medium text-dark-200 block mt-3">Modelo</label>
               {models.length ? <select value={providerModel} onChange={(event) => { setProviderModel(event.target.value); saveStoredModel(provider, event.target.value); setApiTested(false); }} className="input mt-2">{models.map((item) => <option key={item.id} value={item.id}>{item.name || item.id}</option>)}</select> : <input value={providerModel} onChange={(event) => { setProviderModel(event.target.value); setApiTested(false); }} className="input mt-2" placeholder={aiProviders[provider].model} />}
               <div className="flex flex-wrap gap-2 mt-2">
-                <button type="button" className="btn-secondary" onClick={loadModels} disabled={loadingModels || testingApi}>{loadingModels ? 'Carregando...' : 'Carregar modelos'}</button>
-                <button type="button" className="btn-secondary" onClick={testProviderApi} disabled={testingApi || loadingModels}>{testingApi ? 'Testando...' : 'Testar API'}</button>
+                <button type="button" className="btn-secondary" onClick={loadModels} disabled={loadingModels || loadingValidModel || testingApi}>{loadingModels ? 'Carregando...' : 'Carregar modelos'}</button>
+                <button type="button" className="btn-secondary" onClick={loadValidModel} disabled={loadingValidModel || loadingModels || testingApi}>{loadingValidModel ? 'Procurando modelo válido...' : 'Carregar modelo válido'}</button>\n                <button type="button" className="btn-secondary" onClick={testProviderApi} disabled={testingApi || loadingModels || loadingValidModel}>{testingApi ? 'Testando...' : 'Testar API'}</button>
                 {apiTested && <span className="inline-flex items-center text-xs text-emerald-400 px-2">✓ API funcionando</span>}
               </div>
               <p className="text-xs text-dark-500 mt-2">AnglerPro pode usar OpenAI, Gemini, Claude, Grok ou DeepSeek.</p>
