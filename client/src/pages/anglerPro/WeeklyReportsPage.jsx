@@ -70,29 +70,144 @@ export default function WeeklyReportsPage() {
     const generatedAt = timestampToDate(report.createdAt) || new Date();
     const start = getDate(report.startDate);
     const end = getDate(report.endDate);
+    const daily = Array.isArray(report.daily) ? report.daily : [];
+    const averageTicket = report.salesCount ? (Number(report.salesTotal || 0) / report.salesCount) : 0;
+    const margin = Number(report.income || 0) ? (Number(report.profit || 0) / Number(report.income || 0)) * 100 : 0;
+    const bestDay = daily.reduce((best, day) => (Number(day.salesTotal || 0) > Number(best?.salesTotal || 0) ? day : best), daily[0]);
 
+    const drawFooter = (pageNumber) => {
+      pdf.setFontSize(8);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text('Relatório gerado pelo AnglerERP.', 20, 285);
+      pdf.text(`Página ${pageNumber}`, 175, 285);
+      pdf.setTextColor(30, 30, 30);
+    };
+
+    const drawMetric = (x, y, w, label, value) => {
+      pdf.setFillColor(245, 247, 250);
+      pdf.roundedRect(x, y, w, 22, 3, 3, 'F');
+      pdf.setFontSize(8);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(label, x + 4, y + 7);
+      pdf.setFontSize(11);
+      pdf.setTextColor(30, 30, 30);
+      pdf.text(value, x + 4, y + 16);
+    };
+
+    const drawBars = (x, y, w, h, values, labels, title) => {
+      const max = Math.max(...values, 1);
+      const gap = 5;
+      const barW = Math.max(8, (w - gap * (values.length - 1)) / values.length);
+      pdf.setFontSize(11);
+      pdf.setTextColor(30, 30, 30);
+      pdf.text(title, x, y - 7);
+      pdf.setDrawColor(220, 220, 220);
+      pdf.line(x, y + h, x + w, y + h);
+      values.forEach((value, index) => {
+        const barH = (Number(value || 0) / max) * (h - 8);
+        const bx = x + index * (barW + gap);
+        const by = y + h - barH;
+        pdf.setFillColor(59, 130, 246);
+        pdf.roundedRect(bx, by, barW, barH, 1, 1, 'F');
+        pdf.setFontSize(7);
+        pdf.setTextColor(90, 90, 90);
+        pdf.text(labels[index], bx + barW / 2, y + h + 9, { align: 'center' });
+      });
+    };
+
+    const drawLine = (x, y, w, h, values, labels, title) => {
+      const max = Math.max(...values, 1);
+      const min = Math.min(...values, 0);
+      const range = Math.max(max - min, 1);
+      const step = values.length > 1 ? w / (values.length - 1) : w;
+      pdf.setFontSize(11);
+      pdf.setTextColor(30, 30, 30);
+      pdf.text(title, x, y - 7);
+      pdf.setDrawColor(220, 220, 220);
+      pdf.line(x, y + h, x + w, y + h);
+      if (!values.length) return;
+      const points = values.map((value, index) => ({
+        x: x + index * step,
+        y: y + h - ((Number(value || 0) - min) / range) * (h - 8),
+      }));
+      pdf.setDrawColor(16, 185, 129);
+      pdf.setLineWidth(1.2);
+      for (let i = 1; i < points.length; i += 1) pdf.line(points[i - 1].x, points[i - 1].y, points[i].x, points[i].y);
+      points.forEach((point, index) => {
+        pdf.setFillColor(16, 185, 129);
+        pdf.circle(point.x, point.y, 1.7, 'F');
+        pdf.setFontSize(7);
+        pdf.setTextColor(90, 90, 90);
+        pdf.text(labels[index], point.x, y + h + 9, { align: 'center' });
+      });
+      pdf.setLineWidth(0.2);
+    };
+
+    pdf.setFillColor(31, 41, 55);
+    pdf.rect(0, 0, 210, 15, 'F');
+    pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(18);
-    pdf.text('Relatório semanal', 20, 20);
+    pdf.text('Relatório semanal', 20, 10);
+    pdf.setTextColor(30, 30, 30);
     pdf.setFontSize(11);
-    pdf.text(companyName, 20, 29);
-    pdf.text(`Período: ${formatDate(start)} até ${formatDate(end)}`, 20, 36);
-    pdf.text(`Criado por: ${report.generatedByName || 'Usuário'}`, 20, 43);
-    pdf.text(`Gerado em: ${formatDate(generatedAt)}`, 20, 50);
-
-    pdf.setDrawColor(210, 210, 210);
-    pdf.line(20, 57, 190, 57);
-    pdf.setFontSize(13);
-    pdf.text('Resumo da semana', 20, 69);
-    pdf.setFontSize(11);
-    pdf.text(`Vendas realizadas: ${report.salesCount || 0}`, 20, 80);
-    pdf.text(`Valor total das vendas: ${formatBRL(report.salesTotal || 0)}`, 20, 88);
-    pdf.text(`Receitas: ${formatBRL(report.income || 0)}`, 20, 96);
-    pdf.text(`Despesas: ${formatBRL(report.expense || 0)}`, 20, 104);
-    pdf.text(`Resultado: ${formatBRL(report.profit || 0)}`, 20, 112);
-
+    pdf.text(companyName, 20, 25);
     pdf.setFontSize(9);
     pdf.setTextColor(100, 100, 100);
-    pdf.text('Relatório gerado pelo AnglerERP.', 20, 285);
+    pdf.text(`Período: ${formatDate(start)} até ${formatDate(end)}`, 20, 32);
+    pdf.text(`Criado por: ${report.generatedByName || 'Usuário'} • Gerado em: ${formatDate(generatedAt)}`, 20, 38);
+
+    drawMetric(20, 47, 40, 'Vendas', String(report.salesCount || 0));
+    drawMetric(63, 47, 40, 'Faturamento', formatBRL(report.salesTotal || 0));
+    drawMetric(106, 47, 40, 'Ticket médio', formatBRL(averageTicket));
+    drawMetric(149, 47, 41, 'Margem', `${margin.toFixed(1)}%`);
+
+    pdf.setFontSize(12);
+    pdf.setTextColor(30, 30, 30);
+    pdf.text('Visão financeira', 20, 80);
+    pdf.setFontSize(10);
+    pdf.text(`Receitas: ${formatBRL(report.income || 0)}`, 20, 88);
+    pdf.text(`Despesas: ${formatBRL(report.expense || 0)}`, 20, 96);
+    pdf.text(`Resultado: ${formatBRL(report.profit || 0)}`, 20, 104);
+    if (bestDay) pdf.text(`Melhor dia de vendas: ${bestDay.label} (${formatBRL(bestDay.salesTotal || 0)})`, 20, 112);
+
+    const labels = daily.map((day) => day.label);
+    drawBars(20, 128, 170, 55, daily.map((day) => day.salesTotal), labels, 'Faturamento por dia');
+    drawLine(20, 202, 170, 55, daily.map((day) => day.profit), labels, 'Resultado por dia');
+    drawFooter(1);
+
+    pdf.addPage();
+    pdf.setFontSize(16);
+    pdf.setTextColor(30, 30, 30);
+    pdf.text('Detalhamento diário', 20, 20);
+    pdf.setFontSize(9);
+    let y = 31;
+    pdf.setFillColor(239, 246, 255);
+    pdf.rect(20, y - 6, 170, 9, 'F');
+    pdf.setTextColor(50, 60, 70);
+    pdf.text('Dia', 23, y);
+    pdf.text('Vendas', 62, y);
+    pdf.text('Faturamento', 88, y);
+    pdf.text('Receitas', 123, y);
+    pdf.text('Despesas', 151, y);
+    pdf.text('Resultado', 174, y);
+    y += 9;
+    daily.forEach((day) => {
+      pdf.setTextColor(50, 50, 50);
+      pdf.text(day.label, 23, y);
+      pdf.text(String(day.salesCount || 0), 62, y);
+      pdf.text(formatBRL(day.salesTotal || 0), 88, y);
+      pdf.text(formatBRL(day.income || 0), 123, y);
+      pdf.text(formatBRL(day.expense || 0), 151, y);
+      pdf.text(formatBRL(day.profit || 0), 174, y);
+      y += 9;
+    });
+    pdf.setFontSize(10);
+    pdf.text('Indicadores calculados', 20, y + 8);
+    pdf.setFontSize(9);
+    pdf.text(`Ticket médio: ${formatBRL(averageTicket)}`, 20, y + 18);
+    pdf.text(`Margem sobre receitas: ${margin.toFixed(1)}%`, 20, y + 26);
+    pdf.text(`Quantidade de relatórios armazenados: ${reports.length}/5`, 20, y + 34);
+    drawFooter(2);
     pdf.save(`relatorio-semanal-${report.startDate || 'periodo'}.pdf`);
   };
 
@@ -121,6 +236,34 @@ export default function WeeklyReportsPage() {
       const income = incomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
       const expense = expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
       const salesTotal = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+      const daily = Array.from({ length: 7 }, (_, index) => {
+        const dayStart = new Date(start);
+        dayStart.setDate(dayStart.getDate() + index);
+        const dayEnd = new Date(dayStart);
+        dayEnd.setHours(23, 59, 59, 999);
+        const daySales = sales.filter((sale) => {
+          const date = timestampToDate(sale.createdAt);
+          return date && date >= dayStart && date <= dayEnd;
+        });
+        const dayIncomes = incomes.filter((item) => {
+          const date = timestampToDate(item.createdAt);
+          return date && date >= dayStart && date <= dayEnd;
+        });
+        const dayExpenses = expenses.filter((item) => {
+          const date = timestampToDate(item.createdAt);
+          return date && date >= dayStart && date <= dayEnd;
+        });
+        const dayIncome = dayIncomes.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const dayExpense = dayExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        return {
+          label: dayStart.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+          salesCount: daySales.length,
+          salesTotal: daySales.reduce((sum, sale) => sum + Number(sale.total || 0), 0),
+          income: dayIncome,
+          expense: dayExpense,
+          profit: dayIncome - dayExpense,
+        };
+      });
 
       await createWeeklyReport(company.id, {
         startDate,
