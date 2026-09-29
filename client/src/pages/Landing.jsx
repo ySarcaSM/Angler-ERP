@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import toast from 'react-hot-toast';
 import { db } from '../config/firebase';
 import { Link } from 'react-router-dom';
 import {
@@ -262,10 +263,10 @@ export default function Landing() {
       });
 
       setContactForm({ title: '', email: '', description: '' });
-      window.alert('Sua mensagem será lida, aguarde.');
+      toast.success('Sua mensagem será lida, aguarde.');
     } catch (error) {
       console.error('Erro ao salvar mensagem de contato:', error);
-      window.alert('Não foi possível enviar sua mensagem. Tente novamente.');
+      toast.error('Não foi possível enviar sua mensagem. Tente novamente.');
     } finally {
       setContactSending(false);
     }
