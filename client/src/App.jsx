@@ -23,6 +23,7 @@ import FinancialDashboard from './pages/financial/FinancialDashboard';
 import StockDashboard from './pages/stock/StockDashboard';
 import ReportsPage from './pages/reports/ReportsPage';
 import WeeklyReportsPage from './pages/anglerPro/WeeklyReportsPage';
+import CustomReportsPage from './pages/anglerPro/CustomReportsPage';
 import LogsPage from './pages/logs/LogsPage';
 import NotificationsPage from './pages/notifications/NotificationsPage';
 import AngelAssistant from './pages/assistant/AngelAssistant';
@@ -106,6 +107,7 @@ export default function App() {
       <Route path="/stock" element={<ModuleRoute moduleKey="stock"><StockDashboard /></ModuleRoute>} />
       <Route path="/reports" element={<ModuleRoute moduleKey="reports"><ReportsPage /></ModuleRoute>} />
       <Route path="/angler-pro/relatorios-semanais" element={<AnglerProRoute><WeeklyReportsPage /></AnglerProRoute>} />
+      <Route path="/angler-pro/relatorios-customizaveis" element={<AnglerProRoute><CustomReportsPage /></AnglerProRoute>} />
       <Route path="/budgets/new" element={<ModuleRoute moduleKey="budgets"><WriteRoute><BudgetForm /></WriteRoute></ModuleRoute>} />
       <Route path="/budgets" element={<ModuleRoute moduleKey="budgets"><BudgetsPage /></ModuleRoute>} />
       <Route path="/budgets/profiles" element={<ModuleRoute moduleKey="measurement"><ProfileGroupPage /></ModuleRoute>} />
