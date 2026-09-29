@@ -1,6 +1,8 @@
-import { createDoc, updateDoc_, deleteDoc_, listDocs } from './firestore.js';
+import { createDoc, getDoc_, updateDoc_, deleteDoc_, listDocs } from './firestore.js';
 
 const COLLECTION = 'formulas';
+
+export async function getFormula(id) { return getDoc_(COLLECTION, id); }
 
 export async function listFormulas(companyId, options = {}) {
   const result = await listDocs(COLLECTION, {
