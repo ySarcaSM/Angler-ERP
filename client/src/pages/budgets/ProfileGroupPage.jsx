@@ -725,12 +725,12 @@ function CutPreview({ profile, result, onDownload }) {
         if (hasAccordion) {
           [0, 1].forEach((accordionIndex) => {
             const accordionX = groupX + (accordionIndex === 0 ? 0 : pieceDrawWidth + accordionDrawWidth);
-            context.fillStyle = '#facc15';
+            context.fillStyle = '#22c55e';
             context.fillRect(accordionX, currentRowY, accordionDrawWidth, pieceDrawHeight);
-            context.strokeStyle = '#a16207';
+            context.strokeStyle = '#15803d';
             context.lineWidth = 1.5;
             context.strokeRect(accordionX, currentRowY, accordionDrawWidth, pieceDrawHeight);
-            drawResponsivePieceLabel(context, accordionX, currentRowY, accordionDrawWidth, pieceDrawHeight, accordionLabel, '#713f12');
+            drawResponsivePieceLabel(context, accordionX, currentRowY, accordionDrawWidth, pieceDrawHeight, accordionLabel, '#14532d');
           });
         }
 
@@ -829,38 +829,101 @@ function CutPreview({ profile, result, onDownload }) {
       context.restore();
     }
 
-    // Cotas por peça, como na referência: uma linha de dimensão acima de
-    // cada coluna, com setas/ticks nas extremidades e o valor centralizado.
+    // Cotas por peça: cada seta usa exatamente a largura do retângulo
+    // que está sendo medido. Para mochilas com sanfona, corpo e sanfonas
+    // recebem cotas independentes, todas alinhadas às suas bordas reais.
+    const drawHorizontalDimension = (targetContext, startX, endX, y, label, color = '#111827') => {
+      if (endX <= startX) return;
+      const arrowSize = Math.min(6, Math.max(3, (endX - startX) / 8));
+      targetContext.save();
+      targetContext.strokeStyle = color;
+      targetContext.fillStyle = color;
+      targetContext.lineWidth = 1.5;
+      targetContext.beginPath();
+      targetContext.moveTo(startX, y);
+      targetContext.lineTo(endX, y);
+      targetContext.moveTo(startX, y - 4);
+      targetContext.lineTo(startX, y + 4);
+      targetContext.moveTo(endX, y - 4);
+      targetContext.lineTo(endX, y + 4);
+      targetContext.stroke();
+      targetContext.beginPath();
+      targetContext.moveTo(startX, y);
+      targetContext.lineTo(startX + arrowSize, y - 3);
+      targetContext.lineTo(startX + arrowSize, y + 3);
+      targetContext.closePath();
+      targetContext.fill();
+      targetContext.beginPath();
+      targetContext.moveTo(endX, y);
+      targetContext.lineTo(endX - arrowSize, y - 3);
+      targetContext.lineTo(endX - arrowSize, y + 3);
+      targetContext.closePath();
+      targetContext.fill();
+      targetContext.font = '700 8px Arial';
+      const labelWidth = targetContext.measureText(label).width;
+      targetContext.fillText(label, ((startX + endX) / 2) - (labelWidth / 2), y - 5);
+      targetContext.restore();
+    };
+
+    const drawVerticalDimension = (targetContext, x, startY, endY, label, color = '#111827') => {
+      if (endY <= startY) return;
+      const arrowSize = Math.min(6, Math.max(3, (endY - startY) / 8));
+      targetContext.save();
+      targetContext.strokeStyle = color;
+      targetContext.fillStyle = color;
+      targetContext.lineWidth = 1.5;
+      targetContext.beginPath();
+      targetContext.moveTo(x, startY);
+      targetContext.lineTo(x, endY);
+      targetContext.moveTo(x - 4, startY);
+      targetContext.lineTo(x + 4, startY);
+      targetContext.moveTo(x - 4, endY);
+      targetContext.lineTo(x + 4, endY);
+      targetContext.stroke();
+      targetContext.beginPath();
+      targetContext.moveTo(x, startY);
+      targetContext.lineTo(x - 3, startY + arrowSize);
+      targetContext.lineTo(x + 3, startY + arrowSize);
+      targetContext.closePath();
+      targetContext.fill();
+      targetContext.beginPath();
+      targetContext.moveTo(x, endY);
+      targetContext.lineTo(x - 3, endY - arrowSize);
+      targetContext.lineTo(x + 3, endY - arrowSize);
+      targetContext.closePath();
+      targetContext.fill();
+      targetContext.translate(x + 10, (startY + endY) / 2);
+      targetContext.rotate(-Math.PI / 2);
+      targetContext.font = '700 8px Arial';
+      const labelWidth = targetContext.measureText(label).width;
+      targetContext.fillText(label, -labelWidth / 2, 0);
+      targetContext.restore();
+    };
+
     if (mainPiecesToDraw > 0) {
       const dimensionY = mainAreaY - 10;
-      context.strokeStyle = '#111827';
-      context.fillStyle = '#111827';
-      context.lineWidth = 1;
-      context.font = '700 8px Arial';
       const drawnPiecesInFirstRow = Math.min(firstCutPlan.wholePiecesPerRow, mainPiecesToDraw, quantity);
       for (let column = 0; column < drawnPiecesInFirstRow; column += 1) {
-        const startX = mainStartX + (column * (mainPieceDrawWidth + mainGap));
-        const endX = startX + mainPieceDrawWidth;
-        context.beginPath();
-        context.moveTo(startX, dimensionY);
-        context.lineTo(endX, dimensionY);
-        context.moveTo(startX, dimensionY - 4);
-        context.lineTo(startX, dimensionY + 4);
-        context.moveTo(endX, dimensionY - 4);
-        context.lineTo(endX, dimensionY + 4);
-        context.moveTo(startX, dimensionY);
-        context.lineTo(startX + 4, dimensionY - 3);
-        context.moveTo(startX, dimensionY);
-        context.lineTo(startX + 4, dimensionY + 3);
-        context.moveTo(endX, dimensionY);
-        context.lineTo(endX - 4, dimensionY - 3);
-        context.moveTo(endX, dimensionY);
-        context.lineTo(endX - 4, dimensionY + 3);
-        context.stroke();
-        const label = `${formatNumber(cutWidthCm, 0)} cm`;
-        const labelWidth = context.measureText(label).width;
-        context.fillText(label, startX + ((mainPieceDrawWidth - labelWidth) / 2), dimensionY - 4);
+        const groupX = mainStartX + (column * groupDrawWidth);
+        const accordionDrawWidthForDimension = hasAccordion ? accordionWidth * centimeterScale : 0;
+        const mainStart = groupX + accordionDrawWidthForDimension;
+        const mainEnd = mainStart + mainPieceDrawWidth;
+        drawHorizontalDimension(context, mainStart, mainEnd, dimensionY, `${formatNumber(cutWidthCm, 0)} cm`);
+        if (hasAccordion && accordionDrawWidthForDimension > 0) {
+          const leftAccordionStart = groupX;
+          const leftAccordionEnd = groupX + accordionDrawWidthForDimension;
+          const rightAccordionStart = mainEnd;
+          const rightAccordionEnd = rightAccordionStart + accordionDrawWidthForDimension;
+          drawHorizontalDimension(context, leftAccordionStart, leftAccordionEnd, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#15803d');
+          drawHorizontalDimension(context, rightAccordionStart, rightAccordionEnd, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#15803d');
+        }
       }
+
+      // A cota vertical fica alinhada à primeira mochila/sanfona,
+      // usando a altura real do retângulo desenhado.
+      const firstPieceX = mainStartX + mainPieceDrawWidth + (hasAccordion ? accordionDrawWidthForDimension : 0);
+      const firstPieceY = mainAreaY;
+      drawVerticalDimension(context, firstPieceX + 8, firstPieceY, firstPieceY + (cutHeightCm * verticalCentimeterScale), `${formatNumber(cutHeightCm, 0)} cm`);
     }
     const cardY = 520;
     const cardGap = 22;
@@ -984,22 +1047,49 @@ function CutPreview({ profile, result, onDownload }) {
       const secondMainPieceDrawWidth = secondPieceWidthCm * centimeterScale;
       const secondMainAreaHeight = Math.min(secondPieceHeightCm * verticalCentimeterScale, materialPlanDrawHeight);
       const secondMainLabel = `${formatNumber(secondPieceWidthCm, 0)} x ${formatNumber(secondPieceHeightCm, 0)} cm`;
+      const secondAccordionDrawWidth = hasAccordion ? accordionWidth * centimeterScale : 0;
+      const secondGroupDrawWidth = secondMainPieceDrawWidth + (secondAccordionDrawWidth * 2);
       const secondPiecesToDraw = Math.min(secondPlanQuantity, secondRows * secondPiecesPerRow);
       let secondLastPieceEndX = mainStartX;
       let secondLastPieceRowY = mainAreaY;
       for (let index = 0; index < secondPiecesToDraw; index += 1) {
         const row = secondPiecesPerRow > 0 ? Math.floor(index / secondPiecesPerRow) : 0;
         const column = secondPiecesPerRow > 0 ? index % secondPiecesPerRow : 0;
-        const pieceX = mainStartX + (column * (secondMainPieceDrawWidth + mainGap));
+        const groupX = mainStartX + (column * (secondGroupDrawWidth + mainGap));
         const pieceY = mainAreaY + (row * secondMainAreaHeight);
+        if (hasAccordion && secondAccordionDrawWidth > 0) {
+          [0, 1].forEach((accordionIndex) => {
+            const accordionX = groupX + (accordionIndex === 0 ? 0 : secondMainPieceDrawWidth + secondAccordionDrawWidth);
+            duplicateContext.fillStyle = '#22c55e';
+            duplicateContext.fillRect(accordionX, pieceY, secondAccordionDrawWidth, secondMainAreaHeight);
+            duplicateContext.strokeStyle = '#15803d';
+            duplicateContext.lineWidth = 1.5;
+            duplicateContext.strokeRect(accordionX, pieceY, secondAccordionDrawWidth, secondMainAreaHeight);
+            drawResponsivePieceLabel(duplicateContext, accordionX, pieceY, secondAccordionDrawWidth, secondMainAreaHeight, `Sanfona ${formatNumber(accordionWidth, 1)} cm`, '#14532d');
+          });
+        }
+        const pieceX = groupX + secondAccordionDrawWidth;
         duplicateContext.fillStyle = color.fill;
         duplicateContext.fillRect(pieceX, pieceY, secondMainPieceDrawWidth, secondMainAreaHeight);
         duplicateContext.strokeStyle = '#27506a';
         duplicateContext.lineWidth = 1.5;
         duplicateContext.strokeRect(pieceX, pieceY, secondMainPieceDrawWidth, secondMainAreaHeight);
         drawResponsivePieceLabel(duplicateContext, pieceX, pieceY, secondMainPieceDrawWidth, secondMainAreaHeight, secondMainLabel, color.dark);
-        secondLastPieceEndX = pieceX + secondMainPieceDrawWidth + mainGap;
+        secondLastPieceEndX = groupX + secondGroupDrawWidth + mainGap;
         secondLastPieceRowY = pieceY;
+      }
+
+      if (secondPiecesToDraw > 0) {
+        const dimensionY = mainAreaY - 10;
+        const firstGroupX = mainStartX;
+        const secondMainStart = firstGroupX + secondAccordionDrawWidth;
+        const secondMainEnd = secondMainStart + secondMainPieceDrawWidth;
+        drawHorizontalDimension(duplicateContext, secondMainStart, secondMainEnd, dimensionY, `${formatNumber(secondPieceWidthCm, 0)} cm`);
+        if (hasAccordion && secondAccordionDrawWidth > 0) {
+          drawHorizontalDimension(duplicateContext, firstGroupX, secondMainStart, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#15803d');
+          drawHorizontalDimension(duplicateContext, secondMainEnd, secondMainEnd + secondAccordionDrawWidth, dimensionY - 14, `${formatNumber(accordionWidth, 1)} cm`, '#15803d');
+        }
+        drawVerticalDimension(duplicateContext, secondMainEnd + 8, mainAreaY, mainAreaY + secondMainAreaHeight, `${formatNumber(secondPieceHeightCm, 0)} cm`);
       }
 
       const unusedHeight = Math.max(0, materialPlanDrawHeight - (secondRows * (Number(secondPlan?.pieceHeight) || cutHeightCm) * verticalCentimeterScale));
@@ -1016,7 +1106,7 @@ function CutPreview({ profile, result, onDownload }) {
       const secondPlacedRows = secondPlan.wholePiecesPerRow > 0 ? Math.ceil(secondPlacedPieces / secondPlan.wholePiecesPerRow) : 0;
       const secondPieceDrawWidth = secondPieceWidthCm * centimeterScale;
       const secondPieceDrawHeight = secondPieceHeightCm * verticalCentimeterScale;
-      const secondGridDrawWidth = secondPlacedColumns * secondPieceDrawWidth;
+      const secondGridDrawWidth = secondPlacedColumns * secondGroupDrawWidth;
       const secondGridDrawHeight = secondPlacedRows * secondPieceDrawHeight;
       const secondLengthWasteX = mainStartX + secondGridDrawWidth;
       const secondLengthWasteWidth = Math.max(0, cutAreaRight - secondLengthWasteX);
@@ -1025,7 +1115,7 @@ function CutPreview({ profile, result, onDownload }) {
 
       if (secondLengthWasteWidth > 0 && secondGridDrawHeight > 0) {
         const wasteLineY = mainAreaY + (secondGridDrawHeight / 2);
-        const wasteLabel = 'Sobra: ' + formatNumber(Math.max(0, secondPlan.usableLength - (secondPlacedColumns * secondPieceWidthCm)), 0) + ' cm';
+        const wasteLabel = 'Sobra: ' + formatNumber(Math.max(0, secondPlan.usableLength - (secondPlacedColumns * (secondPieceWidthCm + (accordionWidth * 2)))), 0) + ' cm';
         const arrowSize = Math.min(8, Math.max(4, secondLengthWasteWidth / 3));
         const arrowHalf = arrowSize / 2;
         duplicateContext.save();
