@@ -79,7 +79,7 @@ function FormulaManager() {
 
   const openNew = () => { navigate('/app/budgets/formulas/new'); };
 
-  const openEdit = (formula) => { setForm({ ...EMPTY, ...formula }); setEditing(formula.id); setModal(true); };
+  const openEdit = (formula) => { navigate(`/app/budgets/formulas/${formula.id}/edit`); };
   const duplicate = (formula) => { setForm({ ...EMPTY, ...formula, id: undefined, name: `${formula.name} (cópia)`, active: true }); setEditing(null); setModal(true); };
   const openCalculator = (formula) => { setCalculating(formula); setCalculationValues(Object.fromEntries((formula.variables || '').split(',').map((variable) => variable.trim()).filter(Boolean).map((variable) => [variable, '']))); setCalculationResult(null); setCalculationError(''); };
   const calculate = () => {
