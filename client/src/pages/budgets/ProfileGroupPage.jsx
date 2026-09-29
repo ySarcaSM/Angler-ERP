@@ -1012,7 +1012,9 @@ function CutPreview({ profile, result, onDownload }) {
         'Mantenha as folhas bem alinhadas e use pregos/grampos.',
         `Esse plano gera ${formatNumber(placedPieces, 0)} peças (${formatNumber(emptyPositions, 0)} de sobra).`,
         `Aproveitamento de praticamente ${formatNumber(utilization, 0)}% da ${utilizationAxis}.`,
-      ], '#dff2df');   };
+      ];
+      drawCardTextForContext(cardStartX + (cardWidth + cardGap) * 2, cardY, cardWidth, cardHeight, 'DICAS — PLANO', tips, '#dff2df');
+    };
 
     drawPlanCards(firstCutPlan, previewQuantity);
 
