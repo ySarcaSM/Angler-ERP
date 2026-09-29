@@ -358,8 +358,8 @@ export default function CustomReportsPage() {
         const chartTop = 55;
         const chartDays = data.chartDays[chart.id] || data.daily;
         const labels = chartDays.map((day) => day.label);
-        const periodLabel = chart.period === 'weekly' ? 'Últimos 7 dias' : chart.period === 'day' ? \`Dia \${chart.date ? formatDate(toLocalDate(chart.date)) : ''}\` : 'Global';
-        const titleWithPeriod = \`\${chart.title} · \${periodLabel}\`;
+        const periodLabel = chart.period === 'weekly' ? 'Últimos 7 dias' : chart.period === 'day' ? `Dia ${chart.date ? formatDate(toLocalDate(chart.date)) : ''}` : 'Global';
+        const titleWithPeriod = `${chart.title} · ${periodLabel}`;
 
         if (chart.type === 'pie') {
           const pieValues = chartMetrics.map((metric) => {
@@ -527,7 +527,7 @@ export default function CustomReportsPage() {
                 <div className="rounded-xl bg-dark-900/50 border border-dark-700/50 p-3"><div className="text-xs text-dark-500">Gráficos</div><div className="text-sm text-dark-200 mt-1">{charts.length}</div></div>
               </div>
               <div className="flex flex-wrap gap-3">
-              {charts.map((chart, index) => <div key={chart.id} className="rounded-xl border border-dark-700/50 p-3 flex-1 min-w-[220px]"><div className="text-sm text-dark-200">{index + 1}. {chart.title}</div><div className="text-xs text-dark-500 mt-1">{CHARTS.find((type) => type.key === chart.type)?.label} · {chart.period === 'weekly' ? 'Semanal' : chart.period === 'day' ? \`Dia \${chart.date ? formatDate(toLocalDate(chart.date)) : 'não selecionado'}\` : 'Global'} · {chart.metrics.length} informação(ões)</div><div className="flex flex-wrap gap-1.5 mt-2">{chart.metrics.map((key) => <span key={key} className="px-2 py-1 rounded-md bg-dark-800 text-[11px] text-dark-400">{METRICS.find((metric) => metric.key === key)?.label}</span>)}</div></div>)}
+              {charts.map((chart, index) => <div key={chart.id} className="rounded-xl border border-dark-700/50 p-3 flex-1 min-w-[220px]"><div className="text-sm text-dark-200">{index + 1}. {chart.title}</div><div className="text-xs text-dark-500 mt-1">{CHARTS.find((type) => type.key === chart.type)?.label} · {chart.period === 'weekly' ? 'Semanal' : chart.period === 'day' ? `Dia ${chart.date ? formatDate(toLocalDate(chart.date)) : 'não selecionado'}` : 'Global'} · {chart.metrics.length} informação(ões)</div><div className="flex flex-wrap gap-1.5 mt-2">{chart.metrics.map((key) => <span key={key} className="px-2 py-1 rounded-md bg-dark-800 text-[11px] text-dark-400">{METRICS.find((metric) => metric.key === key)?.label}</span>)}</div></div>)}
               </div>
               <div className="rounded-xl bg-primary-400/5 border border-primary-400/10 p-3 text-xs text-dark-400">O PDF será montado automaticamente com os dados disponíveis da empresa e a configuração acima.</div>
             </div>
