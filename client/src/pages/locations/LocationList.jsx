@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, MapPin, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import {
@@ -22,7 +22,6 @@ function formatCEP(value) {
 
 export default function LocationList() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { company, user, userData } = useAuth();
   const isOperator = userData?.role === 'operator';
   const [data, setData] = useState([]);
@@ -78,8 +77,6 @@ export default function LocationList() {
   };
 
   const openNew = () => { navigate('/app/locations/new'); };
-  const openNewForm = () => { setForm({ ...EMPTY }); setEditing(null); setModal(true); };
-  useEffect(() => { if (location.pathname === '/app/locations/new') openNewForm(); }, [location.pathname]);
 
   const openEdit = (location) => { setForm({ ...EMPTY, ...location }); setEditing(location.id); setModal(true); };
 
@@ -137,7 +134,7 @@ export default function LocationList() {
         <DataTable columns={columns} data={data} loading={loading} onRowClick={openEdit} />
       </div>
 
-      <Modal fullscreen={location.pathname === '/app/locations/new'} open={modal} onClose={() => { setModal(false); if (location.pathname === '/app/locations/new') navigate('/app/locations'); }} title={editing ? 'Editar Localização' : 'Nova Localização'} size="lg" backdropClassName="bg-transparent">
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Editar Localização' : 'Nova Localização'} size="lg" backdropClassName="bg-transparent">
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="label">Nome *</label><input className="input" value={form.name} onChange={(event) => updateField('name', event.target.value)} required placeholder="Estoque principal" /></div>
