@@ -41,6 +41,8 @@ async function registerInternal({
   companyName, razaoSocial, cnpj, sector, address, companyEmail, companyPhone,
   // Modules
   enabledModules,
+  // Plan
+  plan = 'testfree',
 }) {
   // Reaproveita uma conta Auth sem perfil apenas quando o documento foi
   // removido pelo administrador. Isso permite recadastrar sem serviço pago.
@@ -106,7 +108,7 @@ async function registerInternal({
       companyEmail: companyEmail || '',
       companyPhone: companyPhone || '',
       createdAt: serverTimestamp(),
-      plan: 'trial',
+      plan,
       ownerUid: user.uid,
       companyId: user.uid,
       settings: {
