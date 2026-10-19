@@ -38,3 +38,11 @@ O arquivo `firestore.rules` é uma baseline restritiva; ele não migra as regras
 - Não publicamos índices vazios (isso apagaria índices anteriores da instância).
 
 - CI: o lockfile existente está incompleto para `npm ci`; o build de revisão usa `npm install`, como a Vercel atual. Sincronizar o lockfile em uma etapa posterior.
+
+## Exclusão administrativa
+
+- Configure `FIREBASE_SERVICE_ACCOUNT_JSON` **somente** na Vercel para a função `/api/admin/delete-user`.
+- O endpoint exige método POST, token Firebase válido e **claim superadmin**.
+- Apaga Auth com Admin SDK somente depois de limpar os dados Firestore; mantém auditoria de empresas externas.
+- Faça backup prévio. A exclusão é irreversível, pode exceder tempo em tenants muito grandes e pode precisar de reprocessamento manual.
+- Não executar em produção antes de validar a rota e limites de duração da função na Vercel.
