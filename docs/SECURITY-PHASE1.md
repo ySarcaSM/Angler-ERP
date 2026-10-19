@@ -48,3 +48,7 @@ O arquivo `firestore.rules` é uma baseline restritiva; ele não migra as regras
 - Não executar em produção antes de validar a rota e limites de duração da função na Vercel.
 
 - Regras de criação de usuário exigem exclusivamente a associação pessoal, sem privilégios pré-atribuídos em empresas externas. Administradores de empresa não podem conceder cargo `owner` nem modificar a flag `personal` de outros usuários.
+
+## Validações automatizadas de Firestore
+
+O workflow GitHub Actions inclui testes de acesso cruzado entre empresas, tentativa de upgrade de plano, escalonamento de privilégios, transições indevidas de vendas e proteção de lançamentos financeiros ligados a vendas. Esses testes usam o **Firestore Emulator** com dados fictícios.
