@@ -185,9 +185,88 @@ service cloud.firestore {
       }
     }
 
-    // Regra de consulta com caminho concreto: o planejador Firestore
-    // precisa do escopo da coleção para verificar os filtros do tenant.
-    match /sales/{saleId} {
+    // Consultas exigem match explícito por coleção: o analisador de regras
+    // do Firestore deve provar a restrição companyId == tenant ativo.
+    // Todas as consultas do cliente devem incluir where('companyId','==',id).
+    match /clients/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /products/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /sales/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /purchases/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /suppliers/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /locations/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /budgets/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /formulas/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /financialTransactions/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /stockMovements/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /auditLogs/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /weeklyReports/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /companyMembers/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /companyInvitations/{itemId} {
       allow list: if superadmin() || (signedIn()
         && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
@@ -202,14 +281,6 @@ service cloud.firestore {
           'companyInvitations'
         ] && ((resource == null && member(currentCompany()))
           || (resource != null && member(resource.data.companyId)));
-      allow list: if collectionName in [
-          'clients','products','sales','purchases','suppliers','locations',
-          'budgets','formulas','financialTransactions','stockMovements',
-          'auditLogs','weeklyReports','companyMembers',
-          'companyInvitations'
-        ] && (superadmin() || (signedIn()
-          && resource.data.companyId == get(userPath()).data.companyId
-          && get(userPath()).data.memberships[get(userPath()).data.companyId].active == true));
       // Regras mais específicas a seguir aplicam-se também; escreva permissões
       // restritivas em cada coleção, nunca um allow write genérico.
     }

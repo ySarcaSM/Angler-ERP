@@ -97,7 +97,7 @@ test('sale creates once, approves atomically and rejects repeated approval',asyn
   const [after,finance,movements,client]=await Promise.all([
     getDoc(doc(db(),'products/product')),
     getDoc(doc(db(),`financialTransactions/sale_${created.id}`)),
-    getDocs(query(collection(db(),'stockMovements'),where('referenceId','==',created.id))),
+    getDocs(query(collection(db(),'stockMovements'),where('companyId','==','company'))),
     getDoc(doc(db(),'clients/customer')),
   ]);
   assert.equal(after.data().stock.current,4);
