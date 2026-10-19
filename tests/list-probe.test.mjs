@@ -7,6 +7,12 @@ const CASES=[
  ['membership-dynamic', "resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships.keys()",{}],
  ['claim-equality', "resource.data.companyId == request.auth.token.companyId",{companyId:'company'}],
  ['claim-company-and-db-membership', "resource.data.companyId == request.auth.token.companyId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[request.auth.token.companyId].active == true",{companyId:'company'}],
+ ['direct-with-constant-membership', "resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships.company.active == true",{}],
+ ['nested-membership', "resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true",{}],
+ ['get-with-default', "resource.data.get('companyId','') == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyId','')",{}],
+ ['mixed-get-method', "resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyId','')",{}],
+ ['membership-function-equivalent', "resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('memberships', {}).get('company', {}).get('active', false) == true",{}],
+
 ];
 test('diagnose Firestore query rule patterns',async()=>{
  for(const [id,condition,claims] of CASES){
