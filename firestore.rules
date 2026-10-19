@@ -187,13 +187,19 @@ service cloud.firestore {
 
     // Tenants: a chave companyId não pode ser alterada após a criação.
     match /{collectionName}/{docId} {
-      allow get, list: if collectionName in [
+      allow get: if collectionName in [
           'clients','products','sales','purchases','suppliers','locations',
           'budgets','formulas','financialTransactions','stockMovements',
           'auditLogs','weeklyReports','companyMembers',
           'companyInvitations'
-        ]
-        && member(resource.data.companyId);
+        ] && ((resource == null && member(currentCompany()))
+          || (resource != null && member(resource.data.companyId)));
+      allow list: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions','stockMovements',
+          'auditLogs','weeklyReports','companyMembers',
+          'companyInvitations'
+        ] && member(resource.data.companyId);
       // Regras mais específicas a seguir aplicam-se também; escreva permissões
       // restritivas em cada coleção, nunca um allow write genérico.
     }
