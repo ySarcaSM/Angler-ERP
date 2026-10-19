@@ -2,7 +2,7 @@
 import { runTransaction } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import {
-  getDoc_, docRef, newDocRef,
+  getDoc_, listDocs, docRef, newDocRef,
   serverTimestamp, increment, requestDeletionForOperator,
 } from './firestore.js';
 
