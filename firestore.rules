@@ -185,6 +185,14 @@ service cloud.firestore {
       }
     }
 
+    // Regra de consulta com caminho concreto: o planejador Firestore
+    // precisa do escopo da coleção para verificar os filtros do tenant.
+    match /sales/{saleId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
     // Tenants: a chave companyId não pode ser alterada após a criação.
     match /{collectionName}/{docId} {
       allow get: if collectionName in [
