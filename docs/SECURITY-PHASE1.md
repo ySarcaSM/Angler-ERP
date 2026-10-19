@@ -58,3 +58,13 @@ O workflow GitHub Actions inclui testes de acesso cruzado entre empresas, tentat
 - A configuração Root Directory do projeto Vercel foi corrigida de `client` para a raiz do repositório em 2026-10-19.
 - Um deployment de preview da branch foi compilado com status READY. Isto valida a compilação e a entrega dos artefatos, não a autenticação real nem a segurança da base de produção.
 - Não foi realizado merge na main; a custom claim superadmin e a credencial de serviço continuam exigindo acesso administrativo ao Firebase.
+
+## Resultado da validação ampliada — 19/10/2026
+
+- **18 testes de Firebase Emulator aprovados**, abrangendo autenticação e consultas de 14 coleções, fluxos de venda, compra, orçamento, movimentação de estoque, verificação de tenant e bloqueio a terceiros.
+- `npm ci` e `npm run build` aprovados no GitHub Actions.
+- Vercel: `Root Directory` corrigido de `client` para a **raiz** do repositório. O preview do commit `a594b0f` ficou `READY` (sem promoção à produção).
+- `firestore.rules` agora possui regras específicas de listagem para coleções de tenant. Em todas essas coleções, as consultas frontend devem incluir `where('companyId','==', activeCompanyId)` e o perfil precisa ter membership ativo.
+- **Condição para merge:** executar migração de superadmin e testes de login e exclusão na instância de homologação do Firebase. O preview e os testes não simulam contas reais, dados legados, integração de pagamentos ou ambiente de produção.
+- A Vercel possui configurações legadas `VITE_ADMIN_USER` e `VITE_ADMIN_PASSWORD`; **rotacione qualquer segredo reutilizado**, remova essas variáveis públicas e configure apenas a credencial de serviço em segredo de servidor, se e quando a função de exclusão for ativada. Não coloque credenciais no GitHub.
+- O PR permanece separado da branch `main` para impedir que a troca do login administrativo quebre o acesso existente sem as claims provisionadas.
