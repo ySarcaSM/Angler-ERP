@@ -36,3 +36,5 @@ O arquivo `firestore.rules` é uma baseline restritiva; ele não migra as regras
 - Vendas aprovadas, compras recebidas e orçamentos aprovados são bloqueados para exclusão até haver fluxo de estorno auditável.
 - Registros legados podem requerer reconciliação de contadores e lançamentos financeiros.
 - Não publicamos índices vazios (isso apagaria índices anteriores da instância).
+
+- CI: o lockfile existente está incompleto para `npm ci`; o build de revisão usa `npm install`, como a Vercel atual. Sincronizar o lockfile em uma etapa posterior.

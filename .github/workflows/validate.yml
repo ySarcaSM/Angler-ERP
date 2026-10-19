@@ -18,6 +18,6 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: npm ci
+      - run: npm install --include=dev --no-audit --no-fund
       - run: node --check src/services/firebase/admin.js && node --check src/services/firebase/sales.js && node --check src/services/firebase/purchases.js && node --check src/services/firebase/budgetApproval.js && node --check src/services/firebase/stock.js
       - run: npm run build
