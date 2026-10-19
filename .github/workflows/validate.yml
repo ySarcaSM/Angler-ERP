@@ -24,4 +24,4 @@ jobs:
       - name: Install Firestore rules test tools
         run: npm install --no-save --no-audit --no-fund @firebase/rules-unit-testing@4.0.1 firebase-tools@14.22.0
       - name: Test Firestore rules with emulator
-        run: npx firebase emulators:exec --only firestore --project demo-angler-erp -- "node --test tests/firestore-rules.test.mjs tests/operations.test.mjs"
+        run: npx firebase emulators:exec --only firestore --project demo-angler-erp -- "node --test tests/firestore-rules.test.mjs tests/operations.test.mjs tests/list-probe.test.mjs"
