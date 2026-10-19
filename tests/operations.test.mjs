@@ -51,14 +51,14 @@ before(async () => {
     plugins:[{
       name:'replace-vite-firebase-with-emulator',
       setup(b) {
-        b.onResolve({filter:/\\/config\\/firebase(?:\\.js)?$/},() => ({path:'firebase-mock',namespace:'angler-test'}));
+        b.onResolve({filter:/config\/firebase(?:\.js)?$/},() => ({path:'firebase-mock',namespace:'angler-test'}));
         b.onLoad({filter:/.*/,namespace:'angler-test'},() => ({
           contents:'export const db = globalThis.__anglerTestFirestore; export const auth = null;',
         }));
       },
     }],
   });
-  ({default:undefined,...sales}=await import(pathToFileURL(join(compiledDir,'sales.mjs')).href));
+  sales=await import(pathToFileURL(join(compiledDir,'sales.mjs')).href);
   purchases=await import(pathToFileURL(join(compiledDir,'purchases.mjs')).href);
   stock=await import(pathToFileURL(join(compiledDir,'stock.mjs')).href);
   budgets=await import(pathToFileURL(join(compiledDir,'budgets.mjs')).href);
