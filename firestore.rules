@@ -185,13 +185,6 @@ service cloud.firestore {
       }
     }
 
-    // Consultas de vendas com filtro de tenant testadas separadamente.
-    match /sales/{saleId} {
-      allow list: if signedIn()
-        && ownMembership(currentCompany())
-        && resource.data.companyId == currentCompany();
-    }
-
     // Tenants: a chave companyId não pode ser alterada após a criação.
     match /{collectionName}/{docId} {
       allow get: if collectionName in [
@@ -207,8 +200,8 @@ service cloud.firestore {
           'auditLogs','weeklyReports','companyMembers',
           'companyInvitations'
         ] && (superadmin() || (signedIn()
-          && resource.data.get('companyId', '') == currentCompany()
-          && ownMembership(currentCompany())));
+          && resource.data.companyId == get(userPath()).data.companyId
+          && get(userPath()).data.memberships[get(userPath()).data.companyId].active == true));
       // Regras mais específicas a seguir aplicam-se também; escreva permissões
       // restritivas em cada coleção, nunca um allow write genérico.
     }

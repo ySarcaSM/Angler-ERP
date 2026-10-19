@@ -84,6 +84,11 @@ test('sale creates once, approves atomically and rejects repeated approval',asyn
   // Check an explicit tenant-filtered query before the service list helper.
   const direct=await getDocs(query(collection(db(),'sales'),where('companyId','==','company')));
   assert.equal(direct.size,1);
+  await assert.rejects(getDocs(query(
+    collection(environment.authenticatedContext('outsider').firestore(),'sales'),
+    where('companyId','==','company'),
+  )));
+
   const listed=await sales.listSales('company');
   assert.equal(listed.data.length,1);
   const before=await getDoc(doc(db(),'products/product'));
