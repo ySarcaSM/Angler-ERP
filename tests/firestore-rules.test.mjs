@@ -176,3 +176,28 @@ test('a manager may revoke a member but the revoked member loses read access', a
   const revokedDb=env.authenticatedContext('u3').firestore();
   await assertFails(getDoc(doc(revokedDb,'clients/own')));
 });
+
+test('every module list is tenant-scoped for an active member', async () => {
+  const collections = [
+    'clients', 'products', 'sales', 'purchases', 'suppliers', 'locations',
+    'budgets', 'formulas', 'financialTransactions', 'stockMovements',
+    'auditLogs', 'weeklyReports', 'companyMembers', 'companyInvitations',
+  ];
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await Promise.all(collections.map(async (name) => {
+      await setDoc(doc(db, name, 'query-c1'), { companyId: 'c1', name: 'Tenant 1' });
+      await setDoc(doc(db, name, 'query-c2'), { companyId: 'c2', name: 'Tenant 2' });
+    }));
+  });
+  const db = env.authenticatedContext('u1').firestore();
+  for (const name of collections) {
+    const own = await assertSucceeds(getDocs(query(
+      collection(db, name), where('companyId', '==', 'c1'),
+    )));
+    assert.ok(own.size >= 1, name + ' should return own records');
+    await assertFails(getDocs(query(
+      collection(db, name), where('companyId', '==', 'c2'),
+    )));
+  }
+});
