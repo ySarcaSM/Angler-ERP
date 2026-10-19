@@ -97,3 +97,82 @@ test('superadmin claim grants administrative read but not self-selected role',as
   const results=await assertSucceeds(getDocs(collection(db,'users')));
   assert.equal(results.size,3);
 });
+
+test('first-time account registration cannot start with another company or a paid plan', async () => {
+  const db=env.authenticatedContext('u4').firestore();
+  await assertSucceeds(setDoc(doc(db,'companies/u4'),{ownerUid:'u4',companyId:'u4',plan:'testfree'}));
+  await assertFails(setDoc(doc(db,'companies/forged-company'),{ownerUid:'u4',companyId:'forged-company',plan:'testfree'}));
+  await assertFails(setDoc(doc(db,'companies/u4-paid'),{ownerUid:'u4',companyId:'u4-paid',plan:'anglerultra'}));
+  await assertFails(setDoc(doc(db,'users/u4'),{
+    uid:'u4',role:'owner',companyId:'u4',personalCompanyId:'u4',
+    memberships:{u4:{active:true,role:'owner',personal:true},c1:{active:true,role:'owner'}},
+  }));
+  await assertSucceeds(setDoc(doc(db,'users/u4'),{
+    uid:'u4',role:'owner',companyId:'u4',personalCompanyId:'u4',
+    memberships:{u4:{active:true,role:'owner',personal:true}},
+  }));
+  await assertSucceeds(setDoc(doc(db,'companies/u4/members/u4'),{
+    userId:'u4',companyId:'u4',role:'owner',active:true,
+  }));
+});
+
+test('external user can request access but cannot read target company data', async () => {
+  const db=env.authenticatedContext('u2').firestore();
+  await assertSucceeds(setDoc(doc(db,'companyAccessRequests/req-u2-c1'),{
+    companyId:'c1',requesterUid:'u2',status:'pending',email:'user2@example.test',
+  }));
+  await assertFails(getDoc(doc(db,'companies/c1')));
+});
+
+test('forged linked financial entries are rejected', async () => {
+  const db=env.authenticatedContext('u1').firestore();
+  await assertFails(setDoc(doc(db,'financialTransactions/sale_bad'),{
+    companyId:'c1',referenceType:'sale',referenceId:'bad',type:'income',status:'pending',amount:100,
+  }));
+  await assertFails(setDoc(doc(db,'financialTransactions/sale_s2'),{
+    companyId:'c1',referenceType:'sale',referenceId:'s2',type:'income',status:'pending',amount:999,
+  }));
+});
+
+test('purchase receipt and budget approval need matching linked financial entries', async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    const db=context.firestore();
+    await Promise.all([
+      setDoc(doc(db,'purchases/pur1'),{companyId:'c1',status:'draft',total:20,items:[]}),
+      setDoc(doc(db,'budgets/bud1'),{companyId:'c1',status:'draft',value:12}),
+    ]);
+  });
+  const db=env.authenticatedContext('u1').firestore();
+  await assertFails(updateDoc(doc(db,'purchases/pur1'),{status:'received'}));
+  await assertFails(updateDoc(doc(db,'budgets/bud1'),{status:'approved'}));
+  await assertSucceeds(runTransaction(db,async(tx)=>{
+    await tx.get(doc(db,'purchases/pur1'));
+    tx.update(doc(db,'purchases/pur1'),{status:'received',receivedAt:new Date()});
+    tx.set(doc(db,'financialTransactions/purchase_pur1'),{
+      companyId:'c1',referenceType:'purchase',referenceId:'pur1',
+      type:'expense',status:'pending',amount:20,
+    });
+  }));
+  await assertSucceeds(runTransaction(db,async(tx)=>{
+    await tx.get(doc(db,'budgets/bud1'));
+    tx.update(doc(db,'budgets/bud1'),{status:'approved',approvedAt:new Date()});
+    tx.set(doc(db,'financialTransactions/budget_bud1'),{
+      companyId:'c1',referenceType:'budget',referenceId:'bud1',
+      source:'budget',type:'income',status:'pending',amount:12,
+    });
+  }));
+  await assertFails(updateDoc(doc(db,'budgets/bud1'),{value:100000}));
+  await assertFails(updateDoc(doc(db,'purchases/pur1'),{status:'draft'}));
+});
+
+test('a manager may revoke a member but the revoked member loses read access', async () => {
+  const managerDb=env.authenticatedContext('u1').firestore();
+  const staffRef=doc(managerDb,'users/u3');
+  await assertSucceeds(updateDoc(staffRef,{
+    'memberships.c1.active':false,
+    'accessControl.lastGrantedCompanyId':'c1',
+    updatedAt:new Date(),
+  }));
+  const revokedDb=env.authenticatedContext('u3').firestore();
+  await assertFails(getDoc(doc(revokedDb,'clients/own')));
+});
