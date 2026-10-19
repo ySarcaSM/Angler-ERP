@@ -65,6 +65,8 @@ export async function requestDeletionForOperator(collectionPath, id) {
   const authUser = getAuth().currentUser;
   if (!authUser) throw new Error('Usuário não autenticado.');
 
+  const allowedCollections = ['clients','products','sales','purchases','suppliers','locations','budgets','formulas','financialTransactions'];
+  if (!allowedCollections.includes(collectionPath)) throw new Error('Tipo de exclusão não autorizado.');
   const targetRef = doc(db, collectionPath, id);
   const targetSnapshot = await getDoc(targetRef);
   if (!targetSnapshot.exists()) throw new Error('Registro não encontrado.');

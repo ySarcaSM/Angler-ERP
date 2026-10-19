@@ -5,7 +5,7 @@
 import {
   doc, getDoc, updateDoc, collection, query, where, getDocs,
   serverTimestamp,
-  writeBatch,
+  writeBatch, runTransaction,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import {
@@ -190,14 +190,32 @@ export async function rejectDeletionRequest(requestItem) {
 }
 
 export async function approveDeletionRequest(requestItem) {
-  const batch = writeBatch(db);
-  batch.delete(doc(db, requestItem.collection, requestItem.documentId));
-  batch.update(doc(db, 'deletionRequests', requestItem.id), {
-    status: 'approved',
-    reviewedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const allowed = ['clients','products','sales','purchases','suppliers','locations','budgets','formulas','financialTransactions'];
+  if (!allowed.includes(requestItem?.collection)) throw new Error('Coleção não permitida para exclusão.');
+  const requestRef = doc(db, 'deletionRequests', requestItem.id);
+  const targetRef = doc(db, requestItem.collection, requestItem.documentId);
+  return runTransaction(db, async (tx) => {
+    const [requestSnap, targetSnap] = await Promise.all([tx.get(requestRef), tx.get(targetRef)]);
+    if (!requestSnap.exists()) throw new Error('Solicitação não encontrada.');
+    const requestData = requestSnap.data();
+    if (requestData.status !== 'pending') throw new Error('Solicitação já foi analisada.');
+    if (requestData.collection !== requestItem.collection || requestData.documentId !== requestItem.documentId
+      || requestData.companyId !== requestItem.companyId) throw new Error('Solicitação inconsistente.');
+    if (!targetSnap.exists() || targetSnap.data().companyId !== requestData.companyId) {
+      throw new Error('Documento ausente ou pertencente a outra empresa.');
+    }
+    // Documentos que já impactaram livros contábeis/estoque exigem estorno,
+    // não uma exclusão genérica.
+    if (requestData.collection === 'sales' && targetSnap.data().status === 'approved') {
+      throw new Error('Venda aprovada exige estorno, não exclusão.');
+    }
+    if (requestData.collection === 'purchases' && targetSnap.data().status === 'received') {
+      throw new Error('Compra recebida exige estorno, não exclusão.');
+    }
+    tx.delete(targetRef);
+    tx.update(requestRef, { status: 'approved', reviewedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    return { id: requestItem.id, approved: true };
   });
-  await batch.commit();
 }
 
 // ─── Audit Log ───
