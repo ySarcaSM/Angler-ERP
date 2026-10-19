@@ -108,7 +108,7 @@ async function registerInternal({
       companyEmail: companyEmail || '',
       companyPhone: companyPhone || '',
       createdAt: serverTimestamp(),
-      plan,
+      plan: 'testfree', // O cliente não pode conceder planos pagos a si próprio.
       ownerUid: user.uid,
       companyId: user.uid,
       settings: {

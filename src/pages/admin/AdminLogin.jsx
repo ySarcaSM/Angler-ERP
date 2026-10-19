@@ -67,17 +67,17 @@ export default function AdminLogin() {
           {/* Username */}
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-1.5">
-              Usuário
+              E-mail do superadministrador
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
               <input
-                type="text"
+                type="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 autoComplete="username"
-                placeholder="admin"
+                placeholder="admin@suaempresa.com"
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-dark-800 border border-dark-600
                            text-white placeholder-dark-500
                            focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500

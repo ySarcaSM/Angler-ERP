@@ -36,17 +36,8 @@ export default function SettingsPage() {
   }, [authCompany]);
 
   const handlePlanChange = async (planKey) => {
-    if (!isOwner || planKey === currentPlan || changingPlan) return;
-    setChangingPlan(true);
-    try {
-      await updateCompany(authCompany.id, { plan: planKey });
-      setCurrentPlan(planKey);
-      toast.success('Plano atualizado!');
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível atualizar o plano.');
-    } finally {
-      setChangingPlan(false);
-    }
+    if (!isOwner || planKey === currentPlan) return;
+    toast('A alteração de plano exige ativação administrativa. Contate o responsável pelo Angler ERP.');
   };
 
   const handleSave = async (e) => {

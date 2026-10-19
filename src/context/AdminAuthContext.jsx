@@ -1,18 +1,10 @@
-// ═══════════════════════════════════════════
-// Admin Auth Context — Autenticação do Superadmin
-// ═══════════════════════════════════════════
-// Contexto isolado da autenticação normal do app.
-// Apenas o superadmin (credenciais hardcoded) pode acessar.
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   adminLogin as fbAdminLogin,
   adminLogout as fbAdminLogout,
   onAdminAuthChange,
-  getStoredAdminSession,
 } from '../services/firebase/admin';
-import toast from 'react-hot-toast';
 
 const AdminAuthContext = createContext(null);
 
@@ -21,22 +13,10 @@ export function AdminAuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Verificar sessão ao montar
-  useEffect(() => {
-    // Primeiro, verificar sessão salva (rápido, sem rede)
-    const stored = getStoredAdminSession();
-    if (stored) {
-      setAdmin(stored);
-    }
-
-    // Depois, verificar Firebase Auth state
-    const unsubscribe = onAdminAuthChange((adminData) => {
-      setAdmin(adminData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  useEffect(() => onAdminAuthChange((adminData) => {
+    setAdmin(adminData);
+    setLoading(false);
+  }), []);
 
   const login = useCallback(async (username, password) => {
     const adminData = await fbAdminLogin(username, password);
@@ -50,16 +30,8 @@ export function AdminAuthProvider({ children }) {
     navigate('/admin/login');
   }, [navigate]);
 
-  const value = {
-    admin,
-    loading,
-    isAuthenticated: !!admin,
-    login,
-    logout,
-  };
-
   return (
-    <AdminAuthContext.Provider value={value}>
+    <AdminAuthContext.Provider value={{ admin, loading, isAuthenticated: !!admin, login, logout }}>
       {children}
     </AdminAuthContext.Provider>
   );
