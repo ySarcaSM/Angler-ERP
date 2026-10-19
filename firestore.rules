@@ -185,6 +185,13 @@ service cloud.firestore {
       }
     }
 
+    // Consultas de vendas com filtro de tenant testadas separadamente.
+    match /sales/{saleId} {
+      allow list: if signedIn()
+        && ownMembership(currentCompany())
+        && resource.data.companyId == currentCompany();
+    }
+
     // Tenants: a chave companyId não pode ser alterada após a criação.
     match /{collectionName}/{docId} {
       allow get: if collectionName in [
