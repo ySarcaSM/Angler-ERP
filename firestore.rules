@@ -200,7 +200,7 @@ service cloud.firestore {
           'auditLogs','weeklyReports','companyMembers',
           'companyInvitations'
         ] && (superadmin() || (signedIn()
-          && resource.data.companyId == currentCompany()
+          && resource.data.get('companyId', '') == currentCompany()
           && ownMembership(currentCompany())));
       // Regras mais específicas a seguir aplicam-se também; escreva permissões
       // restritivas em cada coleção, nunca um allow write genérico.

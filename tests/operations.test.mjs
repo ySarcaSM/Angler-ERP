@@ -81,6 +81,9 @@ test('sale creates once, approves atomically and rejects repeated approval',asyn
   },user);
   assert.equal(created.number,1);
   assert.equal(created.total,20);
+  // Check an explicit tenant-filtered query before the service list helper.
+  const direct=await getDocs(query(collection(db(),'sales'),where('companyId','==','company')));
+  assert.equal(direct.size,1);
   const listed=await sales.listSales('company');
   assert.equal(listed.data.length,1);
   const before=await getDoc(doc(db(),'products/product'));
