@@ -5,7 +5,7 @@ service cloud.firestore {
       return request.auth != null;
     }
     function superadmin() {
-      return signedIn() && request.auth.token.superadmin == true;
+      return signedIn() && request.auth.token.get('superadmin', false) == true;
     }
     function userPath() {
       return /databases/$(database)/documents/users/$(request.auth.uid);

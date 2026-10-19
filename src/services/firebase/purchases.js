@@ -43,7 +43,7 @@ export async function createPurchase(companyId,data,user) {
     if (supplierRef && (!supplier.exists() || supplier.data().companyId !== companyId)) {
       throw new Error('Fornecedor não pertence à empresa.');
     }
-    const nextNumber = Number(counter.exists() ? counter.data().purchaseCount : 0) + 1;
+    const nextNumber = (Number(counter.exists() ? (counter.data().purchaseCount || 0) : 0) || 0) + 1;
     const purchase = { ...data,...totals,companyId,number:nextNumber,status:'draft',paymentStatus:'pending',createdBy:user.uid };
     tx.set(purchaseRef,{...purchase,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});
     tx.set(counterRef,{purchaseCount:nextNumber,updatedAt:serverTimestamp()},{merge:true});
