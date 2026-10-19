@@ -37,7 +37,7 @@ O arquivo `firestore.rules` é uma baseline restritiva; ele não migra as regras
 - Registros legados podem requerer reconciliação de contadores e lançamentos financeiros.
 - Não publicamos índices vazios (isso apagaria índices anteriores da instância).
 
-- CI: o lockfile existente está incompleto para `npm ci`; o build de revisão usa `npm install`, como a Vercel atual. Sincronizar o lockfile em uma etapa posterior.
+- CI: o package-lock.json foi regenerado, e o build final usa npm ci para garantir instalações reproduzíveis.
 
 ## Exclusão administrativa
 
@@ -52,3 +52,9 @@ O arquivo `firestore.rules` é uma baseline restritiva; ele não migra as regras
 ## Validações automatizadas de Firestore
 
 O workflow GitHub Actions inclui testes de acesso cruzado entre empresas, tentativa de upgrade de plano, escalonamento de privilégios, transições indevidas de vendas e proteção de lançamentos financeiros ligados a vendas. Esses testes usam o **Firestore Emulator** com dados fictícios.
+
+## Validação do preview na Vercel
+
+- A configuração Root Directory do projeto Vercel foi corrigida de `client` para a raiz do repositório em 2026-10-19.
+- Um deployment de preview da branch foi compilado com status READY. Isto valida a compilação e a entrega dos artefatos, não a autenticação real nem a segurança da base de produção.
+- Não foi realizado merge na main; a custom claim superadmin e a credencial de serviço continuam exigindo acesso administrativo ao Firebase.
