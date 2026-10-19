@@ -88,6 +88,38 @@ service cloud.firestore {
              || (after == 'approved' && approvalLinked('budget', id))))
           : true);
     }
+    function immutableOnFinish(collectionName) {
+      let previous = resource.data.get('status', 'draft');
+      let next = request.resource.data.get('status', previous);
+      return (collectionName == 'sales' && next == 'approved' && previous != 'approved')
+        ? request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'approvedAt', 'updatedAt'])
+        : (collectionName == 'purchases' && next == 'received' && previous != 'received')
+        ? request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'receivedAt', 'updatedAt'])
+        : (collectionName == 'budgets' && next == 'approved' && previous != 'approved')
+        ? request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'approvedAt', 'updatedAt'])
+        : true;
+    }
+    function financialCreateAllowed(docId) {
+      let kind = request.resource.data.get('referenceType', '');
+      let linkedId = request.resource.data.get('referenceId', '');
+      let linkedCollection = kind == 'sale' ? 'sales'
+        : kind == 'purchase' ? 'purchases'
+        : kind == 'budget' ? 'budgets' : '';
+      let record = /databases/$(database)/documents/$(linkedCollection)/$(linkedId);
+      return (kind == '' && request.resource.data.get('source', '') == '')
+        || (kind in ['sale','purchase','budget']
+          && linkedId is string && linkedId.size() > 0
+          && docId == kind + '_' + linkedId
+          && existsAfter(record)
+          && getAfter(record).data.companyId == request.resource.data.companyId
+          && getAfter(record).data.get('status', '') ==
+            (kind == 'purchase' ? 'received' : 'approved')
+          && request.resource.data.amount ==
+            getAfter(record).data.get('total', getAfter(record).data.get('value', 0)));
+    }
     function preserveApprovedRecord(collectionName) {
       return !(collectionName in ['sales', 'purchases', 'budgets']
           && resource.data.get('status', '') in ['approved', 'received', 'cancelled']);
@@ -173,14 +205,16 @@ service cloud.firestore {
         ] && writer(request.resource.data.companyId)
           && !(collectionName == 'sales' && request.resource.data.get('status', 'draft') != 'draft')
           && !(collectionName == 'purchases' && request.resource.data.get('status', 'draft') != 'draft')
-          && !(collectionName == 'budgets' && request.resource.data.get('status', 'draft') != 'draft');
+          && !(collectionName == 'budgets' && request.resource.data.get('status', 'draft') != 'draft')
+          && (collectionName != 'financialTransactions' || financialCreateAllowed(docId));
       allow update: if collectionName in [
           'clients','products','sales','purchases','suppliers','locations',
           'budgets','formulas','financialTransactions'
         ] && writer(resource.data.companyId) && sameCompany()
           && (collectionName != 'financialTransactions' || financialRecordAllowedToChange())
           && preserveApprovedRecord(collectionName)
-          && validStatusChange(collectionName, docId);
+          && validStatusChange(collectionName, docId)
+          && immutableOnFinish(collectionName);
       allow delete: if collectionName in [
           'clients','products','sales','purchases','suppliers','locations',
           'budgets','formulas','financialTransactions'
