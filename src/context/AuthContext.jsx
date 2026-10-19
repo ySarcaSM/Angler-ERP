@@ -14,7 +14,6 @@ import {
   subscribeCompanyData,
 } from '../services/firebase/auth';
 import { listApprovedCompanyAccessRequests } from '../services/firebase/companyAccess';
-import { isCurrentUserAdmin } from '../services/firebase/admin';
 import toast from 'react-hot-toast';
 import { AuthContext } from './AuthContextValue';
 import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, promptAccessibilityPreferences, storeAccessibilityPreferences } from '../utils/accessibility';
@@ -68,7 +67,10 @@ async function loadCompanies(userData, personalCompanyId) {
   // da solicitação aprovada, mesmo que ainda não tenham sido refletidos
   // corretamente no mapa de memberships.
   approvedRequests.forEach((requestItem) => {
-    if (requestItem.companyId && !ids.includes(requestItem.companyId)) ids.push(requestItem.companyId);
+    // Uma aprovação histórica jamais reativa um membership revogado.
+    if (requestItem.companyId && memberships[requestItem.companyId]?.active !== false && !ids.includes(requestItem.companyId)) {
+      ids.push(requestItem.companyId);
+    }
   });
 
   if (personalCompanyId && !ids.includes(personalCompanyId)) {

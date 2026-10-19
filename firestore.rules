@@ -1,0 +1,193 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function superadmin() {
+      return signedIn() && request.auth.token.superadmin == true;
+    }
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+    function userExists() {
+      return signedIn() && exists(userPath());
+    }
+    function ownMembership(companyId) {
+      return userExists()
+        && get(userPath()).data.get('memberships', {}).get(companyId, {}).get('active', false) == true;
+    }
+    function role(companyId) {
+      return get(userPath()).data.get('memberships', {}).get(companyId, {}).get('role', 'viewer');
+    }
+    function member(companyId) {
+      return superadmin() || ownMembership(companyId);
+    }
+    function manager(companyId) {
+      return superadmin() || (ownMembership(companyId)
+        && role(companyId) in ['owner', 'admin']);
+    }
+    function writer(companyId) {
+      return superadmin() || (ownMembership(companyId)
+        && role(companyId) in ['owner', 'admin', 'operator', 'manager']);
+    }
+    function sameCompany() {
+      return request.resource.data.companyId == resource.data.companyId;
+    }
+    function requestCollectionAllowed(collectionName) {
+      return collectionName in ['clients', 'products', 'sales', 'purchases',
+        'suppliers', 'locations', 'budgets', 'formulas', 'financialTransactions'];
+    }
+    function safeMembershipUpdate() {
+      let companyId = request.resource.data.get('accessControl', {}).get('lastGrantedCompanyId', '');
+      return manager(companyId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['memberships', 'accessControl', 'updatedAt'])
+        && request.resource.data.get('memberships', {}).diff(resource.data.get('memberships', {}))
+          .affectedKeys().hasOnly([companyId])
+        && request.resource.data.get('memberships', {}).get(companyId, {}).get('role', 'invalid')
+          in ['owner', 'admin', 'manager', 'operator', 'viewer'];
+    }
+
+    match /users/{uid} {
+      allow get: if superadmin() || (signedIn() && request.auth.uid == uid)
+        || (resource.data.get('companyId', '') != '' && manager(resource.data.companyId));
+      allow list: if superadmin();
+      allow create: if superadmin() || (signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.companyId == uid
+        && request.resource.data.personalCompanyId == uid
+        && request.resource.data.role == 'owner'
+        && request.resource.data.get('memberships', {}).get(uid, {}).get('role', '') == 'owner');
+      allow update: if superadmin()
+        || (request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['name', 'lastName', 'accessibilityPreferences', 'companyId', 'updatedAt'])
+          && (request.resource.data.companyId == resource.data.companyId
+            || ownMembership(request.resource.data.companyId)))
+        || safeMembershipUpdate();
+      allow delete: if superadmin();
+    }
+
+    match /companies/{companyId} {
+      allow get, list: if superadmin() || member(companyId);
+      allow create: if superadmin() || (signedIn()
+        && companyId == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.companyId == companyId
+        && request.resource.data.plan == 'testfree');
+      allow update: if superadmin() || (manager(companyId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name','tradeName','document','cnpj','email','phone',
+            'companyEmail','companyPhone','settings','modules','weeklyReportAutomation','updatedAt'])
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.plan == resource.data.plan);
+      allow delete: if superadmin();
+      match /members/{uid} {
+        allow read: if member(companyId);
+        allow create: if superadmin() || manager(companyId)
+          || (signedIn() && request.auth.uid == uid && companyId == uid
+            && request.resource.data.role == 'owner'
+            && request.resource.data.companyId == companyId);
+        allow update, delete: if manager(companyId);
+      }
+    }
+
+    // Tenants: a chave companyId não pode ser alterada após a criação.
+    match /{collectionName}/{docId} {
+      allow get, list: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions','stockMovements',
+          'auditLogs','weeklyReports','deletionRequests','companyMembers',
+          'companyInvitations'
+        ]
+        && member(resource.data.companyId);
+      // Regras mais específicas a seguir aplicam-se também; escreva permissões
+      // restritivas em cada coleção, nunca um allow write genérico.
+    }
+    match /{collectionName}/{docId} {
+      allow create: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions','stockMovements',
+          'auditLogs'
+        ] && writer(request.resource.data.companyId);
+      allow update: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions'
+        ] && writer(resource.data.companyId) && sameCompany();
+      allow delete: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions'
+        ] && manager(resource.data.companyId);
+    }
+    match /counters/{companyId} {
+      allow get: if member(companyId);
+      allow create, update: if writer(companyId);
+      allow delete: if superadmin();
+    }
+    match /companyMembers/{memberId} {
+      allow create: if manager(request.resource.data.companyId);
+      allow update, delete: if manager(resource.data.companyId) && sameCompany();
+    }
+    match /companyAccessRequests/{requestId} {
+      allow get, list: if superadmin() || manager(resource.data.companyId)
+        || (signedIn() && resource.data.requesterUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.requesterUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId))
+        && request.resource.data.companyId != request.auth.uid;
+      allow update: if manager(resource.data.companyId) && sameCompany()
+        && request.resource.data.requesterUid == resource.data.requesterUid;
+      allow delete: if manager(resource.data.companyId) || superadmin();
+    }
+    match /deletionRequests/{requestId} {
+      allow get, list: if superadmin() || manager(resource.data.companyId)
+        || (signedIn() && member(resource.data.companyId)
+          && resource.data.requesterUid == request.auth.uid);
+      allow create: if signedIn() && ownMembership(request.resource.data.companyId)
+        && role(request.resource.data.companyId) == 'operator'
+        && request.resource.data.requesterUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && requestCollectionAllowed(request.resource.data.collection);
+      allow update: if manager(resource.data.companyId)
+        && sameCompany()
+        && request.resource.data.collection == resource.data.collection
+        && request.resource.data.documentId == resource.data.documentId;
+      allow delete: if superadmin();
+    }
+    match /weeklyReports/{reportId} {
+      allow create: if writer(request.resource.data.companyId);
+      allow delete: if manager(resource.data.companyId);
+    }
+    match /companyInvitations/{invitationId} {
+      allow create: if manager(request.resource.data.companyId);
+      allow update, delete: if manager(resource.data.companyId) && sameCompany();
+    }
+    match /assistantChats/{chatId} {
+      allow read, update, delete: if superadmin() || (signedIn()
+        && ownMembership(resource.data.companyId)
+        && resource.data.userId == request.auth.uid);
+      allow create: if signedIn() && ownMembership(request.resource.data.companyId)
+        && request.resource.data.userId == request.auth.uid;
+      match /messages/{messageId} {
+        allow read, create, delete: if superadmin() || (signedIn()
+          && exists(/databases/$(database)/documents/assistantChats/$(chatId))
+          && get(/databases/$(database)/documents/assistantChats/$(chatId)).data.userId == request.auth.uid
+          && ownMembership(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId));
+      }
+    }
+    match /contactMessages/{messageId} {
+      allow create: if request.resource.data.keys().hasAll(['title', 'description'])
+        && request.resource.data.title is string
+        && request.resource.data.description is string
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description.size() <= 5000;
+      allow read, delete: if superadmin();
+    }
+    match /{any=**} {
+      allow read, write: if superadmin();
+    }
+  }
+}

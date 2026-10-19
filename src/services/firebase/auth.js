@@ -267,9 +267,7 @@ export async function switchActiveCompany(uid, companyId, role) {
   const membership = data.memberships?.[companyId];
   const companySnapshot = await getDoc(doc(db, 'companies', companyId));
   const isPersonalCompany = companySnapshot.exists() && companySnapshot.data()?.ownerUid === uid;
-  const legacyMember = data.companyId === companyId;
-
-  if (!membership?.active && !legacyMember && !isPersonalCompany) {
+  if (membership?.active !== true && !isPersonalCompany) {
     throw new Error('Você não possui acesso a esta empresa.');
   }
 
@@ -277,7 +275,8 @@ export async function switchActiveCompany(uid, companyId, role) {
     ? 'owner'
     : (membership?.role || role || data.role);
 
-  await updateDoc(userRef, { companyId, role: nextRole });
+  // O cargo decorre da associação com a empresa, nunca da escolha do usuário.
+  await updateDoc(userRef, { companyId });
   return { companyId, role: nextRole };
 }
 

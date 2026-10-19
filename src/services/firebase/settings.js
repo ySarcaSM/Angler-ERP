@@ -81,7 +81,29 @@ export async function updateUser(uid, data) {
 }
 
 export async function deactivateUser(uid) {
-  return updateDoc_('users', uid, { active: false });
+  // Desativação global é reservada ao administrador mestre.
+  return updateDoc_('users', uid, { active: false, status: 'disabled' });
+}
+
+export async function deactivateCompanyMember(companyId, uid) {
+  if (!companyId || !uid) throw new Error('Empresa e usuário são obrigatórios.');
+  const userRef = doc(db, 'users', uid);
+  const companyRef = doc(db, 'companies', companyId);
+  const [userSnap, companySnap] = await Promise.all([getDoc(userRef), getDoc(companyRef)]);
+  if (!userSnap.exists() || !companySnap.exists()) throw new Error('Empresa ou usuário inexistente.');
+  if (companySnap.data().ownerUid === uid) throw new Error('Não é permitido remover o proprietário.');
+  if (userSnap.data().memberships?.[companyId]?.active !== true) {
+    throw new Error('O usuário não possui acesso ativo a esta empresa.');
+  }
+  const batch = writeBatch(db);
+  batch.update(userRef, {
+    [`memberships.${companyId}.active`]: false,
+    'accessControl.lastGrantedCompanyId': companyId,
+    updatedAt: serverTimestamp(),
+  });
+  batch.update(doc(db, 'companies', companyId, 'members', uid), { active: false, updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'companyMembers', `${companyId}_${uid}`), { active: false, updatedAt: serverTimestamp() });
+  await batch.commit();
 }
 
 export async function createCompanyInvitation({ companyId, email, role, createdBy }) {
