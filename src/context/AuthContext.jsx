@@ -80,6 +80,7 @@ async function loadCompanies(userData, personalCompanyId) {
   // companyId é apenas o contexto ativo. Só deve ser considerado aqui
   // quando também houver membership ou solicitação aprovada para a empresa.
   if (userData?.companyId && !ids.includes(userData.companyId)
+    && memberships[userData.companyId]?.active !== false
     && (memberships[userData.companyId]?.active || approvedRequests.some((item) => item.companyId === userData.companyId))) {
     ids.push(userData.companyId);
   }

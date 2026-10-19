@@ -1,7 +1,7 @@
 // Compras numeradas e recebidas em operações transacionais.
 import { runTransaction } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import { getDoc_, updateDoc_, deleteDoc_, listDocs, docRef, newDocRef, serverTimestamp, increment } from './firestore.js';
+import { getDoc_, listDocs, docRef, newDocRef, serverTimestamp, increment, requestDeletionForOperator } from './firestore.js';
 const COLLECTION = 'purchases';
 
 function validateItems(items) {
@@ -51,10 +51,20 @@ export async function createPurchase(companyId,data,user) {
   });
 }
 export async function updatePurchase(id,data) {
-  const existing=await getPurchase(id);
-  if (!existing) throw new Error('Compra não encontrada.');
-  if (!['draft','pending'].includes(existing.status)) throw new Error('Compra finalizada ou cancelada não pode ser editada.');
-  return updateDoc_(COLLECTION,id,{...data,...buildTotals({...existing,...data}),status:existing.status,companyId:existing.companyId});
+  const ref=docRef(COLLECTION,id);
+  return runTransaction(db,async(tx)=>{
+    const snapshot=await tx.get(ref);
+    if (!snapshot.exists()) throw new Error('Compra não encontrada.');
+    const current=snapshot.data();
+    if (!['draft','pending'].includes(current.status)) throw new Error('Compra finalizada ou cancelada não pode ser editada.');
+    const safe={...data};
+    delete safe.companyId;
+    delete safe.number;
+    delete safe.status;
+    const totals=buildTotals({...current,...safe});
+    tx.update(ref,{...safe,...totals,updatedAt:serverTimestamp()});
+    return {id,...current,...safe,...totals};
+  });
 }
 export async function receivePurchase(purchaseId,companyId) {
   const purchaseRef=docRef(COLLECTION,purchaseId);
@@ -109,5 +119,17 @@ export async function deletePurchase(id) {
   if (purchase.status==='received') {
     throw new Error('Compra recebida não pode ser excluída sem estorno de estoque e financeiro.');
   }
-  return deleteDoc_(COLLECTION,id);
+  if (await requestDeletionForOperator(COLLECTION,id)) {
+    const error=new Error('Solicitação de exclusão enviada para aprovação.');
+    error.code='deletion-request-created';
+    throw error;
+  }
+  return runTransaction(db,async(tx)=>{
+    const ref=docRef(COLLECTION,id);
+    const snapshot=await tx.get(ref);
+    if (!snapshot.exists()) throw new Error('Compra não encontrada.');
+    if (snapshot.data().status==='received') throw new Error('Compra recebida exige estorno.');
+    tx.delete(ref);
+    return {id,...snapshot.data()};
+  });
 }

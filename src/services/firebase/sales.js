@@ -2,7 +2,7 @@
 import { runTransaction } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import {
-  getDoc_, updateDoc_, listDocs, docRef, newDocRef,
+  getDoc_, docRef, newDocRef,
   serverTimestamp, increment, requestDeletionForOperator,
 } from './firestore.js';
 
@@ -71,13 +71,22 @@ export async function createSale(companyId, data, user) {
 }
 
 export async function updateSale(id, data) {
-  const existing = await getSale(id);
-  if (!existing) throw new Error('Venda não encontrada.');
-  if (!['draft','pending'].includes(existing.status)) throw new Error('Somente vendas em rascunho ou pendentes podem ser editadas.');
-  const totals = buildTotals({ ...existing, ...data });
-  return updateDoc_(COLLECTION, id, {
-    ...data, ...totals,
-    status: existing.status, companyId: existing.companyId,
+  const saleRef = docRef(COLLECTION, id);
+  return runTransaction(db, async (tx) => {
+    const snapshot = await tx.get(saleRef);
+    if (!snapshot.exists()) throw new Error('Venda não encontrada.');
+    const existing = snapshot.data();
+    if (!['draft','pending'].includes(existing.status)) {
+      throw new Error('Somente vendas em rascunho ou pendentes podem ser editadas.');
+    }
+    const safe = { ...data };
+    delete safe.companyId;
+    delete safe.createdBy;
+    delete safe.number;
+    delete safe.status;
+    const totals = buildTotals({ ...existing, ...safe });
+    tx.update(saleRef, { ...safe, ...totals, updatedAt: serverTimestamp() });
+    return { id, ...existing, ...safe, ...totals };
   });
 }
 

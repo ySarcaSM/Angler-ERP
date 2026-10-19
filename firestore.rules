@@ -111,7 +111,10 @@ service cloud.firestore {
           'clients','products','sales','purchases','suppliers','locations',
           'budgets','formulas','financialTransactions','stockMovements',
           'auditLogs'
-        ] && writer(request.resource.data.companyId);
+        ] && writer(request.resource.data.companyId)
+          && !(collectionName == 'sales' && request.resource.data.get('status', 'draft') != 'draft')
+          && !(collectionName == 'purchases' && request.resource.data.get('status', 'draft') != 'draft')
+          && !(collectionName == 'budgets' && request.resource.data.get('status', 'draft') != 'draft');
       allow update: if collectionName in [
           'clients','products','sales','purchases','suppliers','locations',
           'budgets','formulas','financialTransactions'

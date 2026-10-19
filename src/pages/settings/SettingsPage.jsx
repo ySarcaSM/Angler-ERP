@@ -107,7 +107,7 @@ export default function SettingsPage() {
                     <div className="mt-1"><span className="text-lg font-bold text-primary-300">{plan.price}</span><span className="text-xs text-dark-500 ml-1">{plan.period}</span></div>
                     <p className="text-xs text-dark-500 mt-2 leading-relaxed">{plan.description}</p>
                   </div>
-                  <div className="mt-3 text-[11px] font-medium text-dark-500">{selected ? 'Plano atual' : isOwner ? 'Selecionar plano' : 'Disponível'}</div>
+                  <div className="mt-3 text-[11px] font-medium text-dark-500">{selected ? 'Plano atual' : isOwner ? 'Solicitar ativação' : 'Disponível'}</div>
                 </button>
               );
             })}
