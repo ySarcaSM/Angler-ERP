@@ -46,7 +46,11 @@ service cloud.firestore {
         && request.resource.data.get('memberships', {}).diff(resource.data.get('memberships', {}))
           .affectedKeys().hasOnly([companyId])
         && request.resource.data.get('memberships', {}).get(companyId, {}).get('role', 'invalid')
-          in ['owner', 'admin', 'manager', 'operator', 'viewer'];
+          in ['owner', 'admin', 'manager', 'operator', 'viewer']
+        && (request.resource.data.get('memberships', {}).get(companyId, {}).get('role', '') != 'owner'
+          || role(companyId) == 'owner')
+        && request.resource.data.get('memberships', {}).get(companyId, {}).get('personal', false)
+          == resource.data.get('memberships', {}).get(companyId, {}).get('personal', false);
     }
 
     match /users/{uid} {
@@ -59,7 +63,9 @@ service cloud.firestore {
         && request.resource.data.companyId == uid
         && request.resource.data.personalCompanyId == uid
         && request.resource.data.role == 'owner'
-        && request.resource.data.get('memberships', {}).get(uid, {}).get('role', '') == 'owner');
+        && request.resource.data.get('memberships', {}).keys().hasOnly([uid])
+        && request.resource.data.get('memberships', {}).get(uid, {}).get('role', '') == 'owner'
+        && request.resource.data.get('memberships', {}).get(uid, {}).get('personal', false) == true);
       allow update: if superadmin()
         || (request.auth.uid == uid
           && request.resource.data.diff(resource.data).affectedKeys()

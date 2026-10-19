@@ -46,3 +46,5 @@ O arquivo `firestore.rules` é uma baseline restritiva; ele não migra as regras
 - Apaga Auth com Admin SDK somente depois de limpar os dados Firestore; mantém auditoria de empresas externas.
 - Faça backup prévio. A exclusão é irreversível, pode exceder tempo em tenants muito grandes e pode precisar de reprocessamento manual.
 - Não executar em produção antes de validar a rota e limites de duração da função na Vercel.
+
+- Regras de criação de usuário exigem exclusivamente a associação pessoal, sem privilégios pré-atribuídos em empresas externas. Administradores de empresa não podem conceder cargo `owner` nem modificar a flag `personal` de outros usuários.
