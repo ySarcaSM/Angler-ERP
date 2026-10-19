@@ -99,7 +99,7 @@ service cloud.firestore {
       allow get, list: if collectionName in [
           'clients','products','sales','purchases','suppliers','locations',
           'budgets','formulas','financialTransactions','stockMovements',
-          'auditLogs','weeklyReports','deletionRequests','companyMembers',
+          'auditLogs','weeklyReports','companyMembers',
           'companyInvitations'
         ]
         && member(resource.data.companyId);
@@ -119,7 +119,10 @@ service cloud.firestore {
       allow delete: if collectionName in [
           'clients','products','sales','purchases','suppliers','locations',
           'budgets','formulas','financialTransactions'
-        ] && manager(resource.data.companyId);
+        ] && manager(resource.data.companyId)
+          && !(collectionName == 'sales' && resource.data.get('status', '') == 'approved')
+          && !(collectionName == 'purchases' && resource.data.get('status', '') == 'received')
+          && !(collectionName == 'budgets' && resource.data.get('status', '') == 'approved');
     }
     match /counters/{companyId} {
       allow get: if member(companyId);

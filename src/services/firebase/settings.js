@@ -212,6 +212,9 @@ export async function approveDeletionRequest(requestItem) {
     if (requestData.collection === 'purchases' && targetSnap.data().status === 'received') {
       throw new Error('Compra recebida exige estorno, não exclusão.');
     }
+    if (requestData.collection === 'budgets' && targetSnap.data().status === 'approved') {
+      throw new Error('Orçamento aprovado exige estorno, não exclusão.');
+    }
     tx.delete(targetRef);
     tx.update(requestRef, { status: 'approved', reviewedAt: serverTimestamp(), updatedAt: serverTimestamp() });
     return { id: requestItem.id, approved: true };

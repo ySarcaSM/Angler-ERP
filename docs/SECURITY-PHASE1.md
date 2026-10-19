@@ -29,3 +29,10 @@ O arquivo `firestore.rules` é uma baseline restritiva; ele não migra as regras
 - Publique em ambiente de homologação primeiro. Não copie uma regra global `allow read, write: if true`.
 - Se ocorrer `permission-denied`, investigue a consulta e a regra correspondente; não relaxe permissões globais para contornar o erro.
 - A ativação da claim do superadmin e publicação das regras exigem acesso administrativo ao Firebase: **não são executadas por este commit**.
+
+## Integridade de dados
+
+- Numeração, aprovação e recepção são transacionais; as novas transações usam IDs previsíveis por venda/compra/orçamento.
+- Vendas aprovadas, compras recebidas e orçamentos aprovados são bloqueados para exclusão até haver fluxo de estorno auditável.
+- Registros legados podem requerer reconciliação de contadores e lançamentos financeiros.
+- Não publicamos índices vazios (isso apagaria índices anteriores da instância).

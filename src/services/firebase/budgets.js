@@ -25,9 +25,20 @@ export async function createBudget(companyId, data) {
 }
 
 export async function updateBudget(id, data) {
+  const current = await getBudget(id);
+  if (!current) throw new Error('Orçamento não encontrado.');
+  if (['approved','cancelled'].includes(current.status)) {
+    throw new Error('Orçamento aprovado ou cancelado está bloqueado para edição.');
+  }
+  if (data.status && !['draft','pending'].includes(data.status)) {
+    throw new Error('Mudança de status inválida.');
+  }
   return updateDoc_(COLLECTION, id, data);
 }
 
 export async function deleteBudget(id) {
+  const current = await getBudget(id);
+  if (!current) throw new Error('Orçamento não encontrado.');
+  if (current.status === 'approved') throw new Error('Orçamento aprovado precisa de estorno antes de ser excluído.');
   return deleteDoc_(COLLECTION, id);
 }
