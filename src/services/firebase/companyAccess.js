@@ -7,13 +7,9 @@ export async function createCompanyAccessRequest({ companyId, requesterUid, emai
     throw new Error('Informe o ID da empresa.');
   }
 
-  const companySnapshot = await getDoc(doc(db, 'companies', normalizedCompanyId));
-  if (!companySnapshot.exists()) {
-    throw new Error('Esta empresa não existe. Confira o ID da empresa e tente novamente.');
-  }
-
-  const companyData = companySnapshot.data();
-  if (companyData.ownerUid === requesterUid || normalizedCompanyId === requesterUid) {
+  // O usuário externo não pode ler o documento privado da empresa.
+  // A regra de criação valida a existência da empresa pelo caminho informado.
+  if (normalizedCompanyId === requesterUid) {
     throw new Error('Você não pode solicitar acesso à sua própria empresa. Use a opção "Minha conta".');
   }
 

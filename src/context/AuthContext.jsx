@@ -13,9 +13,7 @@ import {
   getPersonalCompanyId as getOwnedPersonalCompanyId,
   subscribeCompanyData,
 } from '../services/firebase/auth';
-import { getStoredAdminSession } from '../services/firebase/admin';
 import { listApprovedCompanyAccessRequests } from '../services/firebase/companyAccess';
-import { isCurrentUserAdmin } from '../services/firebase/admin';
 import toast from 'react-hot-toast';
 import { AuthContext } from './AuthContextValue';
 import { applyAccessibilityPreferences, DEFAULT_ACCESSIBILITY, promptAccessibilityPreferences, storeAccessibilityPreferences } from '../utils/accessibility';
@@ -69,7 +67,10 @@ async function loadCompanies(userData, personalCompanyId) {
   // da solicitação aprovada, mesmo que ainda não tenham sido refletidos
   // corretamente no mapa de memberships.
   approvedRequests.forEach((requestItem) => {
-    if (requestItem.companyId && !ids.includes(requestItem.companyId)) ids.push(requestItem.companyId);
+    // Uma aprovação histórica jamais reativa um membership revogado.
+    if (requestItem.companyId && memberships[requestItem.companyId]?.active !== false && !ids.includes(requestItem.companyId)) {
+      ids.push(requestItem.companyId);
+    }
   });
 
   if (personalCompanyId && !ids.includes(personalCompanyId)) {
@@ -79,6 +80,7 @@ async function loadCompanies(userData, personalCompanyId) {
   // companyId é apenas o contexto ativo. Só deve ser considerado aqui
   // quando também houver membership ou solicitação aprovada para a empresa.
   if (userData?.companyId && !ids.includes(userData.companyId)
+    && memberships[userData.companyId]?.active !== false
     && (memberships[userData.companyId]?.active || approvedRequests.some((item) => item.companyId === userData.companyId))) {
     ids.push(userData.companyId);
   }
@@ -117,14 +119,17 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       if (firebaseUser) {
-        // Não interferir com a sessão do superadmin
-        const adminSession = getStoredAdminSession();
-        if (adminSession && firebaseUser.uid === adminSession.uid) {
-          setLoading(false);
-          return;
-        }
-
         try {
+          // Claims assinadas pelo Firebase, nunca o localStorage.
+          const idToken = await firebaseUser.getIdTokenResult();
+          if (idToken.claims.superadmin === true) {
+            setUser(null);
+            setUserData(null);
+            setCompany(null);
+            setAvailableCompanies([]);
+            setLoading(false);
+            return;
+          }
           // Get user data from Firestore
           const uData = await getUserData(firebaseUser.uid);
           if (uData) {
@@ -294,6 +299,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     await fbLogout();
+    sessionStorage.removeItem('angler-account-selected');
     sessionStorage.removeItem('angler-accessibility-confirmed');
     sessionStorage.removeItem('angler-gemini-api-key');
     setUser(null);

@@ -1,0 +1,27 @@
+name: Validate Angler ERP
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [security/phase-1-hardening-20261019]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: node --check scripts/firebase-production-preflight.mjs && node --check src/services/firebase/admin.js && node --check src/services/firebase/sales.js && node --check src/services/firebase/purchases.js && node --check src/services/firebase/budgetApproval.js && node --check src/services/firebase/stock.js
+      - run: npm run build
+      - name: Install Firestore rules test tools
+        run: npm install --no-save --no-audit --no-fund @firebase/rules-unit-testing@4.0.1 firebase-tools@14.22.0
+      - name: Test Firestore rules with emulator
+        run: npx firebase emulators:exec --only firestore --project demo-angler-erp -- "node --test tests/firestore-rules.test.mjs tests/operations.test.mjs"

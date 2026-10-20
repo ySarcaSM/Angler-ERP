@@ -36,17 +36,8 @@ export default function SettingsPage() {
   }, [authCompany]);
 
   const handlePlanChange = async (planKey) => {
-    if (!isOwner || planKey === currentPlan || changingPlan) return;
-    setChangingPlan(true);
-    try {
-      await updateCompany(authCompany.id, { plan: planKey });
-      setCurrentPlan(planKey);
-      toast.success('Plano atualizado!');
-    } catch (err) {
-      toast.error(err.message || 'Não foi possível atualizar o plano.');
-    } finally {
-      setChangingPlan(false);
-    }
+    if (!isOwner || planKey === currentPlan) return;
+    toast('A alteração de plano exige ativação administrativa. Contate o responsável pelo Angler ERP.');
   };
 
   const handleSave = async (e) => {
@@ -116,7 +107,7 @@ export default function SettingsPage() {
                     <div className="mt-1"><span className="text-lg font-bold text-primary-300">{plan.price}</span><span className="text-xs text-dark-500 ml-1">{plan.period}</span></div>
                     <p className="text-xs text-dark-500 mt-2 leading-relaxed">{plan.description}</p>
                   </div>
-                  <div className="mt-3 text-[11px] font-medium text-dark-500">{selected ? 'Plano atual' : isOwner ? 'Selecionar plano' : 'Disponível'}</div>
+                  <div className="mt-3 text-[11px] font-medium text-dark-500">{selected ? 'Plano atual' : isOwner ? 'Solicitar ativação' : 'Disponível'}</div>
                 </button>
               );
             })}

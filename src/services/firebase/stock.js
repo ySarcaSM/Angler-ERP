@@ -4,9 +4,11 @@
 
 import {
   listDocs, getDoc_,
-  getBatch, docRef, newDocRef, serverTimestamp,
+  docRef, newDocRef, serverTimestamp,
 } from './firestore.js';
 import { timestampToDate } from '../../utils/format';
+import { runTransaction } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 const COLLECTION = 'stockMovements';
 
@@ -31,39 +33,27 @@ export async function listMovements(companyId, options = {}) {
 }
 
 export async function adjustStock(companyId, { productId, productName, quantity, type, reason }, user) {
-  const productDoc = await getDoc_('products', productId);
-  if (!productDoc) throw new Error('Produto não encontrado');
-
-  const previousStock = productDoc.stock?.current || 0;
-  const absQty = Math.abs(quantity);
-  const newStock = type === 'entry'
-    ? previousStock + absQty
-    : Math.max(0, previousStock - absQty);
-
-  const batch = getBatch();
-
+  const amount = Number(quantity);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Informe uma quantidade positiva.');
+  if (!['entry', 'exit'].includes(type)) throw new Error('Tipo de movimento inválido.');
   const productRef = docRef('products', productId);
-  batch.update(productRef, {
-    'stock.current': newStock,
-    updatedAt: serverTimestamp(),
+  return runTransaction(db, async (tx) => {
+    const snapshot = await tx.get(productRef);
+    if (!snapshot.exists() || snapshot.data().companyId !== companyId) {
+      throw new Error('Produto inexistente ou de outra empresa.');
+    }
+    const previousStock = Number(snapshot.data().stock?.current || 0);
+    if (type === 'exit' && previousStock < amount) throw new Error('Estoque insuficiente para a saída.');
+    const newStock = type === 'entry' ? previousStock + amount : previousStock - amount;
+    tx.update(productRef, { 'stock.current': newStock, updatedAt: serverTimestamp() });
+    tx.set(newDocRef(COLLECTION), {
+      companyId, productId, productName: snapshot.data().name || productName,
+      type: 'adjustment', direction: type, quantity: amount,
+      previousStock, newStock, reason: reason || 'Ajuste manual',
+      createdBy: user?.uid || 'unknown', createdAt: serverTimestamp(),
+    });
+    return { previousStock, newStock };
   });
-
-  const movementRef = newDocRef(COLLECTION);
-  batch.set(movementRef, {
-    companyId,
-    productId,
-    productName,
-    type: 'adjustment',
-    quantity: absQty,
-    previousStock,
-    newStock,
-    reason: reason || 'Ajuste manual',
-    createdBy: user?.uid || 'unknown',
-    createdAt: serverTimestamp(),
-  });
-
-  await batch.commit();
-  return { previousStock, newStock };
 }
 
 export async function getSummary(companyId) {

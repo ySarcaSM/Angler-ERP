@@ -1,271 +1,194 @@
-// ═══════════════════════════════════════════
-// Sales Service (Firestore)
-// ═══════════════════════════════════════════
-
+// Operações de venda com numeração e aprovação atômicas no Firestore.
+import { runTransaction } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import {
-  getDoc_, updateDoc_, listDocs,
-  getBatch, docRef, newDocRef, serverTimestamp, increment, requestDeletionForOperator,
+  getDoc_, listDocs, docRef, newDocRef,
+  serverTimestamp, increment, requestDeletionForOperator,
 } from './firestore.js';
 
 const COLLECTION = 'sales';
 
+function validAmount(value, label) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) throw new Error(`${label} inválido.`);
+  return number;
+}
+function buildTotals(data) {
+  if (!Array.isArray(data.items) || data.items.length === 0) throw new Error('Informe ao menos um produto.');
+  const items = data.items.map((item) => {
+    const quantity = Number(item.quantity);
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) throw new Error('A quantidade precisa ser um inteiro positivo.');
+    const unitPrice = validAmount(item.unitPrice, 'Preço');
+    const discount = validAmount(item.discount || 0, 'Desconto do item');
+    const gross = quantity * unitPrice;
+    if (discount > gross) throw new Error('O desconto do item excede seu valor.');
+    return { ...item, quantity, unitPrice, discount, total: gross - discount };
+  });
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  const discountPercent = validAmount(data.discount || 0, 'Desconto percentual');
+  if (discountPercent > 100) throw new Error('Desconto percentual acima de 100%.');
+  const discountAmount = subtotal * discountPercent / 100;
+  const total = subtotal - discountAmount
+    + validAmount(data.shipping || 0, 'Frete')
+    + validAmount(data.tax || 0, 'Imposto');
+  return { items, subtotal, discountPercent, discountAmount, total };
+}
+
 export async function listSales(companyId, options = {}) {
   return listDocs(COLLECTION, {
     ...options,
-    filters: [
-      { field: 'companyId', op: '==', value: companyId },
-      ...(options.filters || []),
-    ],
+    filters: [{ field: 'companyId', op: '==', value: companyId }, ...(options.filters || [])],
     sortBy: options.sortBy || 'createdAt',
     sortDir: options.sortDir || 'desc',
   });
 }
-
-export async function getSale(id) {
-  return getDoc_(COLLECTION, id);
-}
+export async function getSale(id) { return getDoc_(COLLECTION, id); }
 
 export async function createSale(companyId, data, user) {
-  // Get next sale number
-  const counterDoc = await getDoc_('counters', companyId);
-  const nextNumber = (counterDoc?.saleCount || 0) + 1;
-
-  // Calculate totals
-  const items = data.items.map((item) => ({
-    ...item,
-    quantity: Math.floor(Number(item.quantity) || 0),
-    unitPrice: Number(item.unitPrice) || 0,
-    total: (Math.floor(Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)) - (Number(item.discount) || 0),
-  }));
-  const subtotal = items.reduce((sum, i) => sum + i.total, 0);
-  const discountPercent = Number(data.discount) || 0;
-  const discountAmount = subtotal * (discountPercent / 100);
-  const total = subtotal - discountAmount + (Number(data.shipping) || 0) + (Number(data.tax) || 0);
-
-  const sale = {
-    ...data,
-    companyId,
-    number: nextNumber,
-    items,
-    subtotal,
-    discountPercent,
-    discountAmount,
-    total,
-    status: data.status || 'draft',
-    paymentStatus: data.paymentStatus || 'pending',
-    createdBy: user.uid,
-    createdByName: user.displayName || user.email,
-  };
-
-  const batch = getBatch();
-
-  // Create sale document with auto-generated ID
+  if (!companyId || !user?.uid) throw new Error('Empresa e usuário são obrigatórios.');
+  const totals = buildTotals(data);
   const saleRef = newDocRef(COLLECTION);
-  batch.set(saleRef, { ...sale, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-
-  // Update counter
   const counterRef = docRef('counters', companyId);
-  batch.set(counterRef, { saleCount: nextNumber, updatedAt: serverTimestamp() }, { merge: true });
+  const clientRef = data.clientId ? docRef('clients', data.clientId) : null;
 
-  // Update client's total purchases
-  if (data.clientId) {
-    const clientRef = docRef('clients', data.clientId);
-    batch.update(clientRef, {
-      totalPurchases: increment(total),
-      lastPurchaseAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  }
-
-  await batch.commit();
-  return { id: saleRef.id, ...sale };
+  return runTransaction(db, async (tx) => {
+    const counter = await tx.get(counterRef);
+    const client = clientRef ? await tx.get(clientRef) : null;
+    if (clientRef && (!client?.exists() || client.data().companyId !== companyId)) {
+      throw new Error('Cliente não pertence à empresa atual.');
+    }
+    const nextNumber = (Number(counter.exists() ? counter.data().saleCount : 0) || 0) + 1;
+    const sale = {
+      ...data, ...totals, companyId, number: nextNumber, status: 'draft',
+      paymentStatus: data.paymentStatus || 'pending',
+      createdBy: user.uid,
+      createdByName: user.displayName || user.email,
+    };
+    tx.set(saleRef, { ...sale, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    tx.set(counterRef, { saleCount: nextNumber, updatedAt: serverTimestamp() }, { merge: true });
+    return { id: saleRef.id, ...sale };
+  });
 }
 
 export async function updateSale(id, data) {
-  const existing = await getSale(id);
-  if (!existing) throw new Error('Venda não encontrada');
-  if (['approved', 'cancelled'].includes(existing.status)) throw new Error('Apenas vendas em rascunho ou pendentes podem ser editadas.');
-  const items = (data.items || []).map((item) => ({
-    ...item,
-    quantity: Math.floor(Number(item.quantity) || 0),
-    unitPrice: Number(item.unitPrice) || 0,
-    total: (Math.floor(Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)) - (Number(item.discount) || 0),
-  }));
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const discountPercent = Number(data.discount) || 0;
-  const discountAmount = subtotal * (discountPercent / 100);
-  const total = subtotal - discountAmount + (Number(data.shipping) || 0) + (Number(data.tax) || 0);
-  return updateDoc_(COLLECTION, id, {
-    ...data,
-    items,
-    subtotal,
-    discountPercent,
-    discountAmount,
-    total,
+  const saleRef = docRef(COLLECTION, id);
+  return runTransaction(db, async (tx) => {
+    const snapshot = await tx.get(saleRef);
+    if (!snapshot.exists()) throw new Error('Venda não encontrada.');
+    const existing = snapshot.data();
+    if (!['draft','pending'].includes(existing.status)) {
+      throw new Error('Somente vendas em rascunho ou pendentes podem ser editadas.');
+    }
+    const safe = { ...data };
+    delete safe.companyId;
+    delete safe.createdBy;
+    delete safe.number;
+    delete safe.status;
+    const totals = buildTotals({ ...existing, ...safe });
+    tx.update(saleRef, { ...safe, ...totals, updatedAt: serverTimestamp() });
+    return { id, ...existing, ...safe, ...totals };
   });
 }
 
 export async function approveSale(saleId, companyId) {
-  const sale = await getSale(saleId);
-  if (!sale) throw new Error('Venda não encontrada');
-  if (sale.status !== 'draft' && sale.status !== 'pending') {
-    throw new Error('Venda não pode ser aprovada neste status');
-  }
-
-  const batch = getBatch();
-
-  // Update sale status
   const saleRef = docRef(COLLECTION, saleId);
-  batch.update(saleRef, {
-    status: 'approved',
-    approvedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  // Update stock for each item
-  for (const item of sale.items) {
-    if (item.productId) {
-      const productRef = docRef('products', item.productId);
-      const productDoc = await getDoc_('products', item.productId);
-      if (productDoc) {
-        const previousStock = productDoc.stock?.current || 0;
-
-        batch.update(productRef, {
-          'stock.current': increment(-item.quantity),
-          updatedAt: serverTimestamp(),
-        });
-
-        // Create stock movement with unique ID
-        const movementRef = newDocRef('stockMovements');
-        batch.set(movementRef, {
-          companyId,
-          productId: item.productId,
-          productName: item.productName,
-          type: 'exit',
-          quantity: item.quantity,
-          previousStock,
-          newStock: previousStock - item.quantity,
-          reason: `Venda #${sale.number}`,
-          referenceType: 'sale',
-          referenceId: saleId,
-          createdAt: serverTimestamp(),
-        });
-      }
+  return runTransaction(db, async (tx) => {
+    const saleSnap = await tx.get(saleRef);
+    if (!saleSnap.exists()) throw new Error('Venda não encontrada.');
+    const sale = saleSnap.data();
+    if (sale.companyId !== companyId) throw new Error('Venda de outra empresa.');
+    if (!['draft', 'pending'].includes(sale.status)) {
+      throw new Error('Venda já aprovada, cancelada ou em estado inválido.');
     }
-  }
+    const quantities = new Map();
+    for (const item of sale.items || []) {
+      if (!item.productId) continue;
+      const quantity = Number(item.quantity);
+      if (!Number.isSafeInteger(quantity) || quantity <= 0) throw new Error('Quantidade inválida na venda.');
+      quantities.set(item.productId, (quantities.get(item.productId) || 0) + quantity);
+    }
+    const productRefs = [...quantities.keys()].map((id) => docRef('products', id));
+    const productSnapshots = await Promise.all(productRefs.map((ref) => tx.get(ref)));
+    const clientRef = sale.clientId ? docRef('clients', sale.clientId) : null;
+    const clientSnap = clientRef ? await tx.get(clientRef) : null;
+    if (clientRef && (!clientSnap.exists() || clientSnap.data().companyId !== companyId)) {
+      throw new Error('Cliente da venda não pertence à empresa.');
+    }
+    const financialRef = docRef('financialTransactions', `sale_${saleId}`);
+    const financialSnap = await tx.get(financialRef);
+    if (financialSnap.exists()) throw new Error('O lançamento financeiro desta venda já existe.');
 
-  // Create financial transaction (income) with unique ID
-  const txRef = newDocRef('financialTransactions');
-  batch.set(txRef, {
-    companyId,
-    type: 'income',
-    category: 'Vendas',
-    description: `Venda #${sale.number} — ${sale.clientName}`,
-    amount: sale.total,
-    date: serverTimestamp(),
-    status: sale.paymentStatus === 'paid' ? 'paid' : 'pending',
-    paymentMethod: sale.paymentMethod,
-    referenceType: 'sale',
-    referenceId: saleId,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    const products = productRefs.map((ref, index) => {
+      const snapshot = productSnapshots[index];
+      if (!snapshot.exists() || snapshot.data().companyId !== companyId) {
+        throw new Error('Um dos produtos não pertence à empresa.');
+      }
+      const current = Number(snapshot.data().stock?.current || 0);
+      const quantity = quantities.get(ref.id);
+      if (!Number.isFinite(current) || current < quantity) {
+        throw new Error(`Estoque insuficiente para ${snapshot.data().name || ref.id}.`);
+      }
+      return { ref, data: snapshot.data(), current, quantity };
+    });
+    tx.update(saleRef, { status: 'approved', approvedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    for (const product of products) {
+      tx.update(product.ref, { 'stock.current': increment(-product.quantity), updatedAt: serverTimestamp() });
+      tx.set(newDocRef('stockMovements'), {
+        companyId, productId: product.ref.id, productName: product.data.name,
+        type: 'exit', quantity: product.quantity, previousStock: product.current,
+        newStock: product.current - product.quantity, reason: `Venda #${sale.number}`,
+        referenceType: 'sale', referenceId: saleId, createdAt: serverTimestamp(),
+      });
+    }
+    if (clientRef) {
+      tx.update(clientRef, {
+        totalPurchases: increment(Number(sale.total || 0)),
+        lastPurchaseAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
+    }
+    tx.set(financialRef, {
+      companyId, type: 'income', category: 'Vendas',
+      description: `Venda #${sale.number} — ${sale.clientName || 'Cliente'}`,
+      amount: Number(sale.total || 0), date: serverTimestamp(),
+      status: sale.paymentStatus === 'paid' ? 'paid' : 'pending',
+      paymentMethod: sale.paymentMethod || null,
+      referenceType: 'sale', referenceId: saleId,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+    return { ...sale, status: 'approved' };
   });
-
-  await batch.commit();
-  return sale;
 }
 
 export async function cancelSale(saleId) {
-  const sale = await getSale(saleId);
-  if (!sale) throw new Error('Venda não encontrada');
-  if (sale.status === 'cancelled') return sale;
-  if (sale.status === 'approved') {
-    throw new Error('Vendas aprovadas só podem ser deletadas');
-  }
-
-  await updateDoc_(COLLECTION, saleId, {
-    status: 'cancelled',
-    paymentStatus: 'cancelled',
-    cancelledAt: serverTimestamp(),
+  const saleRef = docRef(COLLECTION, saleId);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(saleRef);
+    if (!snap.exists()) throw new Error('Venda não encontrada.');
+    const sale = snap.data();
+    if (sale.status === 'cancelled') return { ...sale, action: 'cancelled' };
+    if (sale.status === 'approved') throw new Error('Vendas aprovadas não podem ser canceladas sem estorno auditável.');
+    tx.update(saleRef, { status: 'cancelled', paymentStatus: 'cancelled', cancelledAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    return { ...sale, action: 'cancelled' };
   });
-  return { ...sale, action: 'cancelled' };
 }
 
 export async function deleteSale(saleId) {
   const sale = await getSale(saleId);
-  if (!sale) throw new Error('Venda não encontrada');
-
+  if (!sale) throw new Error('Venda não encontrada.');
   if (await requestDeletionForOperator(COLLECTION, saleId)) {
-    const error = new Error('Solicitação de exclusão enviada para aprovação do administrador ou proprietário.');
+    const error = new Error('Solicitação de exclusão enviada para aprovação.');
     error.code = 'deletion-request-created';
     throw error;
   }
-
-  const batch = getBatch();
-  const saleRef = docRef(COLLECTION, saleId);
-
-  if (sale.status === 'approved') {
-    for (const item of sale.items || []) {
-      if (!item.productId) continue;
-
-      const productDoc = await getDoc_('products', item.productId);
-      if (!productDoc) continue;
-
-      const previousStock = productDoc.stock?.current || 0;
-      const quantity = Math.max(0, Number(item.quantity) || 0);
-      batch.update(docRef('products', item.productId), {
-        'stock.current': increment(quantity),
-        updatedAt: serverTimestamp(),
-      });
-
-      const movementRef = newDocRef('stockMovements');
-      batch.set(movementRef, {
-        companyId: sale.companyId,
-        productId: item.productId,
-        productName: item.productName,
-        type: 'entry',
-        quantity,
-        previousStock,
-        newStock: previousStock + quantity,
-        reason: `Exclusão da venda #${sale.number}`,
-        referenceType: 'sale_deletion',
-        referenceId: saleId,
-        createdAt: serverTimestamp(),
-      });
+  const ref = docRef(COLLECTION, saleId);
+  return runTransaction(db, async (tx) => {
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists()) throw new Error('Venda não encontrada.');
+    const current = snapshot.data();
+    if (current.status === 'approved') {
+      throw new Error('Vendas aprovadas não podem ser excluídas. Use um fluxo de estorno auditável.');
     }
-  }
-
-  batch.delete(saleRef);
-  await batch.commit();
-
-  if (sale.status === 'approved') {
-    try {
-      const { data: transactions } = await listDocs('financialTransactions', {
-        filters: [{ field: 'companyId', op: '==', value: sale.companyId }],
-        pageSize: 500,
-        sortBy: null,
-      });
-      const saleTransactions = transactions.filter(
-        (transaction) => transaction.referenceType === 'sale' && transaction.referenceId === saleId,
-      );
-
-      if (saleTransactions.length > 0) {
-        const financialBatch = getBatch();
-        for (const transaction of saleTransactions) {
-          if (transaction.status !== 'cancelled') {
-            financialBatch.update(docRef('financialTransactions', transaction.id), {
-              status: 'cancelled',
-              cancelledAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            });
-          }
-        }
-        await financialBatch.commit();
-      }
-    } catch (error) {
-      console.warn('Venda deletada, mas o lançamento financeiro não foi atualizado:', error);
-    }
-  }
-
-  return { ...sale, action: 'deleted' };
+    tx.delete(ref);
+    return { ...current, action: 'deleted' };
+  });
 }

@@ -5,7 +5,7 @@
 import {
   doc, getDoc, updateDoc, collection, query, where, getDocs,
   serverTimestamp,
-  writeBatch,
+  writeBatch, runTransaction,
 } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import {
@@ -81,7 +81,29 @@ export async function updateUser(uid, data) {
 }
 
 export async function deactivateUser(uid) {
-  return updateDoc_('users', uid, { active: false });
+  // Desativação global é reservada ao administrador mestre.
+  return updateDoc_('users', uid, { active: false, status: 'disabled' });
+}
+
+export async function deactivateCompanyMember(companyId, uid) {
+  if (!companyId || !uid) throw new Error('Empresa e usuário são obrigatórios.');
+  const userRef = doc(db, 'users', uid);
+  const companyRef = doc(db, 'companies', companyId);
+  const [userSnap, companySnap] = await Promise.all([getDoc(userRef), getDoc(companyRef)]);
+  if (!userSnap.exists() || !companySnap.exists()) throw new Error('Empresa ou usuário inexistente.');
+  if (companySnap.data().ownerUid === uid) throw new Error('Não é permitido remover o proprietário.');
+  if (userSnap.data().memberships?.[companyId]?.active !== true) {
+    throw new Error('O usuário não possui acesso ativo a esta empresa.');
+  }
+  const batch = writeBatch(db);
+  batch.update(userRef, {
+    [`memberships.${companyId}.active`]: false,
+    'accessControl.lastGrantedCompanyId': companyId,
+    updatedAt: serverTimestamp(),
+  });
+  batch.update(doc(db, 'companies', companyId, 'members', uid), { active: false, updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'companyMembers', `${companyId}_${uid}`), { active: false, updatedAt: serverTimestamp() });
+  await batch.commit();
 }
 
 export async function createCompanyInvitation({ companyId, email, role, createdBy }) {
@@ -168,14 +190,35 @@ export async function rejectDeletionRequest(requestItem) {
 }
 
 export async function approveDeletionRequest(requestItem) {
-  const batch = writeBatch(db);
-  batch.delete(doc(db, requestItem.collection, requestItem.documentId));
-  batch.update(doc(db, 'deletionRequests', requestItem.id), {
-    status: 'approved',
-    reviewedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const allowed = ['clients','products','sales','purchases','suppliers','locations','budgets','formulas','financialTransactions'];
+  if (!allowed.includes(requestItem?.collection)) throw new Error('Coleção não permitida para exclusão.');
+  const requestRef = doc(db, 'deletionRequests', requestItem.id);
+  const targetRef = doc(db, requestItem.collection, requestItem.documentId);
+  return runTransaction(db, async (tx) => {
+    const [requestSnap, targetSnap] = await Promise.all([tx.get(requestRef), tx.get(targetRef)]);
+    if (!requestSnap.exists()) throw new Error('Solicitação não encontrada.');
+    const requestData = requestSnap.data();
+    if (requestData.status !== 'pending') throw new Error('Solicitação já foi analisada.');
+    if (requestData.collection !== requestItem.collection || requestData.documentId !== requestItem.documentId
+      || requestData.companyId !== requestItem.companyId) throw new Error('Solicitação inconsistente.');
+    if (!targetSnap.exists() || targetSnap.data().companyId !== requestData.companyId) {
+      throw new Error('Documento ausente ou pertencente a outra empresa.');
+    }
+    // Documentos que já impactaram livros contábeis/estoque exigem estorno,
+    // não uma exclusão genérica.
+    if (requestData.collection === 'sales' && targetSnap.data().status === 'approved') {
+      throw new Error('Venda aprovada exige estorno, não exclusão.');
+    }
+    if (requestData.collection === 'purchases' && targetSnap.data().status === 'received') {
+      throw new Error('Compra recebida exige estorno, não exclusão.');
+    }
+    if (requestData.collection === 'budgets' && targetSnap.data().status === 'approved') {
+      throw new Error('Orçamento aprovado exige estorno, não exclusão.');
+    }
+    tx.delete(targetRef);
+    tx.update(requestRef, { status: 'approved', reviewedAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    return { id: requestItem.id, approved: true };
   });
-  await batch.commit();
 }
 
 // ─── Audit Log ───

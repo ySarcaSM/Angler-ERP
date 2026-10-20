@@ -1,4 +1,6 @@
-import { createDoc, getDoc_, updateDoc_, deleteDoc_, listDocs } from './firestore.js';
+import { createDoc, getDoc_, listDocs, docRef, serverTimestamp, requestDeletionForOperator } from './firestore.js';
+import { runTransaction } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 const COLLECTION = 'budgets';
 
@@ -25,9 +27,40 @@ export async function createBudget(companyId, data) {
 }
 
 export async function updateBudget(id, data) {
-  return updateDoc_(COLLECTION, id, data);
+  return runTransaction(db, async (tx) => {
+    const ref = docRef(COLLECTION, id);
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists()) throw new Error('Orçamento não encontrado.');
+    const current = snapshot.data();
+    if (['approved','cancelled'].includes(current.status)) {
+      throw new Error('Orçamento aprovado ou cancelado está bloqueado para edição.');
+    }
+    if (data.status && !['draft','pending'].includes(data.status)) {
+      throw new Error('Mudança de status inválida.');
+    }
+    const safe = { ...data };
+    delete safe.companyId;
+    delete safe.createdAt;
+    delete safe.approvedAt;
+    tx.update(ref, { ...safe, updatedAt: serverTimestamp() });
+    return { id, ...current, ...safe };
+  });
 }
-
 export async function deleteBudget(id) {
-  return deleteDoc_(COLLECTION, id);
+  const current = await getBudget(id);
+  if (!current) throw new Error('Orçamento não encontrado.');
+  if (current.status === 'approved') throw new Error('Orçamento aprovado precisa de estorno antes de ser excluído.');
+  if (await requestDeletionForOperator(COLLECTION, id)) {
+    const error = new Error('Solicitação de exclusão enviada para aprovação.');
+    error.code = 'deletion-request-created';
+    throw error;
+  }
+  return runTransaction(db, async (tx) => {
+    const ref = docRef(COLLECTION, id);
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists()) throw new Error('Orçamento não encontrado.');
+    if (snapshot.data().status === 'approved') throw new Error('Orçamento aprovado exige estorno.');
+    tx.delete(ref);
+    return { id, ...snapshot.data() };
+  });
 }

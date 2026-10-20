@@ -1,0 +1,383 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function superadmin() {
+      return signedIn() && request.auth.token.get('superadmin', false) == true;
+    }
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+    function userExists() {
+      return signedIn() && exists(userPath());
+    }
+    function ownMembership(companyId) {
+      return userExists()
+        && get(userPath()).data.get('memberships', {}).get(companyId, {}).get('active', false) == true;
+    }
+    function role(companyId) {
+      return get(userPath()).data.get('memberships', {}).get(companyId, {}).get('role', 'viewer');
+    }
+    function member(companyId) {
+      return superadmin() || ownMembership(companyId);
+    }
+    function manager(companyId) {
+      return superadmin() || (ownMembership(companyId)
+        && role(companyId) in ['owner', 'admin']);
+    }
+    function writer(companyId) {
+      return superadmin() || (ownMembership(companyId)
+        && role(companyId) in ['owner', 'admin', 'operator', 'manager']);
+    }
+    function sameCompany() {
+      return request.resource.data.companyId == resource.data.companyId;
+    }
+    function requestCollectionAllowed(collectionName) {
+      return collectionName in ['clients', 'products', 'sales', 'purchases',
+        'suppliers', 'locations', 'budgets', 'formulas', 'financialTransactions'];
+    }
+    function safeMembershipUpdate() {
+      let companyId = request.resource.data.get('accessControl', {}).get('lastGrantedCompanyId', '');
+      return manager(companyId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['memberships', 'accessControl', 'updatedAt'])
+        && request.resource.data.get('memberships', {}).diff(resource.data.get('memberships', {}))
+          .affectedKeys().hasOnly([companyId])
+        && request.resource.data.get('memberships', {}).get(companyId, {}).get('role', 'invalid')
+          in ['owner', 'admin', 'manager', 'operator', 'viewer']
+        && (request.resource.data.get('memberships', {}).get(companyId, {}).get('role', '') != 'owner'
+          || role(companyId) == 'owner')
+        && request.resource.data.get('memberships', {}).get(companyId, {}).get('personal', false)
+          == resource.data.get('memberships', {}).get(companyId, {}).get('personal', false);
+    }
+
+    function currentCompany() {
+      return userExists() ? get(userPath()).data.get('companyId', '') : '';
+    }
+    function mayReadStaffProfile() {
+      return signedIn() && manager(currentCompany())
+        && resource.data.get('memberships', {}).get(currentCompany(), {}).get('active', false) == true;
+    }
+    function linkedFinancialRecord(kind, id) {
+      return /databases/$(database)/documents/financialTransactions/$(kind + '_' + id);
+    }
+    function approvalLinked(kind, id) {
+      let ref = linkedFinancialRecord(kind, id);
+      return existsAfter(ref)
+        && getAfter(ref).data.companyId == resource.data.companyId
+        && getAfter(ref).data.get('referenceId', '') == id
+        && getAfter(ref).data.get('referenceType', '') == kind
+        && getAfter(ref).data.amount == resource.data.get('total', resource.data.get('value', 0));
+    }
+    function validStatusChange(collectionName, id) {
+      let before = resource.data.get('status', 'draft');
+      let after = request.resource.data.get('status', before);
+      return (collectionName == 'sales'
+          ? (before in ['draft', 'pending'] &&
+             ((after in ['draft', 'pending', 'cancelled'])
+             || (after == 'approved' && approvalLinked('sale', id))))
+          : collectionName == 'purchases'
+          ? (before in ['draft', 'pending'] &&
+             ((after in ['draft', 'pending'])
+             || (after == 'received' && approvalLinked('purchase', id))))
+          : collectionName == 'budgets'
+          ? (before in ['draft', 'pending'] &&
+             ((after in ['draft', 'pending'])
+             || (after == 'approved' && approvalLinked('budget', id))))
+          : true);
+    }
+    function immutableOnFinish(collectionName) {
+      let previous = resource.data.get('status', 'draft');
+      let next = request.resource.data.get('status', previous);
+      return (collectionName == 'sales' && next == 'approved' && previous != 'approved')
+        ? request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'approvedAt', 'updatedAt'])
+        : (collectionName == 'purchases' && next == 'received' && previous != 'received')
+        ? request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'receivedAt', 'updatedAt'])
+        : (collectionName == 'budgets' && next == 'approved' && previous != 'approved')
+        ? request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'approvedAt', 'updatedAt'])
+        : true;
+    }
+    function financialCreateAllowed(docId) {
+      let kind = request.resource.data.get('referenceType', '');
+      let linkedId = request.resource.data.get('referenceId', '');
+      let linkedCollection = kind == 'sale' ? 'sales'
+        : kind == 'purchase' ? 'purchases'
+        : kind == 'budget' ? 'budgets' : '';
+      let record = /databases/$(database)/documents/$(linkedCollection)/$(linkedId);
+      return (kind == '' && request.resource.data.get('source', '') == '')
+        || (kind in ['sale','purchase','budget']
+          && linkedId is string && linkedId.size() > 0
+          && docId == kind + '_' + linkedId
+          && existsAfter(record)
+          && getAfter(record).data.companyId == request.resource.data.companyId
+          && getAfter(record).data.get('status', '') ==
+            (kind == 'purchase' ? 'received' : 'approved')
+          && request.resource.data.amount ==
+            getAfter(record).data.get('total', getAfter(record).data.get('value', 0)));
+    }
+    function preserveApprovedRecord(collectionName) {
+      return !(collectionName in ['sales', 'purchases', 'budgets']
+          && resource.data.get('status', '') in ['approved', 'received', 'cancelled']);
+    }
+    function financialRecordAllowedToChange() {
+      return (resource.data.get('referenceType', '') == '' && resource.data.get('source', '') == '')
+        || (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'paidAt', 'updatedAt'])
+          && resource.data.get('status', '') == 'pending'
+          && request.resource.data.get('status', '') == 'paid');
+    }
+    function financialRecordAllowedToDelete() {
+      return resource.data.get('referenceType', '') == ''
+        && resource.data.get('source', '') == '';
+    }
+    match /users/{uid} {
+      allow get: if superadmin() || (signedIn() && request.auth.uid == uid)
+        || mayReadStaffProfile();
+      allow list: if superadmin();
+      allow create: if superadmin() || (signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.companyId == uid
+        && request.resource.data.personalCompanyId == uid
+        && request.resource.data.role == 'owner'
+        && request.resource.data.get('memberships', {}).keys().hasOnly([uid])
+        && request.resource.data.get('memberships', {}).get(uid, {}).get('role', '') == 'owner'
+        && request.resource.data.get('memberships', {}).get(uid, {}).get('personal', false) == true);
+      allow update: if superadmin()
+        || (request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['name', 'lastName', 'accessibilityPreferences', 'companyId', 'updatedAt'])
+          && (request.resource.data.companyId == resource.data.companyId
+            || ownMembership(request.resource.data.companyId)))
+        || safeMembershipUpdate();
+      allow delete: if superadmin();
+    }
+
+    match /companies/{companyId} {
+      allow get: if superadmin() || member(companyId)
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow list: if superadmin() ||
+        (signedIn() && resource.data.ownerUid == request.auth.uid);
+      allow create: if superadmin() || (signedIn()
+        && companyId == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.companyId == companyId
+        && request.resource.data.plan == 'testfree');
+      allow update: if superadmin() || (manager(companyId)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name','tradeName','document','cnpj','email','phone',
+            'companyEmail','companyPhone','settings','modules','weeklyReportAutomation','updatedAt'])
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.plan == resource.data.plan);
+      allow delete: if superadmin();
+      match /members/{uid} {
+        allow read: if member(companyId);
+        allow create: if superadmin() || manager(companyId)
+          || (signedIn() && request.auth.uid == uid && companyId == uid
+            && request.resource.data.role == 'owner'
+            && request.resource.data.companyId == companyId);
+        allow update, delete: if manager(companyId);
+      }
+    }
+
+    // Consultas exigem match explícito por coleção: o analisador de regras
+    // do Firestore deve provar a restrição companyId == tenant ativo.
+    // Todas as consultas do cliente devem incluir where('companyId','==',id).
+    match /clients/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /products/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /sales/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /purchases/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /suppliers/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /locations/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /budgets/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /formulas/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /financialTransactions/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /stockMovements/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /auditLogs/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /weeklyReports/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /companyMembers/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    match /companyInvitations/{itemId} {
+      allow list: if superadmin() || (signedIn()
+        && resource.data.companyId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.memberships[get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId].active == true);
+    }
+
+    // Tenants: a chave companyId não pode ser alterada após a criação.
+    match /{collectionName}/{docId} {
+      allow get: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions','stockMovements',
+          'auditLogs','weeklyReports','companyMembers',
+          'companyInvitations'
+        ] && ((resource == null && member(currentCompany()))
+          || (resource != null && member(resource.data.companyId)));
+      // Regras mais específicas a seguir aplicam-se também; escreva permissões
+      // restritivas em cada coleção, nunca um allow write genérico.
+    }
+    match /{collectionName}/{docId} {
+      allow create: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions','stockMovements',
+          'auditLogs'
+        ] && writer(request.resource.data.companyId)
+          && !(collectionName == 'sales' && request.resource.data.get('status', 'draft') != 'draft')
+          && !(collectionName == 'purchases' && request.resource.data.get('status', 'draft') != 'draft')
+          && !(collectionName == 'budgets' && request.resource.data.get('status', 'draft') != 'draft')
+          && (collectionName != 'financialTransactions' || financialCreateAllowed(docId));
+      allow update: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions'
+        ] && writer(resource.data.companyId) && sameCompany()
+          && (collectionName != 'financialTransactions' || financialRecordAllowedToChange())
+          && preserveApprovedRecord(collectionName)
+          && validStatusChange(collectionName, docId)
+          && immutableOnFinish(collectionName);
+      allow delete: if collectionName in [
+          'clients','products','sales','purchases','suppliers','locations',
+          'budgets','formulas','financialTransactions'
+        ] && manager(resource.data.companyId)
+          && !(collectionName == 'sales' && resource.data.get('status', '') == 'approved')
+          && !(collectionName == 'purchases' && resource.data.get('status', '') == 'received')
+          && !(collectionName == 'budgets' && resource.data.get('status', '') == 'approved')
+          && (collectionName != 'financialTransactions' || financialRecordAllowedToDelete());
+    }
+    match /counters/{companyId} {
+      allow get: if member(companyId);
+      allow create, update: if writer(companyId);
+      allow delete: if superadmin();
+    }
+    match /companyMembers/{memberId} {
+      allow create: if manager(request.resource.data.companyId);
+      allow update, delete: if manager(resource.data.companyId) && sameCompany();
+    }
+    match /companyAccessRequests/{requestId} {
+      allow get, list: if superadmin() || manager(resource.data.companyId)
+        || (signedIn() && resource.data.requesterUid == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.requesterUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId))
+        && request.resource.data.companyId != request.auth.uid;
+      allow update: if manager(resource.data.companyId) && sameCompany()
+        && request.resource.data.requesterUid == resource.data.requesterUid;
+      allow delete: if manager(resource.data.companyId) || superadmin();
+    }
+    match /deletionRequests/{requestId} {
+      allow get, list: if superadmin() || manager(resource.data.companyId)
+        || (signedIn() && member(resource.data.companyId)
+          && resource.data.requesterUid == request.auth.uid);
+      allow create: if signedIn() && ownMembership(request.resource.data.companyId)
+        && role(request.resource.data.companyId) == 'operator'
+        && request.resource.data.requesterUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && requestCollectionAllowed(request.resource.data.collection);
+      allow update: if manager(resource.data.companyId)
+        && sameCompany()
+        && request.resource.data.collection == resource.data.collection
+        && request.resource.data.documentId == resource.data.documentId;
+      allow delete: if superadmin();
+    }
+    match /weeklyReports/{reportId} {
+      allow create: if writer(request.resource.data.companyId);
+      allow delete: if manager(resource.data.companyId);
+    }
+    match /companyInvitations/{invitationId} {
+      allow create: if manager(request.resource.data.companyId);
+      allow update, delete: if manager(resource.data.companyId) && sameCompany();
+    }
+    match /assistantChats/{chatId} {
+      allow read, update, delete: if superadmin() || (signedIn()
+        && ownMembership(resource.data.companyId)
+        && resource.data.userId == request.auth.uid);
+      allow create: if signedIn() && ownMembership(request.resource.data.companyId)
+        && request.resource.data.userId == request.auth.uid;
+      match /messages/{messageId} {
+        allow read, create, delete: if superadmin() || (signedIn()
+          && exists(/databases/$(database)/documents/assistantChats/$(chatId))
+          && get(/databases/$(database)/documents/assistantChats/$(chatId)).data.userId == request.auth.uid
+          && ownMembership(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId));
+      }
+    }
+    match /contactMessages/{messageId} {
+      allow create: if request.resource.data.keys().hasAll(['title', 'description'])
+        && request.resource.data.title is string
+        && request.resource.data.description is string
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description.size() <= 5000;
+      allow read, delete: if superadmin();
+    }
+    match /{any=**} {
+      allow read, write: if superadmin();
+    }
+  }
+}
