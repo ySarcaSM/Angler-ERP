@@ -68,3 +68,19 @@ O workflow GitHub Actions inclui testes de acesso cruzado entre empresas, tentat
 - **Condição para merge:** executar migração de superadmin e testes de login e exclusão na instância de homologação do Firebase. O preview e os testes não simulam contas reais, dados legados, integração de pagamentos ou ambiente de produção.
 - A Vercel possui configurações legadas `VITE_ADMIN_USER` e `VITE_ADMIN_PASSWORD`; **rotacione qualquer segredo reutilizado**, remova essas variáveis públicas e configure apenas a credencial de serviço em segredo de servidor, se e quando a função de exclusão for ativada. Não coloque credenciais no GitHub.
 - O PR permanece separado da branch `main` para impedir que a troca do login administrativo quebre o acesso existente sem as claims provisionadas.
+
+## Uso do Firebase original (producao) — inspecao sem alteracoes
+
+Nao existe um ambiente de homologacao separado. O plugin Firebase esta instalado, mas suas operacoes administrativas nao estao disponiveis nesta conversa. A **aprovacao para usar a instancia original nao substitui uma credencial administrativa** e nao justifica publicar regras sem copia de seguranca.
+
+Esta branch inclui `scripts/firebase-production-preflight.mjs`, que executa **somente leituras**: confirma o ID exato do projeto, faz backup local da versao das regras publicadas, verifica ate 500 perfis quanto a `memberships` e examina a claim superadmin quando SUPERADMIN_UID estiver disponivel. Os dados de usuarios nao sao exportados nem exibidos; somente contagens. O backup das regras deve permanecer fora do Git.
+
+Em uma maquina confiavel, depois de instalar as dependencias, configure `EXPECTED_FIREBASE_PROJECT_ID` e uma credencial administrativa via `FIREBASE_SERVICE_ACCOUNT_JSON` ou `GOOGLE_APPLICATION_CREDENTIALS`. Opcionalmente configure `SUPERADMIN_UID`. Execute:
+
+```sh
+node scripts/firebase-production-preflight.mjs
+```
+
+Nenhuma credencial deve ser enviada no chat nem incluida no repositorio. Se o comando detectar membros legados sem `memberships`, corrigir a migracao de perfis antes de publicar as novas regras. Se houver mais de 500 perfis, o relatorio sera marcado como incompleto. A inspecao nao concede custom claims, nao publica regras, nao exclui dados nem substitui backup do banco.
+
+**Ordem obrigatoria antes da alteracao de producao:** backup dos dados por meio apropriado e backup das regras ativas; reconciliar perfis e memberships; provisionar o superadmin com Admin SDK em maquina confiavel; testar login e acesso dos funcionarios com contas reais autorizadas; preparar janela curta de implantacao/rollback; publicar regras somente com os passos conferidos. O Firebase permite reativar um ruleset anterior com Admin SDK ou pelo console, mas rollback das regras nao recupera documentos excluidos ou modificados.

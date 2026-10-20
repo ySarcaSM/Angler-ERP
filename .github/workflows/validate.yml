@@ -19,7 +19,7 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: node --check src/services/firebase/admin.js && node --check src/services/firebase/sales.js && node --check src/services/firebase/purchases.js && node --check src/services/firebase/budgetApproval.js && node --check src/services/firebase/stock.js
+      - run: node --check scripts/firebase-production-preflight.mjs && node --check src/services/firebase/admin.js && node --check src/services/firebase/sales.js && node --check src/services/firebase/purchases.js && node --check src/services/firebase/budgetApproval.js && node --check src/services/firebase/stock.js
       - run: npm run build
       - name: Install Firestore rules test tools
         run: npm install --no-save --no-audit --no-fund @firebase/rules-unit-testing@4.0.1 firebase-tools@14.22.0
